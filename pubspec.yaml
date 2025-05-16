@@ -1,0 +1,42 @@
+name: dm_shop
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  google_fonts: ^6.1.0 
+  iconsax: ^0.0.8
+  intl_phone_field: ^3.2.0 #
+  email_validator: ^2.1.17
+  get: ^4.6.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/onboarding-image1.png
+    - assets/images/logos/logo_dark.jpeg
+    - assets/images/logos/logo_light.jpeg
+    - assets/images/icons/icons-google.png
+
+
+# Police
+
+    - assets/fonts/Poppins-Black.ttf
+    - assets/fonts/Poppins-Bold.ttf
+    - assets/fonts/Poppins-Light.ttf
+    - assets/fonts/Poppins-Medium.ttf
+    - assets/fonts/Poppins-Regular.ttf
+    - assets/fonts/Poppins-SemiBold.ttf
+    - assets/fonts/Poppins-Thin.ttf
