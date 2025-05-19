@@ -1,3 +1,4 @@
+import 'package:dm_shop/screens/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:dm_shop/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
@@ -8,7 +9,7 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/services.dart';
 import 'package:dm_shop/screens/signup_screen.dart';
 import 'package:dm_shop/themes/customs/form_divider.dart';
-import 'package:dm_shop/screens/home_screen.dart';
+import 'package:dm_shop/screens/menu_navigation.dart';
 import 'package:dm_shop/constants/colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -59,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => HomeScreen(),
+                  builder: (context) => HomePage(),
                 ), // Replace HomeScreen with your actual home screen widget
               );
             },

@@ -1,5 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:dm_shop/constants/colors.dart';
+import 'package:dm_shop/screens/home/home_page.dart';
+
+class MenuNavigation extends StatefulWidget {
+  const MenuNavigation({Key? key}) : super(key: key);
+
+  @override
+  State<MenuNavigation> createState() => _MenuNavigationState();
+}
+
+class _MenuNavigationState extends State<MenuNavigation> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    const HomePage(),
+    const Center(child: Text('Chat')),
+    const Center(child: Text('Mes annonces')),
+    const Center(child: Text('Profil')),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  bool _isDarkMode(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = _isDarkMode(context);
+
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: DMColors.primary,
+        shape: const CircleBorder(),
+        elevation: 4,
+      ),
+      bottomNavigationBar: CustomBottomBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+        activeColor: DMColors.primary,
+        inactiveColor: isDark ? Colors.white60 : Colors.black54,
+        isDark: isDark,
+      ),
+    );
+  }
+}
 
 class CustomBottomBar extends StatelessWidget {
   final int selectedIndex;
