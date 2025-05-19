@@ -14,6 +14,10 @@ class DMColors {
     end: Alignment(0.707, -0.707),
     colors: [Color(0xffff9a9e), Color(0xfffad0c4), Color(0xfffad0c4)],
   );
+
+  static const Color primaryGradientStart = Color(0xFFFF9A9E);
+  static const Color primaryGradientEnd = Color(0xFFFAD0C4);
+
   // Text Colors
   static const Color textPrimary = Color(0xFF333333);
   static const Color textSecondary = Color(0xFF6C757D);

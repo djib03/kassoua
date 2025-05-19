@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
 import 'themes/theme.dart';
-import 'package:get/get.dart';
 
 class EShopApp extends StatelessWidget {
   const EShopApp({Key? key}) : super(key: key);

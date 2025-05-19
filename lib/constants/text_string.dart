@@ -32,7 +32,7 @@ class DMTexts {
 
   // -- Authentication Headings Text
   static const String loginTitle =
-      "Bienvenue,"; // Fixed casing: LoginTitle -> loginTitle
+      "Ravi de vous revoir !,"; // Fixed casing: LoginTitle -> loginTitle
   static const String loginSubTitle =
       "Découvrez des choix illimités et un confort inégalé.";
   static const String signupTitle =
