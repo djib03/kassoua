@@ -16,6 +16,8 @@ dependencies:
   email_validator: ^3.0.0
   get: ^4.6.5
   country_picker: ^2.0.27
+  shared_preferences: ^2.3.0
+  carousel_slider: ^5.0.0
 
 dev_dependencies:
   flutter_test:
@@ -28,8 +30,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/onboarding-image1.png
-    - assets/images/logos/logo_dark.jpeg
-    - assets/images/logos/logo_light.jpeg
     - assets/images/icons/icons-google.png
 
 

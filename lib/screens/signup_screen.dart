@@ -9,7 +9,9 @@ import 'package:iconsax/iconsax.dart';
 import 'package:dm_shop/themes/customs/form_divider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:email_validator/email_validator.dart'; // Import the email_validator package
+import 'package:email_validator/email_validator.dart';
+import 'package:dm_shop/screens/menu_navigation.dart'; // Ajouté
+import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -25,10 +27,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _phoneNoController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true; // Ajouté pour la visibilité du mot de passe
 
-  bool _isPhone = false; // Pour basculer entre e-mail et téléphone
-  String? _phoneNumber; // Add this line
-  String? _email; // Add this line
+  bool _isPhone = false;
+  String? _phoneNumber;
+  String? _email;
 
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
@@ -103,13 +106,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer votre Prénom';
+                    return 'Veuillez entrer votre prénom';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: DMSizes.spaceBtwInputFields),
-
               // E-mail ou Numéro de téléphone
               if (_isPhone)
                 IntlPhoneField(
@@ -131,7 +133,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                   ),
-                  initialCountryCode: 'NE', // Default country
+                  initialCountryCode: 'NE',
                   onChanged: (phone) {
                     setState(() {
                       _phoneNumber = phone.completeNumber;
@@ -182,17 +184,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
               const SizedBox(height: DMSizes.spaceBtwInputFields),
-
               // Mot de passe
               TextFormField(
                 controller: _passwordController,
-                obscureText: true,
+                obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: DMTexts.password,
                   prefixIcon: const Icon(Iconsax.password_check),
                   suffixIcon: IconButton(
-                    icon: const Icon(Iconsax.eye_slash),
-                    onPressed: () {},
+                    icon: Icon(
+                      _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
                   ),
                   border: TTextFormFieldTheme.lightInputDecorationTheme.border,
                 ),
@@ -207,20 +214,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 },
               ),
               const SizedBox(height: DMSizes.spaceBtwSections),
-
               // Bouton S'inscrire
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      // Formulaire valide, traiter l'inscription
+                      // Simuler l'inscription
                       String firstName = _firstNameController.text;
                       String lastName = _lastNameController.text;
                       String emailOrPhone =
                           _isPhone
                               ? _phoneNoController.text
-                              : _emailController.text; // Use controller's text
+                              : _emailController.text;
                       String password = _passwordController.text;
 
                       print('Prénom: $firstName');
@@ -231,7 +237,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             : 'Email: $emailOrPhone',
                       );
                       print('Mot de passe: $password');
-                      // Ici, vous traiteriez l'inscription (par exemple, appel à une API)
+
+                      // Simuler une connexion réussie en enregistrant l'état
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('isLoggedIn', true);
+
+                      // Naviguer directement vers MenuNavigation
+                      if (mounted) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MenuNavigation(),
+                          ),
+                        );
+                      }
                     }
                   },
                   style: DMElevatedButtonTheme.lightElevatedButtonTheme.style,
@@ -239,11 +258,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
               const SizedBox(height: DMSizes.spaceBtwItems),
-
               // Ou s'inscrire avec
               const TFormDivider(dividerText: 'Ou s\'inscrire avec'),
               const SizedBox(height: DMSizes.spaceBtwItems),
-
               // Bouton Google
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -265,7 +282,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ],
               ),
               const SizedBox(height: DMSizes.spaceBtwItems),
-
               // Déjà un compte
               Center(
                 child: TextButton(

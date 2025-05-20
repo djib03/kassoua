@@ -1,4 +1,4 @@
-import 'package:dm_shop/screens/home/home_page.dart';
+import 'package:dm_shop/screens/menu_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:dm_shop/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
@@ -9,8 +9,8 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/services.dart';
 import 'package:dm_shop/screens/signup_screen.dart';
 import 'package:dm_shop/themes/customs/form_divider.dart';
-import 'package:dm_shop/screens/menu_navigation.dart';
 import 'package:dm_shop/constants/colors.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -36,32 +36,15 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         title: Text(
           'Se connecter',
-          style:
-              Theme.of(
-                context,
-              ).textTheme.headlineSmall, // Corrected theme usage
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
-        leading: IconButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          icon: Icon(
-            Iconsax.arrow_left,
-            color:
-                Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-          ),
-        ),
+
         actions: [
-          // Add this
           TextButton(
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => HomePage(),
-                ), // Replace HomeScreen with your actual home screen widget
+                MaterialPageRoute(builder: (context) => MenuNavigation()),
               );
             },
             child: const Text(
@@ -80,7 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo, Title & Sub-Title
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -96,8 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: DMSizes.spaceBtwSections),
-
-                // Champ dynamique (email ou téléphone)
                 if (_isPhone)
                   IntlPhoneField(
                     controller: _controller,
@@ -118,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    initialCountryCode: 'NE', // Default country
+                    initialCountryCode: 'NE',
                     onChanged: (phone) {
                       setState(() {
                         _phoneNumber = phone.completeNumber;
@@ -169,8 +149,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                 const SizedBox(height: DMSizes.spaceBtwInputFields),
-
-                // Mot de passe
                 TextFormField(
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
@@ -196,12 +174,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: DMSizes.spaceBtwInputFields / 2),
-
-                // Remember Me & Forget Password
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Remember Me
                     Expanded(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -216,8 +191,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-
-                    // Forget Password
                     TextButton(
                       onPressed: () {},
                       child: const Text(
@@ -228,31 +201,40 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: DMSizes.spaceBtwSections / 2),
-
-                // Boutons
                 Column(
                   children: [
-                    // Se connecter
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (_formKey.currentState!.validate()) {
-                            // Authentifier l'utilisateur
+                            // Simuler une connexion réussie
                             print(
                               _isPhone
                                   ? 'Téléphone: $_phoneNumber'
                                   : 'Email: $_email',
                             );
                             print('Mot de passe: ${_controller.text}');
+
+                            // Enregistrer l'état de connexion
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('isLoggedIn', true);
+
+                            // Naviguer vers MenuNavigation
+                            if (mounted) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const MenuNavigation(),
+                                ),
+                              );
+                            }
                           }
                         },
                         child: const Text('Se connecter'),
                       ),
                     ),
                     const SizedBox(height: DMSizes.spaceBtwItems),
-
-                    // Créer un compte
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -270,12 +252,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: DMSizes.spaceBtwSections),
-
-                // Social Login
                 const TFormDivider(dividerText: 'Se connecter avec'),
-
                 const SizedBox(height: DMSizes.spaceBtwItems),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

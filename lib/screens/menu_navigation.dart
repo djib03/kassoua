@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:dm_shop/constants/colors.dart';
-import 'package:dm_shop/screens/home/home_page.dart';
+import 'package:dm_shop/screens/home_page.dart'; // Importez votre HomePage
+import 'package:flutter/services.dart';
 
 class MenuNavigation extends StatefulWidget {
   const MenuNavigation({Key? key}) : super(key: key);
 
   @override
-  State<MenuNavigation> createState() => _MenuNavigationState();
+  _MenuNavigationState createState() => _MenuNavigationState();
 }
 
 class _MenuNavigationState extends State<MenuNavigation> {
   int _selectedIndex = 0;
 
+  // Les écrans à afficher. HomePage est maintenant utilisé ici.
   final List<Widget> _screens = [
-    const HomePage(),
+    HomePage(), // Utilise la HomePage que nous avons définie plus haut
     const Center(child: Text('Chat')),
     const Center(child: Text('Mes annonces')),
     const Center(child: Text('Profil')),
@@ -34,16 +36,28 @@ class _MenuNavigationState extends State<MenuNavigation> {
   Widget build(BuildContext context) {
     final isDark = _isDarkMode(context);
 
+    // Set system UI overlay style
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: DMColors.buttonPrimary,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.light,
+      ),
+    );
+
     return Scaffold(
-      body: _screens[_selectedIndex],
+      appBar: AppBar(backgroundColor: DMColors.buttonPrimary, toolbarHeight: 0),
+      // MenuNavigation EST un Scaffold maintenant.
+      body: _screens[_selectedIndex], // Affiche l'écran sélectionné.
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
+        child: const Icon(Iconsax.add, color: Colors.white),
         onPressed: () {},
         backgroundColor: DMColors.primary,
         shape: const CircleBorder(),
         elevation: 4,
       ),
       bottomNavigationBar: CustomBottomBar(
+        // Utilise la CustomBottomBar
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
         activeColor: DMColors.primary,
@@ -54,6 +68,7 @@ class _MenuNavigationState extends State<MenuNavigation> {
   }
 }
 
+// Barre de navigation personnalisée
 class CustomBottomBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
