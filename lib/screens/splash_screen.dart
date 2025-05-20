@@ -108,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: DMSizes.spaceBtwItems),
+
                   // Nom de l'application avec animation
                   FadeTransition(
                     opacity: _fadeAnimation,
