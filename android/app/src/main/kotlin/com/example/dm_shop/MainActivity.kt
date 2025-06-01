@@ -1,4 +1,4 @@
-package com.example.dm_shop
+package com.example.kassoua
 
 import io.flutter.embedding.android.FlutterActivity
 

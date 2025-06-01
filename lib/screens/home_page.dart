@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:dm_shop/constants/colors.dart';
-import 'package:dm_shop/constants/size.dart';
-import 'package:dm_shop/themes/customs/text_theme.dart';
-import 'package:dm_shop/screens/product_screen.dart';
+import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/constants/size.dart';
+import 'package:kassoua/themes/customs/text_theme.dart';
+import 'package:kassoua/screens/product_screen.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:kassoua/screens/popular_product_screen.dart';
+import 'package:kassoua/screens/search_page.dart';
 
 class HomePage extends StatelessWidget {
   HomePage({Key? key}) : super(key: key);
@@ -12,18 +15,20 @@ class HomePage extends StatelessWidget {
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
-  // Données simulées pour les catégories (locales, hors ligne)
+  // Données
   final List<Map<String, dynamic>> _categories = [
-    {'name': 'Électronique', 'icon': Iconsax.mobile},
-    {
-      'name': 'Mode',
-      'icon': Iconsax.activity1,
-    }, // Corrigé l'icône pour plus de cohérence
-    {'name': 'Maison', 'icon': Iconsax.home},
-    {'name': 'Sports', 'icon': Iconsax.activity},
-    {'name': 'Jouets', 'icon': Iconsax.game},
-  ];
+    {'name': 'Mode', 'icon': LucideIcons.shirt},
+    {'name': 'Électronique', 'icon': LucideIcons.smartphone},
+    {'name': 'Maison', 'icon': LucideIcons.sofa},
+    {'name': 'Beauté & Santé', 'icon': LucideIcons.heart},
+    {'name': 'Alimentation', 'icon': LucideIcons.utensils},
 
+    {'name': 'Informatique', 'icon': LucideIcons.monitor},
+    {'name': 'Sports & Loisirs', 'icon': LucideIcons.dumbbell},
+    {'name': 'Auto & Moto', 'icon': LucideIcons.car},
+    {'name': 'Livres & Papeterie', 'icon': LucideIcons.book},
+    {'name': 'Téléphonie & Internet', 'icon': LucideIcons.wifi},
+  ];
   // Données simulées pour les produits
   final List<Map<String, dynamic>> _products = [
     {
@@ -95,7 +100,10 @@ class HomePage extends StatelessWidget {
               color: isDark ? DMColors.textWhite : DMColors.black,
             ),
             onPressed: () {
-              // TODO: Implémenter la recherche
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SearchPage()),
+              );
             },
           ),
           IconButton(
@@ -265,7 +273,9 @@ class HomePage extends StatelessWidget {
                         Icon(
                           _categories[index]['icon'],
                           size: DMSizes.iconMd,
-                          color: isDark ? DMColors.textWhite : DMColors.black,
+                          color:
+                              DMColors
+                                  .primary, // Changé pour utiliser la couleur primaire (bleue)
                         ),
                         const SizedBox(height: DMSizes.xs),
                         Text(
@@ -292,22 +302,49 @@ class HomePage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(
                 horizontal: DMSizes.defaultSpace,
               ),
-              child: Text(
-                'Produits populaires',
-                style:
-                    isDark
-                        ? TTextTheme.darkTextTheme.titleLarge?.copyWith(
-                          color: DMColors.textWhite,
-                        )
-                        : TTextTheme.lightTextTheme.titleLarge?.copyWith(
-                          color: DMColors.black,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Produits populaires',
+                    style:
+                        isDark
+                            ? TTextTheme.darkTextTheme.titleLarge?.copyWith(
+                              color: DMColors.textWhite,
+                            )
+                            : TTextTheme.lightTextTheme.titleLarge?.copyWith(
+                              color: DMColors.black,
+                            ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PopularProductScreen(),
                         ),
+                      );
+                    },
+                    child: Text(
+                      'Voir plus',
+                      style: TextStyle(
+                        color: DMColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: DMSizes.spaceBtwSections),
+
+            // Grille de produits
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(DMSizes.defaultSpace),
+              padding: const EdgeInsets.symmetric(
+                horizontal: DMSizes.defaultSpace,
+              ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 childAspectRatio: 0.75,
@@ -318,14 +355,24 @@ class HomePage extends StatelessWidget {
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder:
-                    //         (context) =>
-                    //             ProductScreen(id: _products[index]['id']),
-                    //   ),
-                    // );
+                    // Navigation vers la page détaillée du produit
+                    final product = Product(
+                      id: _products[index]['id'],
+                      name: _products[index]['name'],
+                      description: 'Description du produit...',
+                      price: _products[index]['price'].toDouble(),
+                      quantity: 1,
+                      imageUrl: 'https://via.placeholder.com/150',
+                      sellerId: 'seller_123',
+                      sellerName: 'Vendeur',
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => ProductDetailPage(product: product),
+                      ),
+                    );
                   },
                   child: Card(
                     color: isDark ? DMColors.dark : DMColors.white,
@@ -375,11 +422,10 @@ class HomePage extends StatelessWidget {
                                               fontWeight: FontWeight.bold,
                                               color: DMColors.black,
                                             ),
-                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: DMSizes.xs),
                               Text(
-                                '\$${_products[index]['price']}',
+                                '${_products[index]['price']} FCFA',
                                 style:
                                     isDark
                                         ? TTextTheme.darkTextTheme.bodyMedium

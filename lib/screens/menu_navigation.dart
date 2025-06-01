@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:dm_shop/constants/colors.dart';
-import 'package:dm_shop/screens/home_page.dart'; // Importez votre HomePage
+import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/screens/home_page.dart'; // Importez votre HomePage
 import 'package:flutter/services.dart';
+import 'package:kassoua/screens/message_screen.dart';
+import 'package:kassoua/screens/my_listings_page.dart';
 
 class MenuNavigation extends StatefulWidget {
   const MenuNavigation({Key? key}) : super(key: key);
@@ -17,8 +19,8 @@ class _MenuNavigationState extends State<MenuNavigation> {
   // Les écrans à afficher. HomePage est maintenant utilisé ici.
   final List<Widget> _screens = [
     HomePage(), // Utilise la HomePage que nous avons définie plus haut
-    const Center(child: Text('Chat')),
-    const Center(child: Text('Mes annonces')),
+    ConversationsListPage(),
+    MyListingsPage(),
     const Center(child: Text('Profil')),
   ];
 
@@ -46,16 +48,8 @@ class _MenuNavigationState extends State<MenuNavigation> {
 
     return Scaffold(
       appBar: AppBar(backgroundColor: DMColors.buttonPrimary, toolbarHeight: 0),
-      // MenuNavigation EST un Scaffold maintenant.
+
       body: _screens[_selectedIndex], // Affiche l'écran sélectionné.
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Iconsax.add, color: Colors.white),
-        onPressed: () {},
-        backgroundColor: DMColors.primary,
-        shape: const CircleBorder(),
-        elevation: 4,
-      ),
       bottomNavigationBar: CustomBottomBar(
         // Utilise la CustomBottomBar
         selectedIndex: _selectedIndex,
@@ -94,15 +88,14 @@ class CustomBottomBar extends StatelessWidget {
               : const Color.fromARGB(255, 255, 255, 255),
       height: 66,
       shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
+
       child: SizedBox(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildNavItem(0, Iconsax.home, Iconsax.home, 'Accueil'),
-            _buildNavItem(1, Iconsax.message, Iconsax.message, 'Chat'),
-            const SizedBox(width: 48),
-            _buildNavItem(2, Iconsax.shop, Iconsax.shop, 'Mes annonces'),
+            _buildNavItem(1, Iconsax.message, Iconsax.message, 'Messages'),
+            _buildNavItem(2, Iconsax.shop, Iconsax.shop, 'Ma boutique'),
             _buildNavItem(3, Iconsax.user, Iconsax.user, 'Profil'),
           ],
         ),

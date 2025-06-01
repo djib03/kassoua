@@ -1,4 +1,4 @@
-import 'package:dm_shop/constants/colors.dart';
+import 'package:kassoua/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
@@ -10,7 +10,7 @@ class EShopApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'DM Shop',
+      title: 'Kassoua',
       theme: DMappTheme.dmShopLightTheme,
       darkTheme: DMappTheme.dmShopDarkTheme,
       themeMode: ThemeMode.system,

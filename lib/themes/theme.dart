@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:dm_shop/themes/customs/app_bar_theme.dart';
-import 'package:dm_shop/themes/customs/text_field_theme.dart';
-import 'package:dm_shop/themes/customs/elevated_button_theme.dart';
-import 'package:dm_shop/themes/customs/checkbox_theme.dart';
-import 'package:dm_shop/themes/customs/chip_theme.dart';
-import 'package:dm_shop/themes/customs/text_theme.dart';
-import 'package:dm_shop/themes/customs/bottom_sheet_theme.dart';
-import 'package:dm_shop/themes/customs/outlined_button_theme.dart';
+import 'package:kassoua/themes/customs/app_bar_theme.dart';
+import 'package:kassoua/themes/customs/text_field_theme.dart';
+import 'package:kassoua/themes/customs/elevated_button_theme.dart';
+import 'package:kassoua/themes/customs/checkbox_theme.dart';
+import 'package:kassoua/themes/customs/chip_theme.dart';
+import 'package:kassoua/themes/customs/text_theme.dart';
+import 'package:kassoua/themes/customs/bottom_sheet_theme.dart';
+import 'package:kassoua/themes/customs/outlined_button_theme.dart';
 
 // Couleur principale E-Shop
 class DMappTheme {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dm_shop/constants/colors.dart';
+import 'package:kassoua/constants/colors.dart';
 
 class THelperFunctions {
   static bool isDarkMode(BuildContext context) {

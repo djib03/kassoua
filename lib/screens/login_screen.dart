@@ -1,15 +1,15 @@
-import 'package:dm_shop/screens/menu_navigation.dart';
+import 'package:kassoua/screens/menu_navigation.dart';
 import 'package:flutter/material.dart';
-import 'package:dm_shop/constants/size.dart';
+import 'package:kassoua/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:dm_shop/constants/text_string.dart';
+import 'package:kassoua/constants/text_string.dart';
 import 'package:email_validator/email_validator.dart';
-import 'package:dm_shop/themes/customs/spacing_style.dart';
+import 'package:kassoua/themes/customs/spacing_style.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/services.dart';
-import 'package:dm_shop/screens/signup_screen.dart';
-import 'package:dm_shop/themes/customs/form_divider.dart';
-import 'package:dm_shop/constants/colors.dart';
+import 'package:kassoua/screens/signup_screen.dart';
+import 'package:kassoua/themes/customs/form_divider.dart';
+import 'package:kassoua/constants/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
 
 class LoginScreen extends StatefulWidget {

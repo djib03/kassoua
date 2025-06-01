@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:dm_shop/constants/colors.dart';
-import 'package:dm_shop/constants/size.dart';
-import 'package:dm_shop/themes/customs/elevated_button_theme.dart';
-import 'package:dm_shop/themes/customs/text_field_theme.dart';
-import 'package:dm_shop/themes/customs/text_theme.dart';
-import 'package:dm_shop/constants/text_string.dart';
+import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/constants/size.dart';
+import 'package:kassoua/themes/customs/elevated_button_theme.dart';
+import 'package:kassoua/themes/customs/text_field_theme.dart';
+import 'package:kassoua/themes/customs/text_theme.dart';
+import 'package:kassoua/constants/text_string.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:dm_shop/themes/customs/form_divider.dart';
+import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:email_validator/email_validator.dart';
-import 'package:dm_shop/screens/menu_navigation.dart'; // Ajouté
+import 'package:kassoua/screens/menu_navigation.dart'; // Ajouté
 import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
 
 class SignUpScreen extends StatefulWidget {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:dm_shop/constants/colors.dart';
-import 'package:dm_shop/screens/login_screen.dart';
-import 'package:dm_shop/screens/menu_navigation.dart';
-import 'package:dm_shop/constants/size.dart';
+import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/screens/login_screen.dart';
+import 'package:kassoua/screens/menu_navigation.dart';
+import 'package:kassoua/constants/size.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:dm_shop/constants/size.dart';
+import 'package:kassoua/constants/size.dart';
 
 class DMSpacingStyle {
   static const EdgeInsetsGeometry paddingWithAppBarHeight = EdgeInsets.only(
