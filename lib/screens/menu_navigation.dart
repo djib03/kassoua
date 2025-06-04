@@ -41,13 +41,13 @@ class _MenuNavigationState extends State<MenuNavigation> {
     // Set system UI overlay style
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
-        statusBarColor: DMColors.buttonPrimary,
+        statusBarColor: DMColors.primary,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.light,
       ),
     );
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: DMColors.buttonPrimary, toolbarHeight: 0),
+      appBar: AppBar(backgroundColor: DMColors.primary, toolbarHeight: 0),
 
       body: _screens[_selectedIndex], // Affiche l'écran sélectionné.
       bottomNavigationBar: CustomBottomBar(

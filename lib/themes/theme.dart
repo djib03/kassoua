@@ -7,6 +7,7 @@ import 'package:kassoua/themes/customs/chip_theme.dart';
 import 'package:kassoua/themes/customs/text_theme.dart';
 import 'package:kassoua/themes/customs/bottom_sheet_theme.dart';
 import 'package:kassoua/themes/customs/outlined_button_theme.dart';
+import 'package:kassoua/constants/colors.dart';
 
 // Couleur principale E-Shop
 class DMappTheme {
@@ -16,7 +17,7 @@ class DMappTheme {
     useMaterial3: true,
     fontFamily: 'Poppins',
     brightness: Brightness.light,
-    primaryColor: Color(0xFF4b68ff),
+    primaryColor: DMColors.primary,
     scaffoldBackgroundColor: Color(0xFFF5F5F5),
     chipTheme: TChipTheme.lightChipTheme,
     textTheme: TTextTheme.lightTextTheme,
@@ -32,7 +33,7 @@ class DMappTheme {
     useMaterial3: true,
     fontFamily: 'Poppins',
     brightness: Brightness.dark,
-    primaryColor: Color(0xFF4b68ff),
+    primaryColor: DMColors.primary,
     scaffoldBackgroundColor: Color(0xFF121212),
     textTheme: TTextTheme.darkTextTheme,
     elevatedButtonTheme: DMElevatedButtonTheme.darkElevatedButtonTheme,

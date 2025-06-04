@@ -23,7 +23,7 @@ class EShopApp extends StatelessWidget {
           SystemUiOverlayStyle(
             statusBarColor:
                 DMColors
-                    .buttonPrimary, // Fond transparent (prend la couleur de l'appBar ou fond d'écran)
+                    .primary, // Fond transparent (prend la couleur de l'appBar ou fond d'écran)
             statusBarIconBrightness:
                 brightness == Brightness.dark
                     ? Brightness

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/models/product.dart';
 
 class AddEditProductPage extends StatefulWidget {
   final String? productId;

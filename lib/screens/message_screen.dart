@@ -167,7 +167,6 @@ class DetailedChatPage extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(DMSizes.sm),
             decoration: BoxDecoration(
-              color: Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black12,

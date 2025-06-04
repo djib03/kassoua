@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/screens/login_screen.dart';
 import 'package:kassoua/screens/menu_navigation.dart';
-import 'package:kassoua/constants/size.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -99,31 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
                       scale: _scaleAnimation,
                       child: Image.asset(
                         'assets/images/onboarding-image1.png',
-                        height:
-                            constraints.maxWidth * 0.8, // Augmenté de 0.6 à 0.8
-                        width:
-                            constraints.maxWidth *
-                            0.8, // Ajout d'une largeur proportionnelle
                         fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-
-                  // Nom de l'application avec animation
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Text(
-                        'DM Shop',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.displayLarge?.copyWith(
-                          fontSize: constraints.maxWidth > 600 ? 48 : 36,
-                          fontWeight: FontWeight.bold,
-                          color: DMColors.primary,
-                        ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),

@@ -22,7 +22,6 @@ class HomePage extends StatelessWidget {
     {'name': 'Maison', 'icon': LucideIcons.sofa},
     {'name': 'Beauté & Santé', 'icon': LucideIcons.heart},
     {'name': 'Alimentation', 'icon': LucideIcons.utensils},
-
     {'name': 'Informatique', 'icon': LucideIcons.monitor},
     {'name': 'Sports & Loisirs', 'icon': LucideIcons.dumbbell},
     {'name': 'Auto & Moto', 'icon': LucideIcons.car},

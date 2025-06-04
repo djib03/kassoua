@@ -217,7 +217,7 @@ class MyListingsPage extends StatelessWidget {
                                     ),
                                     SizedBox(width: DMSizes.xs),
                                     Text(
-                                      isSold ? 'Vendu' : 'Disponible',
+                                      isSold ? 'Vendu' : 'Dispo',
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodySmall?.copyWith(

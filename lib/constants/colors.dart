@@ -4,17 +4,11 @@ class DMColors {
   DMColors._();
 
   //app basic colors
-  static const Color primary = Color(0xFF4b68ff);
+  static const Color primary = Color(0xFF4F46E5);
   static const Color secondary = Color(0xFFFFE24B);
   static const Color accent = Color(0xFFb0c7ff);
 
-  // Gradient Colors
-  static const Gradient linerGradient = LinearGradient(
-    begin: Alignment(0.0, 0.0),
-    end: Alignment(0.707, -0.707),
-    colors: [Color(0xffff9a9e), Color(0xfffad0c4), Color(0xfffad0c4)],
-  );
-
+  //
   static const Color primaryGradientStart = Color(0xFFFF9A9E);
   static const Color primaryGradientEnd = Color(0xFFFAD0C4);
 
