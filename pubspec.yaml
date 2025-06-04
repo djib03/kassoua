@@ -19,6 +19,8 @@ dependencies:
   shared_preferences: ^2.3.0
   carousel_slider: ^5.0.0
   lucide_icons: ^0.257.0
+  image_picker: ^1.0.4
+
 
 dev_dependencies:
   flutter_test:

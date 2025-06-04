@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
 import 'themes/theme.dart';
 
-class EShopApp extends StatelessWidget {
-  const EShopApp({Key? key}) : super(key: key);
+class KassouaApp extends StatelessWidget {
+  const KassouaApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

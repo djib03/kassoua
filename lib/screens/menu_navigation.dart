@@ -3,7 +3,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/screens/home_page.dart'; // Importez votre HomePage
 import 'package:flutter/services.dart';
-import 'package:kassoua/screens/message_screen.dart';
+import 'package:kassoua/screens/Chat/conversations_list_page.dart';
 import 'package:kassoua/screens/my_listings_page.dart';
 
 class MenuNavigation extends StatefulWidget {

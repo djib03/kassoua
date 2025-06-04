@@ -4,7 +4,6 @@ import 'package:kassoua/constants/size.dart';
 import 'package:kassoua/themes/customs/elevated_button_theme.dart';
 import 'package:kassoua/themes/customs/text_field_theme.dart';
 import 'package:kassoua/themes/customs/text_theme.dart';
-import 'package:kassoua/constants/text_string.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +11,7 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:kassoua/screens/menu_navigation.dart'; // Ajouté
 import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
+import 'package:kassoua/constants/text_string.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -45,6 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             : TTextTheme.lightTextTheme.headlineSmall;
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: isDark ? DMColors.black : DMColors.white,
         automaticallyImplyLeading: false,
         centerTitle: true,
         elevation: 0,
@@ -245,6 +246,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       // Naviguer directement vers MenuNavigation
                       if (mounted) {
                         Navigator.pushReplacement(
+                          // ignore: use_build_context_synchronously
                           context,
                           MaterialPageRoute(
                             builder: (context) => const MenuNavigation(),

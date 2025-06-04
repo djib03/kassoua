@@ -5,8 +5,9 @@ class DMColors {
 
   //app basic colors
   static const Color primary = Color(0xFF4F46E5);
-  static const Color secondary = Color(0xFFFFE24B);
+  static const Color primarylight = Color(0xFF818cf8);
   static const Color accent = Color(0xFFb0c7ff);
+  static const Color primaryDark = Color(0xFF3730a3);
 
   //
   static const Color primaryGradientStart = Color(0xFFFF9A9E);

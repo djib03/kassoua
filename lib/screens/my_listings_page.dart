@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:kassoua/constants/colors.dart'; // Assurez-vous du bon chemin
+import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
-import 'package:kassoua/screens/add_edit_product_page.dart'; // Assurez-vous du bon chemin
+import 'package:kassoua/screens/add_edit_product_page.dart';
+import 'package:iconsax/iconsax.dart';
 
-// --- Page "Mes Annonces" ---
+// --- Page "Mes Annonces" Améliorée ---
 class MyListingsPage extends StatelessWidget {
   const MyListingsPage({Key? key}) : super(key: key);
 
@@ -15,7 +16,7 @@ class MyListingsPage extends StatelessWidget {
       'imageUrl': '',
       'price': 75000.0,
       'quantity': 1,
-      'status': 'disponible', // ou 'vendu'
+      'status': 'disponible',
       'description': 'Smartphone en excellent état, 128GB, caméra 48MP.',
     },
     {
@@ -50,246 +51,404 @@ class MyListingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Note: Pour une vraie application, vous vérifieriez ici le rôle de l'utilisateur
-    // (s'il est bien un vendeur) avant d'afficher cette page.
-
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: isDark ? DMColors.black : DMColors.white,
       appBar: AppBar(
-        title: const Text('Ma Boutique'),
-        backgroundColor:
-            DMColors.primary, // Utilisation de votre couleur primaire
+        title: Text(
+          'Ma Boutique',
+          style: TextStyle(
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? DMColors.textWhite
+                    : Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         elevation: 0,
+        backgroundColor: isDark ? DMColors.black : DMColors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: DMColors.white),
-            onPressed: () {
-              // Naviguer vers la page d'ajout de produit
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddEditProductPage(),
-                ),
-              );
-            },
+          Container(
+            margin: EdgeInsets.only(right: DMSizes.md),
+            decoration: BoxDecoration(
+              color: DMColors.primary,
+              borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+            ),
+            child: IconButton(
+              icon: const Icon(Iconsax.add, color: DMColors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddEditProductPage(),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
       body:
           mockProducts.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.inbox,
-                      size: DMSizes.iconLg * 2,
-                      color: DMColors.darkGrey,
-                    ),
-                    SizedBox(height: DMSizes.spaceBtwItems),
-                    Text(
-                      'Vous n\'avez pas encore d\'annonces.',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(color: DMColors.darkGrey),
-                    ),
-                    SizedBox(height: DMSizes.spaceBtwItems),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AddEditProductPage(),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: DMColors.primary,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: DMSizes.lg,
-                          vertical: DMSizes.md,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            DMSizes.buttonRadius,
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.add, color: DMColors.white),
-                      label: Text(
-                        'Publier une nouvelle annonce',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleSmall?.copyWith(color: DMColors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-              : ListView.builder(
-                padding: EdgeInsets.all(DMSizes.sm),
-                itemCount: mockProducts.length,
-                itemBuilder: (context, index) {
-                  final product = mockProducts[index];
-                  final bool isSold = product['status'] == 'vendu';
+              ? _buildEmptyState(context)
+              : _buildProductList(context),
+    );
+  }
 
-                  return Card(
-                    elevation: DMSizes.cardElevation,
-                    margin: EdgeInsets.symmetric(vertical: DMSizes.sm),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        DMSizes.borderRadiusMd,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(DMSizes.sm),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Image du produit
-                          SizedBox(
-                            width: DMSizes.imageThumbSize,
-                            height: DMSizes.imageThumbSize,
-                            child: ClipRRect(
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(DMSizes.lg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(DMSizes.xl),
+              decoration: BoxDecoration(
+                color: DMColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Iconsax.shop,
+                size: DMSizes.iconLg * 2,
+                color: DMColors.primary,
+              ),
+            ),
+            SizedBox(height: DMSizes.spaceBtwItems),
+            Text(
+              'Votre boutique est vide',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: DMColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: DMSizes.xs),
+            Text(
+              'Commencez à vendre en ajoutant votre première annonce',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: DMColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: DMSizes.spaceBtwSections),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddEditProductPage(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DMColors.primary,
+                padding: EdgeInsets.symmetric(
+                  horizontal: DMSizes.xl,
+                  vertical: DMSizes.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(DMSizes.buttonRadius),
+                ),
+                elevation: 2,
+              ),
+              icon: const Icon(Iconsax.add, color: DMColors.white),
+              label: Text(
+                'Créer ma première annonce',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: DMColors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductList(BuildContext context) {
+    return ListView.builder(
+      padding: EdgeInsets.all(DMSizes.md),
+      itemCount: mockProducts.length,
+      itemBuilder: (context, index) {
+        final product = mockProducts[index];
+        final bool isSold = product['status'] == 'vendu';
+
+        return Container(
+          margin: EdgeInsets.only(bottom: DMSizes.md),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, // Add this line
+            mainAxisSize: MainAxisSize.min, // Add this line
+            children: [
+              // Contenu principal de la carte
+              Padding(
+                padding: EdgeInsets.all(DMSizes.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Image du produit avec badge de statut
+                    Stack(
+                      children: [
+                        Container(
+                          width: DMSizes.imageThumbSize,
+                          height: DMSizes.imageThumbSize,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(
+                              DMSizes.borderRadiusMd,
+                            ),
+                            color: DMColors.grey.withOpacity(0.1),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              DMSizes.borderRadiusMd,
+                            ),
+                            child: Image.network(
+                              product['imageUrl']!,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) => Icon(
+                                    Iconsax.image,
+                                    size: DMSizes.iconMd,
+                                    color: DMColors.darkGrey,
+                                  ),
+                            ),
+                          ),
+                        ),
+                        // Badge de statut
+                        Positioned(
+                          top: DMSizes.xs,
+                          right: DMSizes.xs,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: DMSizes.xs,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSold ? DMColors.error : DMColors.success,
                               borderRadius: BorderRadius.circular(
-                                DMSizes.productImageRadius,
+                                DMSizes.borderRadiusSm,
                               ),
-                              child: Image.network(
-                                product['imageUrl']!,
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) => const Icon(
-                                      Icons.broken_image,
-                                      color: DMColors.darkGrey,
-                                    ),
+                            ),
+                            child: Text(
+                              isSold ? 'VENDU' : 'DISPO',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelSmall?.copyWith(
+                                color: DMColors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
                               ),
                             ),
                           ),
-                          SizedBox(width: DMSizes.spaceBtwItems),
+                        ),
+                      ],
+                    ),
+                    SizedBox(width: DMSizes.md),
 
-                          // Détails du produit
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product['name']!,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: DMColors.textPrimary,
+                    // Détails du produit
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product['name']!,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? DMColors.white
+                                      : Colors.black,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: DMSizes.xs),
+                          Text(
+                            '${product['price']?.toStringAsFixed(0)} FCFA',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(
+                              color: DMColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: DMSizes.xs),
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: DMSizes.sm,
+                                  vertical: DMSizes.xs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: DMColors.grey.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                    DMSizes.borderRadiusSm,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                SizedBox(height: DMSizes.xs),
-                                Text(
-                                  '${product['price']?.toStringAsFixed(0)} FCFA', // Format du prix
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(color: DMColors.textPrimary),
-                                ),
-                                SizedBox(height: DMSizes.xs),
-                                Row(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      Icons.inventory_2_outlined,
+                                      Iconsax.box,
                                       size: DMSizes.iconSm,
-                                      color: DMColors.darkGrey,
+                                      color: DMColors.textSecondary,
                                     ),
                                     SizedBox(width: DMSizes.xs),
                                     Text(
-                                      'Quantité: ${product['quantity']}',
+                                      'Qté: ${product['quantity']}',
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodySmall?.copyWith(
                                         color: DMColors.textSecondary,
-                                      ),
-                                    ),
-                                    SizedBox(width: DMSizes.sm),
-                                    Icon(
-                                      Icons.circle,
-                                      size: DMSizes.iconXs,
-                                      color:
-                                          isSold
-                                              ? DMColors.error
-                                              : DMColors.success,
-                                    ),
-                                    SizedBox(width: DMSizes.xs),
-                                    Text(
-                                      isSold ? 'Vendu' : 'Dispo',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall?.copyWith(
-                                        color:
-                                            isSold
-                                                ? DMColors.error
-                                                : DMColors.success,
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-
-                          // Boutons d'action (Modifier, Supprimer, Marquer comme vendu)
-                          Column(
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: DMColors.buttonPrimary,
-                                ),
-                                onPressed: () {
-                                  // Naviguer vers la page de modification de produit
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => AddEditProductPage(
-                                            productId: product['id'],
-                                          ),
-                                    ),
-                                  );
-                                },
                               ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  color: DMColors.error,
-                                ),
-                                onPressed: () {
-                                  // Afficher une boîte de dialogue de confirmation avant de supprimer
-                                  _showDeleteConfirmationDialog(
-                                    context,
-                                    product['name']!,
-                                  );
-                                },
-                              ),
-                              if (!isSold) // Afficher seulement si le produit n'est pas déjà vendu
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.check_circle_outline,
-                                    color: DMColors.success,
-                                  ),
-                                  onPressed: () {
-                                    // Marquer le produit comme vendu
-                                    _showMarkAsSoldConfirmationDialog(
-                                      context,
-                                      product['name']!,
-                                    );
-                                  },
-                                ),
                             ],
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
+
+              // Barre d'actions en bas
+              Container(
+                decoration: BoxDecoration(
+                  color:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? DMColors.dark.withOpacity(0.3)
+                          : DMColors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(DMSizes.borderRadiusLg),
+                    bottomRight: Radius.circular(DMSizes.borderRadiusLg),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(DMSizes.sm),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Bouton Modifier
+                      _buildActionButton(
+                        context: context,
+                        icon: Iconsax.edit,
+                        label: 'Modifier',
+                        color: DMColors.primary,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => AddEditProductPage(
+                                    productId: product['id'],
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // Séparateur vertical
+                      Container(
+                        height: 30,
+                        width: 1,
+                        color: DMColors.grey.withOpacity(0.3),
+                      ),
+
+                      // Bouton Marquer comme vendu (seulement si disponible)
+                      if (!isSold)
+                        _buildActionButton(
+                          context: context,
+                          icon: Iconsax.tick_circle,
+                          label: 'Vendu',
+                          color: DMColors.success,
+                          onPressed: () {
+                            _showMarkAsSoldConfirmationDialog(
+                              context,
+                              product['name']!,
+                            );
+                          },
+                        ),
+
+                      // Séparateur vertical (seulement si le produit n'est pas vendu)
+                      if (!isSold)
+                        Container(
+                          height: 30,
+                          width: 1,
+                          color: DMColors.grey.withOpacity(0.3),
+                        ),
+
+                      // Bouton Supprimer
+                      _buildActionButton(
+                        context: context,
+                        icon: Iconsax.trash,
+                        label: 'Supprimer',
+                        color: DMColors.error,
+                        onPressed: () {
+                          _showDeleteConfirmationDialog(
+                            context,
+                            product['name']!,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: DMSizes.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: DMSizes.iconMd),
+              SizedBox(height: DMSizes.xs / 2),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -299,9 +458,30 @@ class MyListingsPage extends StatelessWidget {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Confirmer la suppression'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(DMSizes.sm),
+                decoration: BoxDecoration(
+                  color: DMColors.error.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Iconsax.warning_2,
+                  color: DMColors.error,
+                  size: DMSizes.iconMd,
+                ),
+              ),
+              SizedBox(width: DMSizes.md),
+              const Text('Confirmer la suppression'),
+            ],
+          ),
           content: Text(
-            'Voulez-vous vraiment supprimer l\'annonce "$productName" ?',
+            'Voulez-vous vraiment supprimer l\'annonce "$productName" ?\n\nCette action est irréversible.',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
             TextButton(
@@ -310,30 +490,30 @@ class MyListingsPage extends StatelessWidget {
                 style: TextStyle(color: DMColors.textSecondary),
               ),
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(); // Fermer la boîte de dialogue
+                Navigator.of(dialogContext).pop();
               },
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: DMColors.error),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DMColors.error,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
+                ),
+              ),
               child: const Text(
                 'Supprimer',
                 style: TextStyle(color: DMColors.white),
               ),
               onPressed: () {
-                // Logique de suppression ici (sera connecté à Firebase)
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
                       'Annonce "$productName" supprimée (simulation).',
                     ),
+                    backgroundColor: DMColors.error,
                   ),
                 );
-                Navigator.of(
-                  dialogContext,
-                ).pop(); // Fermer la boîte de dialogue
-                // Vous devrez potentiellement rafraîchir l'interface ici après la suppression réelle.
+                Navigator.of(dialogContext).pop();
               },
             ),
           ],
@@ -351,9 +531,30 @@ class MyListingsPage extends StatelessWidget {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Marquer comme vendu'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(DMSizes.sm),
+                decoration: BoxDecoration(
+                  color: DMColors.success.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Iconsax.tick_circle,
+                  color: DMColors.success,
+                  size: DMSizes.iconMd,
+                ),
+              ),
+              SizedBox(width: DMSizes.md),
+              const Text('Marquer comme vendu'),
+            ],
+          ),
           content: Text(
             'Voulez-vous marquer l\'annonce "$productName" comme "Vendu" ?',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
             TextButton(
@@ -368,22 +569,24 @@ class MyListingsPage extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: DMColors.success,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
+                ),
               ),
               child: const Text(
-                'Marquer comme vendu',
+                'Confirmer',
                 style: TextStyle(color: DMColors.white),
               ),
               onPressed: () {
-                // Logique pour marquer comme vendu ici (sera connecté à Firebase)
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
                       'Annonce "$productName" marquée comme vendue (simulation).',
                     ),
+                    backgroundColor: DMColors.success,
                   ),
                 );
                 Navigator.of(dialogContext).pop();
-                // Vous devrez potentiellement rafraîchir l'interface ici après la mise à jour réelle.
               },
             ),
           ],

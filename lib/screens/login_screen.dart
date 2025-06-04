@@ -29,7 +29,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: isDark ? DMColors.black : DMColors.white,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
