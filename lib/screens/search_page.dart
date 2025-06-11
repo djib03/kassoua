@@ -24,14 +24,34 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // Données d'exemple pour les produits
   final List<Map<String, dynamic>> products = [
-    {'id': 1, 'name': 'T-shirt Premium', 'price': 15000.0, 'isLiked': false},
-    {'id': 2, 'name': 'Jeans Slim Fit', 'price': 45000.0, 'isLiked': true},
-    {'id': 3, 'name': 'Sneakers Sport', 'price': 65000.0, 'isLiked': false},
-    {'id': 4, 'name': 'Veste En Cuir', 'price': 85000.0, 'isLiked': false},
-    {'id': 5, 'name': 'Montre Classique', 'price': 125000.0, 'isLiked': true},
-    {'id': 6, 'name': 'Sac à Dos', 'price': 25000.0, 'isLiked': false},
-    {'id': 7, 'name': 'Chemise Blanche', 'price': 18000.0, 'isLiked': false},
-    {'id': 8, 'name': 'Pantalon Chino', 'price': 32000.0, 'isLiked': false},
+    {
+      'id': 1,
+      'name': 'T-shirt Premium',
+      'price': 15000.0,
+      'isLiked': false,
+      'location': 'Niamey, Niger',
+    },
+    {
+      'id': 2,
+      'name': 'Jeans Slim Fit',
+      'price': 45000.0,
+      'isLiked': true,
+      'location': 'Dosso, Niger',
+    },
+    {
+      'id': 3,
+      'name': 'Sneakers Sport',
+      'price': 65000.0,
+      'isLiked': false,
+      'location': 'Maradi, Niger',
+    },
+    {
+      'id': 4,
+      'name': 'Veste En Cuir',
+      'price': 85000.0,
+      'isLiked': false,
+      'location': 'Tahoua, Niger',
+    },
   ];
 
   List<Map<String, dynamic>> get filteredProducts {
@@ -230,13 +250,40 @@ class _SearchScreenState extends State<SearchScreen> {
             fontSize: 14,
           ),
         ),
-        subtitle: Text(
-          '${product['price'].toInt()} FCFA',
-          style: const TextStyle(
-            color: DMColors.primary,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Iconsax.location,
+                  size: 12,
+                  color: isDark ? DMColors.textSecondary : Colors.grey[600],
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    product['location'] ?? 'Non spécifié',
+                    style: TextStyle(
+                      color: isDark ? DMColors.textSecondary : Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${product['price'].toInt()} FCFA',
+              style: const TextStyle(
+                color: DMColors.primary,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         trailing: GestureDetector(
           onTap: () => _toggleFavorite(product['id']),
@@ -349,7 +396,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 sliver: SliverGrid(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.75,
+                    childAspectRatio:
+                        0.8, // Augmenté de 0.75 à 0.8 pour plus de hauteur
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),

@@ -54,8 +54,9 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Image section - taille flexible
             Expanded(
-              flex: 3,
+              flex: 3, // Conserver le flex 3 pour l'image
               child: Stack(
                 children: [
                   Container(
@@ -109,29 +110,66 @@ class ProductCard extends StatelessWidget {
                 ],
               ),
             ),
+            // Text section
             Expanded(
-              // flex: 2,
+              flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ), // Reduced padding
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment:
+                      MainAxisAlignment
+                          .spaceEvenly, // Changed from spaceBetween
                   children: [
-                    Text(
-                      product['name'],
-                      style: TextStyle(
-                        color: isDark ? DMColors.textWhite : DMColors.black,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        product['name'],
+                        style: TextStyle(
+                          color: isDark ? DMColors.textWhite : DMColors.black,
+                          fontSize:
+                              13, // Slightly increased for better readability
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.location,
+                          size: 12,
+                          color:
+                              isDark
+                                  ? DMColors.textSecondary
+                                  : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            product['location'] ?? 'Non spécifié',
+                            style: TextStyle(
+                              color:
+                                  isDark
+                                      ? DMColors.textSecondary
+                                      : Colors.grey[600],
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                     Text(
                       '${product['price'].toInt()} FCFA',
                       style: const TextStyle(
                         color: DMColors.primary,
-                        fontSize: 14,
+                        fontSize:
+                            13, // Slightly increased for better readability
                         fontWeight: FontWeight.bold,
                       ),
                     ),
