@@ -5,6 +5,7 @@ import 'package:kassoua/screens/home_page.dart'; // Importez votre HomePage
 import 'package:flutter/services.dart';
 import 'package:kassoua/screens/Chat/conversations_list_page.dart';
 import 'package:kassoua/screens/my_listings_page.dart';
+import 'package:kassoua/screens/profile_screen.dart';
 
 class MenuNavigation extends StatefulWidget {
   const MenuNavigation({Key? key}) : super(key: key);
@@ -21,7 +22,7 @@ class _MenuNavigationState extends State<MenuNavigation> {
     HomePage(), // Utilise la HomePage que nous avons définie plus haut
     ConversationsListPage(),
     MyListingsPage(),
-    const Center(child: Text('Profil')),
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {

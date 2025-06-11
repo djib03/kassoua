@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:kassoua/themes/widget/app_bar_action.dart';
-import 'package:kassoua/themes/widget/banner_carousel.dart';
-import 'package:kassoua/themes/widget/category_section.dart';
+import 'package:kassoua/themes/widget/home_page/app_bar_action.dart';
+import 'package:kassoua/themes/widget/home_page/banner_carousel.dart';
+import 'package:kassoua/themes/widget/home_page/category_section.dart';
 import 'package:kassoua/themes/widget/product_card.dart';
-import 'package:kassoua/themes/widget/products_section.dart';
+import 'package:kassoua/themes/widget/home_page/products_section.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/data/home_data.dart';
 import 'package:kassoua/screens/search_page.dart';

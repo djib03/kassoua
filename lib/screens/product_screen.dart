@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/size.dart';
 
 // Modèle de données simple pour le produit
@@ -69,6 +70,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.dark
+              ? DMColors.black
+              : DMColors.white,
       body: CustomScrollView(
         slivers: [
           // App Bar avec image en arrière-plan
@@ -82,7 +87,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: DMColors.primary),
+                icon: Icon(
+                  Iconsax.arrow_left,
+                  color: Theme.of(context).iconTheme.color,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -210,7 +218,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             widget.product.name,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: DMColors.textPrimary,
+
               height: 1.2,
             ),
           ),
@@ -339,10 +347,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         children: [
           Text(
             'Quantité',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: DMColors.textPrimary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           SizedBox(height: DMSizes.sm),
           Container(
@@ -395,10 +402,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         children: [
           Text(
             'Description',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: DMColors.textPrimary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           SizedBox(height: DMSizes.sm),
           Container(
@@ -428,20 +434,26 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         children: [
           Text(
             'Vendeur',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: DMColors.textPrimary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           SizedBox(height: DMSizes.sm),
           Container(
             padding: EdgeInsets.all(DMSizes.md),
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
+              color:
+                  Brightness.dark == Theme.of(context).brightness
+                      ? DMColors.dark
+                      : DMColors.white,
+              border: Border.all(color: DMColors.grey),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color:
+                      Brightness.dark == Theme.of(context).brightness
+                          ? DMColors.dark
+                          : DMColors.white,
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -470,7 +482,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                               widget.product.sellerProfileImageUrl!,
                             )
                             : null,
-                    backgroundColor: Colors.transparent,
+
                     child:
                         widget.product.sellerProfileImageUrl == null ||
                                 widget.product.sellerProfileImageUrl!.isEmpty
@@ -489,12 +501,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     children: [
                       Text(
                         widget.product.sellerName,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: DMColors.textPrimary,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: DMSizes.xs),
                       Text(
@@ -583,28 +591,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ),
           ),
 
-          SizedBox(width: DMSizes.sm),
-
           // Bouton d'achat rapide
-          Container(
-            height: 56,
-            width: 56,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: DMColors.primary.withOpacity(0.3),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

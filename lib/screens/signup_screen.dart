@@ -44,6 +44,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ? TTextTheme.darkTextTheme.headlineSmall
             : TTextTheme.lightTextTheme.headlineSmall;
     return Scaffold(
+      backgroundColor: isDark ? DMColors.black : DMColors.white,
       appBar: AppBar(
         backgroundColor: isDark ? DMColors.black : DMColors.white,
         automaticallyImplyLeading: false,
@@ -67,12 +68,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Bienvenue sur DM Shop !",
+                "Bienvenue sur Kassoua !",
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: DMSizes.sm),
               Text(
-                "Rejoignez notre communauté et commencez à vendre ou acheter en toute simplicité !",
+                "Acheter et vender en toute simplicité !",
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color:
                       isDark

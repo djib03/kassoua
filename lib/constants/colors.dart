@@ -8,10 +8,7 @@ class DMColors {
   static const Color primarylight = Color(0xFF818cf8);
   static const Color accent = Color(0xFFb0c7ff);
   static const Color primaryDark = Color(0xFF3730a3);
-
-  //
-  static const Color primaryGradientStart = Color(0xFFFF9A9E);
-  static const Color primaryGradientEnd = Color(0xFFFAD0C4);
+  static const Color secondary = Color.fromARGB(255, 185, 71, 71);
 
   // Text Colors
   static const Color textPrimary = Color(0xFF333333);
@@ -27,7 +24,7 @@ class DMColors {
   static Color darkContainer = DMColors.white.withOpacity(0.1);
 
   // Button Colors
-  static const Color buttonPrimary = Color(0xFF4b68ff);
+  static const Color buttonPrimary = Color(0xFF4F46E5);
   static const Color buttonSecondary = Color(0xFF6C757D);
   static const Color buttonDisabled = Color(0xFFC4C4C4);
 

@@ -10,10 +10,10 @@ class DMElevatedButtonTheme {
     style: ElevatedButton.styleFrom(
       elevation: 4,
       foregroundColor: Colors.white,
-      backgroundColor: Color(0xFF4b68ff),
+      backgroundColor: Color(0xFF4F46E5),
       disabledForegroundColor: Colors.grey,
       disabledBackgroundColor: Colors.grey,
-      side: const BorderSide(color: Color(0xFF4b68ff)),
+      side: const BorderSide(color: Color(0xFF4F46E5)),
       padding: const EdgeInsets.symmetric(vertical: 18),
       textStyle: const TextStyle(
         fontSize: 16,
@@ -29,10 +29,10 @@ class DMElevatedButtonTheme {
     style: ElevatedButton.styleFrom(
       elevation: 0,
       foregroundColor: Colors.white,
-      backgroundColor: Color(0xFF4b68ff),
+      backgroundColor: Color(0xFF4F46E5),
       disabledForegroundColor: Colors.grey,
       disabledBackgroundColor: Colors.grey,
-      side: const BorderSide(color: Color(0xFF4b68ff)),
+      side: const BorderSide(color: Color(0xFF4F46E5)),
       padding: const EdgeInsets.symmetric(vertical: 18),
       textStyle: const TextStyle(
         fontSize: 16,

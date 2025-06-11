@@ -25,6 +25,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.dark
+              ? DMColors.black
+              : DMColors.white,
       appBar: AppBar(
         title: Text(
           'Catégories',
