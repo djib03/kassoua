@@ -188,8 +188,8 @@ class MyListingsPage extends StatelessWidget {
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, // Add this line
-            mainAxisSize: MainAxisSize.min, // Add this line
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Contenu principal de la carte
               Padding(
@@ -330,7 +330,7 @@ class MyListingsPage extends StatelessWidget {
                 ),
               ),
 
-              // Barre d'actions en bas
+              // Barre d'actions en bas - VERSION UNIFORME
               Container(
                 decoration: BoxDecoration(
                   color:
@@ -345,9 +345,8 @@ class MyListingsPage extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.all(DMSizes.sm),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Bouton Modifier
+                      // Bouton Modifier - toujours présent
                       _buildActionButton(
                         context: context,
                         icon: Iconsax.edit,
@@ -371,32 +370,39 @@ class MyListingsPage extends StatelessWidget {
                         height: 30,
                         width: 1,
                         color: DMColors.grey.withOpacity(0.3),
+                        margin: EdgeInsets.symmetric(horizontal: DMSizes.xs),
                       ),
 
-                      // Bouton Marquer comme vendu (seulement si disponible)
-                      if (!isSold)
-                        _buildActionButton(
-                          context: context,
-                          icon: Iconsax.tick_circle,
-                          label: 'Vendu',
-                          color: DMColors.success,
-                          onPressed: () {
+                      // Bouton Status - adapté selon l'état
+                      _buildActionButton(
+                        context: context,
+                        icon: isSold ? Iconsax.refresh : Iconsax.tick_circle,
+                        label: isSold ? 'Remettre' : 'Vendu',
+                        color: isSold ? DMColors.info : DMColors.success,
+                        onPressed: () {
+                          if (isSold) {
+                            _showReactivateConfirmationDialog(
+                              context,
+                              product['name']!,
+                            );
+                          } else {
                             _showMarkAsSoldConfirmationDialog(
                               context,
                               product['name']!,
                             );
-                          },
-                        ),
+                          }
+                        },
+                      ),
 
-                      // Séparateur vertical (seulement si le produit n'est pas vendu)
-                      if (!isSold)
-                        Container(
-                          height: 30,
-                          width: 1,
-                          color: DMColors.grey.withOpacity(0.3),
-                        ),
+                      // Séparateur vertical
+                      Container(
+                        height: 30,
+                        width: 1,
+                        color: DMColors.grey.withOpacity(0.3),
+                        margin: EdgeInsets.symmetric(horizontal: DMSizes.xs),
+                      ),
 
-                      // Bouton Supprimer
+                      // Bouton Supprimer - toujours présent
                       _buildActionButton(
                         context: context,
                         icon: Iconsax.trash,
@@ -584,6 +590,79 @@ class MyListingsPage extends StatelessWidget {
                       'Annonce "$productName" marquée comme vendue (simulation).',
                     ),
                     backgroundColor: DMColors.success,
+                  ),
+                );
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Nouvelle fonction pour remettre en vente un produit vendu
+  void _showReactivateConfirmationDialog(
+    BuildContext context,
+    String productName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(DMSizes.sm),
+                decoration: BoxDecoration(
+                  color: DMColors.info.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Iconsax.refresh,
+                  color: DMColors.info,
+                  size: DMSizes.iconMd,
+                ),
+              ),
+              SizedBox(width: DMSizes.md),
+              const Text('Remettre en vente'),
+            ],
+          ),
+          content: Text(
+            'Voulez-vous remettre l\'annonce "$productName" en vente ?',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: DMColors.textSecondary),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DMColors.info,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
+                ),
+              ),
+              child: const Text(
+                'Confirmer',
+                style: TextStyle(color: DMColors.white),
+              ),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Annonce "$productName" remise en vente (simulation).',
+                    ),
+                    backgroundColor: DMColors.info,
                   ),
                 );
                 Navigator.of(dialogContext).pop();

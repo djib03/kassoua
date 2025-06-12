@@ -9,6 +9,7 @@ import 'package:kassoua/themes/widget/home_page/products_section.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/data/home_data.dart';
 import 'package:kassoua/screens/search_page.dart';
+import 'package:kassoua/screens/favorite_products_screen.dart'; // Importe la page des favoris
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -20,7 +21,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  Set<String> _favoriteProducts = {};
+  Set<String> _favoriteProducts = {}; // Ton état actuel des favoris
 
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
@@ -48,6 +49,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _loadFavorites() {
     setState(() {
       _favoriteProducts = {};
+      // Ici, tu chargerais les favoris depuis le stockage local (SharedPreferences)
+      // ou une API si tu en as une.
+      // Par exemple :
+      // SharedPreferences.getInstance().then((prefs) {
+      //   setState(() {
+      //     _favoriteProducts = prefs.getStringList('favoriteProductIds')?.toSet() ?? {};
+      //   });
+      // });
     });
   }
 
@@ -70,6 +79,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _saveFavorites() {
     // Implémentation de la sauvegarde des favoris
+    // Par exemple, en utilisant SharedPreferences:
+    // SharedPreferences.getInstance().then((prefs) {
+    //   prefs.setStringList('favoriteProductIds', _favoriteProducts.toList());
+    // });
   }
 
   void _showSnackBar(String message, IconData icon, Color color) {
@@ -93,63 +106,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return _favoriteProducts.contains(productId);
   }
 
-  void _showFavoritesDialog() {
-    final favoriteProductsList =
-        HomeData.products
-            .where((product) => _favoriteProducts.contains(product['id']))
-            .toList();
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Mes Favoris'),
-            content:
-                favoriteProductsList.isEmpty
-                    ? const Text('Aucun produit en favori')
-                    : SizedBox(
-                      width: double.maxFinite,
-                      height: 300,
-                      child: ListView.builder(
-                        itemCount: favoriteProductsList.length,
-                        itemBuilder: (context, index) {
-                          final product = favoriteProductsList[index];
-                          return ListTile(
-                            leading: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Iconsax.image,
-                                color: DMColors.primary,
-                              ),
-                            ),
-                            title: Text(product['name']),
-                            subtitle: Text('${product['price']} FCFA'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                _toggleFavorite(product['id']);
-                                Navigator.of(context).pop();
-                                _showFavoritesDialog();
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Fermer'),
-              ),
-            ],
-          ),
-    );
-  }
+  // Cette méthode est maintenant remplacée par la navigation vers la page
+  // void _showFavoritesDialog() { ... } // Supprime ou commente cette méthode
 
   @override
   Widget build(BuildContext context) {
@@ -228,8 +186,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           isDark: isDark,
         ),
         AppBarAction(
-          icon: Iconsax.heart,
-          onPressed: _showFavoritesDialog,
+          icon: Iconsax.heart, // L'icône de cœur
+          onPressed: () {
+            // Naviguer vers la nouvelle page des favoris
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => FavoriteProductsScreen(
+                      favoriteProductIds:
+                          _favoriteProducts, // Passe les IDs des favoris
+                      onToggleFavorite:
+                          _toggleFavorite, // Passe la fonction de basculement
+                    ),
+              ),
+            ).then((_) {
+              // Optionnel: Recharger les favoris quand on revient de la page
+              // Si tu as un système de sauvegarde des favoris (SharedPreferences, etc.),
+              // c'est un bon endroit pour les recharger pour t'assurer que la HomePage est à jour.
+              _loadFavorites();
+            });
+          },
           isDark: isDark,
         ),
         const SizedBox(width: 8),

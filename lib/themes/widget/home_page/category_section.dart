@@ -31,11 +31,7 @@ class CategorySection extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => CategoryScreen()),
                   );
                 },
-                icon: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: DMColors.primary,
-                ),
+
                 label: const Text(
                   'Voir tout',
                   style: TextStyle(

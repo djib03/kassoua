@@ -1,8 +1,11 @@
+import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:kassoua/screens/address_management_screen.dart';
 import 'package:kassoua/screens/user_detail.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/screens/change_password_screen.dart';
+import 'package:kassoua/screens/notification_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -253,7 +256,7 @@ class ProfileScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [DMColors.primary, DMColors.accent],
+                        colors: [DMColors.primaryDark, DMColors.accent],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -278,7 +281,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 15),
                   Text(
                     'DKDM',
                     style: TextStyle(
@@ -287,7 +290,7 @@ class ProfileScreen extends StatelessWidget {
                       color: isDark ? DMColors.textWhite : DMColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 5),
                   Text(
                     'dkdm@example.com',
                     style: const TextStyle(
@@ -295,7 +298,7 @@ class ProfileScreen extends StatelessWidget {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 20),
+
                   //
                 ],
               ),
@@ -338,7 +341,7 @@ class ProfileScreen extends StatelessWidget {
                         icon: Iconsax.setting,
                         title:
                             'Détails du compte', // Correction: "Detals" -> "Détails"
-                        subtitle: 'Gérer les paramètres du compte',
+                        subtitle: 'Voir les paramètres du compte',
                         onTap: () {
                           Navigator.push(
                             context,
@@ -353,14 +356,29 @@ class ProfileScreen extends StatelessWidget {
                         icon: Iconsax.lock,
                         title: 'Changer le mot de passe',
                         subtitle: 'Mettre à jour votre mot de passe',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const ChangePasswordScreen(),
+                            ),
+                          );
+                        },
                         color: DMColors.primary,
                       ),
                       _buildMenuItem(
                         icon: Iconsax.notification,
                         title: 'Notifications',
                         subtitle: 'Gérer les notifications',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationScreen(),
+                            ),
+                          );
+                        },
                         color: DMColors.primary,
                       ),
                       _buildMenuItem(
@@ -368,7 +386,15 @@ class ProfileScreen extends StatelessWidget {
                         title: 'Mes adresses',
                         subtitle:
                             'Ajouter et gérer vos adresses', // Amélioration du texte
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const AddressManagementScreen(),
+                            ),
+                          );
+                        },
                         color: DMColors.primary,
                       ),
                     ],
