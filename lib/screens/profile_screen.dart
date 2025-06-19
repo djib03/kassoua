@@ -6,6 +6,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/screens/change_password_screen.dart';
 import 'package:kassoua/screens/notification_screen.dart';
+import 'package:kassoua/screens/login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -423,6 +424,13 @@ class ProfileScreen extends StatelessWidget {
                             'Se déconnecter de votre compte en toute sécurité',
                         onTap: () {},
                         color: DMColors.secondary,
+                      ),
+                      _buildMenuItem(
+                        icon: Iconsax.login,
+                        title: 'Se connecter',
+                        subtitle: 'Connecter vous à votre compte compte',
+                        onTap: () {},
+                        color: DMColors.primary,
                       ),
                     ],
                   ),

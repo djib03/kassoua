@@ -1,4 +1,4 @@
-package com.example.kassoua
+package com.dkdm.kassoua
 
 import io.flutter.embedding.android.FlutterActivity
 

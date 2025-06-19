@@ -8,6 +8,7 @@ import 'package:kassoua/themes/customs/spacing_style.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/services.dart';
 import 'package:kassoua/screens/signup_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
@@ -20,6 +21,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
   final _controller = TextEditingController();
   bool _isPhone = false;
