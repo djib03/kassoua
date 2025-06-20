@@ -1,0 +1,1 @@
+// ShopDAO - accès SQLite pour les boutiques

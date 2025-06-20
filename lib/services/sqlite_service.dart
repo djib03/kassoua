@@ -1,0 +1,1 @@
+// SQLiteService - gestion locale

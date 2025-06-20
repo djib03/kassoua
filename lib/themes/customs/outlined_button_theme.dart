@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kassoua/constants/colors.dart';
 
 /// Light and Dark Outlined Button Themes
 class TOutlinedButtonTheme {
@@ -10,7 +11,7 @@ class TOutlinedButtonTheme {
     style: OutlinedButton.styleFrom(
       elevation: 0,
       foregroundColor: Colors.black,
-      side: const BorderSide(color: Color(0xFF4b68ff)),
+      side: const BorderSide(color: DMColors.primary),
       textStyle: const TextStyle(
         fontSize: 16,
         color: Colors.black,
@@ -25,7 +26,7 @@ class TOutlinedButtonTheme {
   static final darkOutlinedButtonTheme = OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: Colors.white,
-      side: const BorderSide(color: Color(0xFF4b68ff)),
+      side: const BorderSide(color: DMColors.primary),
       textStyle: const TextStyle(
         fontSize: 16,
         color: Colors.white,

@@ -20,15 +20,9 @@ class KassouaApp extends StatelessWidget {
         final Brightness brightness = MediaQuery.of(context).platformBrightness;
 
         SystemChrome.setSystemUIOverlayStyle(
-          SystemUiOverlayStyle(
-            statusBarColor:
-                DMColors
-                    .primary, // Fond transparent (prend la couleur de l'appBar ou fond d'écran)
-            statusBarIconBrightness:
-                brightness == Brightness.dark
-                    ? Brightness
-                        .light // En mode sombre : icônes claires
-                    : Brightness.light, // En mode clair : icônes foncées
+          const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent, // Barre de notif transparente
+            statusBarIconBrightness: Brightness.dark,
           ),
         );
 

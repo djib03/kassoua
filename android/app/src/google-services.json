@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "743512989510",
+    "project_id": "dm-shop-88507",
+    "storage_bucket": "dm-shop-88507.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:743512989510:android:54ad788e552371e94a8f47",
+        "android_client_info": {
+          "package_name": "com.dkdm.kassoua"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTn4zuSnI0u2Ufyi_X9s3YEenTC_uygHA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -408,6 +408,28 @@ class ProfileScreen extends StatelessWidget {
                     context,
                     title: 'Actions',
                     items: [
+                    _buildMenuItem(
+                    icon: Iconsax.login,
+                    title: 'Se connecter',
+                    subtitle: 'Connecter vous à votre compte compte',
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LoginScreen(),
+                        ),
+                      );
+                    },
+                    color: DMColors.primary,
+                  ),
+                      _buildMenuItem(
+                        icon: Iconsax.logout,
+                        title: 'Déconnexion',
+                        subtitle:
+                        'Se déconnecter de votre compte en toute sécurité',
+                        onTap: () {},
+                        color: DMColors.secondary,
+                      ),
                       _buildMenuItem(
                         icon: Iconsax.trash,
                         title: 'Supprimer le compte',
@@ -417,21 +439,7 @@ class ProfileScreen extends StatelessWidget {
                         color: DMColors.error,
                         isDestructive: true,
                       ),
-                      _buildMenuItem(
-                        icon: Iconsax.logout,
-                        title: 'Déconnexion',
-                        subtitle:
-                            'Se déconnecter de votre compte en toute sécurité',
-                        onTap: () {},
-                        color: DMColors.secondary,
-                      ),
-                      _buildMenuItem(
-                        icon: Iconsax.login,
-                        title: 'Se connecter',
-                        subtitle: 'Connecter vous à votre compte compte',
-                        onTap: () {},
-                        color: DMColors.primary,
-                      ),
+
                     ],
                   ),
                 ],
