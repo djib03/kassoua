@@ -9,9 +9,13 @@ import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:email_validator/email_validator.dart';
-import 'package:kassoua/screens/menu_navigation.dart'; // Ajouté
 import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
 import 'package:kassoua/constants/text_string.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kassoua/models/user.dart';
+import 'package:kassoua/services/auth_service.dart';
+import 'package:kassoua/screens/login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -32,6 +36,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isPhone = false;
   String? _phoneNumber;
   String? _email;
+
+  final AuthService _authService = AuthService();
 
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
@@ -86,7 +92,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               TextFormField(
                 controller: _firstNameController,
                 decoration: InputDecoration(
-                  labelText: DMTexts.firstName,
+                  labelText: 'nom',
                   prefixIcon: const Icon(Iconsax.user),
                   border: TTextFormFieldTheme.lightInputDecorationTheme.border,
                 ),
@@ -102,7 +108,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               TextFormField(
                 controller: _lastNameController,
                 decoration: InputDecoration(
-                  labelText: DMTexts.lastName,
+                  labelText: 'prénom',
                   prefixIcon: const Icon(Iconsax.user),
                   border: TTextFormFieldTheme.lightInputDecorationTheme.border,
                 ),
@@ -222,35 +228,77 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      // Simuler l'inscription
-                      String firstName = _firstNameController.text;
-                      String lastName = _lastNameController.text;
-                      String emailOrPhone =
-                          _isPhone
-                              ? _phoneNoController.text
-                              : _emailController.text;
+                      String nom = _firstNameController.text.trim();
+                      String prenom = _lastNameController.text.trim();
+                      String email = _emailController.text.trim();
+                      String telephone = _phoneNoController.text.trim();
                       String password = _passwordController.text;
 
-                      print('Prénom: $firstName');
-                      print('Nom: $lastName');
-                      print(
-                        _isPhone
-                            ? 'Téléphone: $emailOrPhone'
-                            : 'Email: $emailOrPhone',
-                      );
-                      print('Mot de passe: $password');
+                      if ((email.isEmpty && telephone.isEmpty) ||
+                          (email.isNotEmpty && telephone.isNotEmpty)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Veuillez remplir soit l'email, soit le téléphone, mais pas les deux.",
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                      // Simuler une connexion réussie en enregistrant l'état
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('isLoggedIn', true);
+                      try {
+                        UserCredential userCredential;
 
-                      // Naviguer directement vers MenuNavigation
-                      if (mounted) {
-                        Navigator.pushReplacement(
-                          // ignore: use_build_context_synchronously
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MenuNavigation(),
+                        if (email.isNotEmpty) {
+                          // Inscription avec email via AuthService
+                          userCredential = await _authService.signUpWithEmail(
+                            email,
+                            password,
+                            displayName: '$nom $prenom',
+                          );
+                        } else {
+                          // Inscription avec téléphone via AuthService
+                          // Ici, il faut gérer la vérification SMS AVANT d'appeler signInWithSmsCode
+                          // Par exemple, tu peux afficher un écran pour entrer le code reçu par SMS
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "L'inscription par téléphone nécessite la vérification SMS.",
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Création de l'objet Utilisateur
+                        final utilisateur = Utilisateur(
+                          id: userCredential.user!.uid,
+                          nom: nom,
+                          prenom: prenom,
+                          email: email.isNotEmpty ? email : '',
+                          telephone: telephone.isNotEmpty ? telephone : '',
+                          dateInscription: DateTime.now(),
+                        );
+
+                        // Enregistrement dans Firestore
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(utilisateur.id)
+                            .set(utilisateur.toMap());
+
+                        // Navigation ou message de succès
+                        if (mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                          );
+                        }
+                      } on FirebaseAuthException catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.message ?? 'Erreur d\'inscription'),
                           ),
                         );
                       }

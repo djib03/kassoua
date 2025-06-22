@@ -8,12 +8,27 @@ class AuthService {
 
   // Email & Password Sign In
   Future<UserCredential> signInWithEmail(String email, String password) {
-    return _firebaseAuth.signInWithEmailAndPassword(email: email, password: password);
+    return _firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
   }
 
   // Email & Password Sign Up
-  Future<UserCredential> signUpWithEmail(String email, String password) {
-    return _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
+  Future<UserCredential> signUpWithEmail(
+    String email,
+    String password, {
+    required String displayName, // Ajout du nom complet
+  }) async {
+    final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    // Mettre à jour le nom d'affichage
+    await userCredential.user?.updateDisplayName(displayName);
+
+    return userCredential;
   }
 
   // Sign Out
@@ -39,7 +54,10 @@ class AuthService {
   }
 
   // Sign in with SMS code
-  Future<UserCredential> signInWithSmsCode(String verificationId, String smsCode) {
+  Future<UserCredential> signInWithSmsCode(
+    String verificationId,
+    String smsCode,
+  ) {
     final credential = PhoneAuthProvider.credential(
       verificationId: verificationId,
       smsCode: smsCode,

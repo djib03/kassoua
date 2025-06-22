@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
+import 'package:kassoua/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -28,6 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _phoneNumber;
   String? _email;
   bool _obscurePassword = true;
+  final AuthService _authService = AuthService();
+  String? _verificationId; // Pour la connexion par SMS
 
   @override
   Widget build(BuildContext context) {
@@ -212,24 +215,133 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
-                            // Simuler une connexion réussie
-                            print(
-                              _isPhone
-                                  ? 'Téléphone: $_phoneNumber'
-                                  : 'Email: $_email',
-                            );
-                            print('Mot de passe: ${_controller.text}');
-
-                            // Enregistrer l'état de connexion
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setBool('isLoggedIn', true);
-
-                            // Naviguer vers MenuNavigation
-                            if (mounted) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MenuNavigation(),
+                            try {
+                              if (_isPhone) {
+                                // Connexion par téléphone
+                                if (_verificationId == null) {
+                                  // Démarre la vérification SMS
+                                  await _authService.verifyPhoneNumber(
+                                    phoneNumber: _phoneNumber!,
+                                    onVerificationCompleted: (
+                                      credential,
+                                    ) async {
+                                      // Connexion automatique (Android)
+                                      await _authService.signInWithSmsCode(
+                                        _verificationId!,
+                                        credential.smsCode!,
+                                      );
+                                      if (mounted) {
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) =>
+                                                    const MenuNavigation(),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    onVerificationFailed: (e) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            e.message ?? 'Erreur SMS',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    onCodeSent: (
+                                      verificationId,
+                                      resendToken,
+                                    ) async {
+                                      setState(() {
+                                        _verificationId = verificationId;
+                                      });
+                                      // Affiche un champ pour entrer le code SMS (à implémenter)
+                                      // Ici, tu peux afficher un dialog ou une nouvelle page pour saisir le code
+                                      // Exemple rapide :
+                                      String?
+                                      smsCode = await showDialog<String>(
+                                        context: context,
+                                        builder: (context) {
+                                          String code = '';
+                                          return AlertDialog(
+                                            title: const Text('Code SMS'),
+                                            content: TextField(
+                                              onChanged:
+                                                  (value) => code = value,
+                                              decoration: const InputDecoration(
+                                                labelText: 'Code reçu par SMS',
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed:
+                                                    () => Navigator.pop(
+                                                      context,
+                                                      code,
+                                                    ),
+                                                child: const Text('Valider'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                      if (smsCode != null &&
+                                          smsCode.isNotEmpty) {
+                                        await _authService.signInWithSmsCode(
+                                          _verificationId!,
+                                          smsCode,
+                                        );
+                                        if (mounted) {
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (context) =>
+                                                      const MenuNavigation(),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    onCodeAutoRetrievalTimeout: (
+                                      verificationId,
+                                    ) {
+                                      setState(() {
+                                        _verificationId = verificationId;
+                                      });
+                                    },
+                                  );
+                                }
+                              } else {
+                                // Connexion par email
+                                await _authService.signInWithEmail(
+                                  _email!,
+                                  _controller.text,
+                                );
+                                // Naviguer vers MenuNavigation
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.setBool('isLoggedIn', true);
+                                if (mounted) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => const MenuNavigation(),
+                                    ),
+                                  );
+                                }
+                              }
+                            } on FirebaseAuthException catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e.message ?? 'Erreur de connexion',
+                                  ),
                                 ),
                               );
                             }

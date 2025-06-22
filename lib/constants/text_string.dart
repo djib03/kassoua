@@ -3,8 +3,8 @@ class DMTexts {
   static const String tContinue = "Continuer";
 
   // -- Authentication Form Text
-  static const String firstName =
-      "Prénom"; // Fixed typo: firstNome -> firstName
+  static const String nomComplet =
+      "NomComplet"; // Fixed typo: firstNome -> firstName
   static const String lastName = "Nom";
   static const String email = "E-mail"; // Fixed typo: emoit -> email
   static const String password =
