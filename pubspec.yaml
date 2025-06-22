@@ -45,6 +45,7 @@ dependencies:
 
   # Development & Debug Tools
   logger: ^2.0.2
+  panara_dialogs: ^0.1.5
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +58,9 @@ flutter:
     - assets/images/onboarding-image1.png
     - assets/images/user.png
     - assets/images/icons/icons-google.png
+    - assets/images/icons/warning.png
+    - assets/images/icons/tick-circle.png
+    - assets/images/icons/refresh-arrow-02.png
 
 
 # Police

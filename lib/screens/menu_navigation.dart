@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/screens/home_page.dart'; // Importez votre HomePage
-import 'package:flutter/services.dart';
 import 'package:kassoua/screens/Chat/conversations_list_page.dart';
 import 'package:kassoua/screens/my_listings_page.dart';
 import 'package:kassoua/screens/profile_screen.dart';
@@ -39,17 +38,7 @@ class _MenuNavigationState extends State<MenuNavigation> {
   Widget build(BuildContext context) {
     final isDark = _isDarkMode(context);
 
-    // Set system UI overlay style
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: DMColors.primary,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.light,
-      ),
-    );
-
     return Scaffold(
-      appBar: AppBar(backgroundColor: DMColors.primary, toolbarHeight: 0),
-
       body: _screens[_selectedIndex], // Affiche l'écran sélectionné.
       bottomNavigationBar: CustomBottomBar(
         // Utilise la CustomBottomBar
@@ -95,7 +84,12 @@ class CustomBottomBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildNavItem(0, Iconsax.home, Iconsax.home, 'Accueil'),
-            _buildNavItem(1, Iconsax.message, Iconsax.message, 'Messages'),
+            _buildNavItem(
+              1,
+              Iconsax.message,
+              Iconsax.message,
+              'Mes discussions',
+            ),
             _buildNavItem(2, Iconsax.shop, Iconsax.shop, 'Ma boutique'),
             _buildNavItem(3, Iconsax.user, Iconsax.user, 'Profil'),
           ],

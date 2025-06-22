@@ -3,6 +3,7 @@ import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:kassoua/screens/add_edit_product_page.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:panara_dialogs/panara_dialogs.dart';
 
 // --- Page "Mes Annonces" Améliorée ---
 class MyListingsPage extends StatelessWidget {
@@ -284,44 +285,8 @@ class MyListingsPage extends StatelessWidget {
                             ).textTheme.titleLarge?.copyWith(
                               color: DMColors.primary,
                               fontWeight: FontWeight.bold,
+                              fontSize: 19,
                             ),
-                          ),
-                          SizedBox(height: DMSizes.xs),
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: DMSizes.sm,
-                                  vertical: DMSizes.xs,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: DMColors.grey.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(
-                                    DMSizes.borderRadiusSm,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Iconsax.box,
-                                      size: DMSizes.iconSm,
-                                      color: DMColors.textSecondary,
-                                    ),
-                                    SizedBox(width: DMSizes.xs),
-                                    Text(
-                                      'Qté: ${product['quantity']}',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall?.copyWith(
-                                        color: DMColors.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
@@ -460,71 +425,29 @@ class MyListingsPage extends StatelessWidget {
 
   // Fonction pour afficher la boîte de dialogue de confirmation de suppression
   void _showDeleteConfirmationDialog(BuildContext context, String productName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
+    PanaraConfirmDialog.show(
+      context,
+      title: 'Supprimer l\'annonce',
+      message: 'Êtes-vous sûr de vouloir supprimer l\'annonce "$productName" ?',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+
+      onTapConfirm: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Annonce "$productName" supprimée (simulation).'),
+            backgroundColor: DMColors.error,
           ),
-          title: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(DMSizes.sm),
-                decoration: BoxDecoration(
-                  color: DMColors.error.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Iconsax.warning_2,
-                  color: DMColors.error,
-                  size: DMSizes.iconMd,
-                ),
-              ),
-              SizedBox(width: DMSizes.md),
-              const Text('Confirmer la suppression'),
-            ],
-          ),
-          content: Text(
-            'Voulez-vous vraiment supprimer l\'annonce "$productName" ?\n\nCette action est irréversible.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                'Annuler',
-                style: TextStyle(color: DMColors.textSecondary),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: DMColors.error,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
-                ),
-              ),
-              child: const Text(
-                'Supprimer',
-                style: TextStyle(color: DMColors.white),
-              ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Annonce "$productName" supprimée (simulation).',
-                    ),
-                    backgroundColor: DMColors.error,
-                  ),
-                );
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-          ],
         );
+        Navigator.of(context).pop();
       },
+      onTapCancel: () {
+        Navigator.of(context).pop();
+      },
+      panaraDialogType: PanaraDialogType.custom,
+      color: DMColors.error,
+      barrierDismissible: false,
+      imagePath: 'assets/images/icons/warning.png',
     );
   }
 
@@ -533,71 +456,31 @@ class MyListingsPage extends StatelessWidget {
     BuildContext context,
     String productName,
   ) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(DMSizes.sm),
-                decoration: BoxDecoration(
-                  color: DMColors.success.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Iconsax.tick_circle,
-                  color: DMColors.success,
-                  size: DMSizes.iconMd,
-                ),
-              ),
-              SizedBox(width: DMSizes.md),
-              const Text('Marquer comme vendu'),
-            ],
-          ),
-          content: Text(
-            'Voulez-vous marquer l\'annonce "$productName" comme "Vendu" ?',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                'Annuler',
-                style: TextStyle(color: DMColors.textSecondary),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
+    PanaraConfirmDialog.show(
+      context,
+      title: 'Marquer comme vendu',
+      message:
+          'Êtes-vous sûr de vouloir marquer l\'annonce "$productName" comme vendue ?',
+      confirmButtonText: 'Marquer comme vendu',
+      cancelButtonText: 'Annuler',
+      onTapConfirm: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Annonce "$productName" marquée comme vendue (simulation).',
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: DMColors.success,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
-                ),
-              ),
-              child: const Text(
-                'Confirmer',
-                style: TextStyle(color: DMColors.white),
-              ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Annonce "$productName" marquée comme vendue (simulation).',
-                    ),
-                    backgroundColor: DMColors.success,
-                  ),
-                );
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-          ],
+            backgroundColor: DMColors.success,
+          ),
         );
+        Navigator.of(context).pop();
       },
+      onTapCancel: () {
+        Navigator.of(context).pop();
+      },
+      panaraDialogType: PanaraDialogType.custom,
+      color: DMColors.success,
+      barrierDismissible: false,
+      imagePath: 'assets/images/icons/tick-circle.png',
     );
   }
 
@@ -606,71 +489,30 @@ class MyListingsPage extends StatelessWidget {
     BuildContext context,
     String productName,
   ) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(DMSizes.sm),
-                decoration: BoxDecoration(
-                  color: DMColors.info.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Iconsax.refresh,
-                  color: DMColors.info,
-                  size: DMSizes.iconMd,
-                ),
-              ),
-              SizedBox(width: DMSizes.md),
-              const Text('Remettre en vente'),
-            ],
-          ),
-          content: Text(
-            'Voulez-vous remettre l\'annonce "$productName" en vente ?',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                'Annuler',
-                style: TextStyle(color: DMColors.textSecondary),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
+    PanaraConfirmDialog.show(
+      context,
+      title: 'Remettre en vente',
+      message: 'Voulez-vous remettre l\'annonce "$productName" en vente ?',
+      confirmButtonText: 'Confirmer',
+      cancelButtonText: 'Annuler',
+      onTapConfirm: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Annonce "$productName" remise en vente (simulation).',
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: DMColors.info,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
-                ),
-              ),
-              child: const Text(
-                'Confirmer',
-                style: TextStyle(color: DMColors.white),
-              ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Annonce "$productName" remise en vente (simulation).',
-                    ),
-                    backgroundColor: DMColors.info,
-                  ),
-                );
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-          ],
+            backgroundColor: DMColors.info,
+          ),
         );
+        Navigator.of(context).pop();
       },
+      onTapCancel: () {
+        Navigator.of(context).pop();
+      },
+      panaraDialogType: PanaraDialogType.custom,
+      color: DMColors.info,
+      barrierDismissible: false,
+      imagePath: 'assets/images/icons/refresh-arrow-02.png',
     );
   }
 }

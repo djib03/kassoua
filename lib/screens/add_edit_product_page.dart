@@ -374,7 +374,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     SizedBox(height: DMSizes.spaceBtwSections),
 
                     // Section Prix et Stock
-                    _buildSectionTitle('Prix et stock'),
+                    _buildSectionTitle('Prix'),
                     SizedBox(height: DMSizes.md),
                     Row(
                       children: [
@@ -393,26 +393,6 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                               final price = double.tryParse(value);
                               if (price == null || price <= 0) {
                                 return 'Prix invalide';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        SizedBox(width: DMSizes.md),
-                        Expanded(
-                          child: _buildTextField(
-                            controller: _quantityController,
-                            label: 'Quantité',
-                            hint: '1',
-                            icon: Iconsax.box,
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Requis';
-                              }
-                              final qty = int.tryParse(value);
-                              if (qty == null || qty <= 0) {
-                                return 'Invalide';
                               }
                               return null;
                             },

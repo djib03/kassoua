@@ -127,7 +127,7 @@ class _ConversationsListPageState extends State<ConversationsListPage>
             elevation: 0,
             backgroundColor: isDark ? DMColors.black : Colors.white,
             title: Text(
-              'Messages',
+              'Discussions',
               style: TextStyle(
                 color: isDark ? DMColors.white : Colors.black,
                 fontSize: DMSizes.fontSizeLg,

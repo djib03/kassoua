@@ -178,9 +178,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                       ),
                     ),
 
-                    // Sélecteur de quantité
-                    _buildQuantitySelector(),
-
                     SizedBox(height: DMSizes.spaceBtwSections),
 
                     // Description
@@ -225,32 +222,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
           SizedBox(height: DMSizes.sm),
 
-          // Rating et reviews (si disponibles)
-          if (widget.product.rating != null)
-            Row(
-              children: [
-                ...List.generate(
-                  5,
-                  (index) => Icon(
-                    index < (widget.product.rating ?? 0).round()
-                        ? Icons.star
-                        : Icons.star_border,
-                    color: Colors.amber,
-                    size: 20,
-                  ),
-                ),
-                SizedBox(width: DMSizes.sm),
-                Text(
-                  '${widget.product.rating?.toStringAsFixed(1)} (${widget.product.reviewCount ?? 0} avis)',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: DMColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-
-          SizedBox(height: DMSizes.md),
-
           // Prix avec design amélioré
           Container(
             padding: EdgeInsets.symmetric(
@@ -289,106 +260,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               ],
             ),
           ),
-
-          SizedBox(height: DMSizes.md),
-
-          // Statut de disponibilité
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: DMSizes.sm,
-              vertical: DMSizes.xs,
-            ),
-            decoration: BoxDecoration(
-              color:
-                  widget.product.quantity > 0
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.product.quantity > 0
-                      ? Icons.check_circle
-                      : Icons.error,
-                  color:
-                      widget.product.quantity > 0 ? Colors.green : Colors.red,
-                  size: 16,
-                ),
-                SizedBox(width: DMSizes.xs),
-                Text(
-                  widget.product.quantity > 0
-                      ? 'En stock (${widget.product.quantity} disponibles)'
-                      : 'Rupture de stock',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:
-                        widget.product.quantity > 0
-                            ? Colors.green[700]
-                            : Colors.red[700],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuantitySelector() {
-    if (widget.product.quantity <= 0) return const SizedBox();
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: DMSizes.defaultSpace),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quantité',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: DMSizes.sm),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: DMColors.grey.withOpacity(0.3)),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  onPressed:
-                      selectedQuantity > 1
-                          ? () => setState(() => selectedQuantity--)
-                          : null,
-                  icon: const Icon(Icons.remove),
-                  color: DMColors.primary,
-                ),
-                Container(
-                  width: 50,
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$selectedQuantity',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed:
-                      selectedQuantity < widget.product.quantity
-                          ? () => setState(() => selectedQuantity++)
-                          : null,
-                  icon: const Icon(Icons.add),
-                  color: DMColors.primary,
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -415,10 +286,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ),
             child: Text(
               widget.product.description,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: DMColors.textSecondary,
-                height: 1.5,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(height: 1.5),
             ),
           ),
         ],

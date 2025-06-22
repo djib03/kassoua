@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
+import 'package:iconsax/iconsax.dart';
 
 class DetailedChatPage extends StatefulWidget {
   final String conversationId;
@@ -306,7 +307,7 @@ class _DetailedChatPageState extends State<DetailedChatPage>
       backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
       leading: IconButton(
         icon: Icon(
-          Icons.arrow_back_ios_new,
+          Iconsax.arrow_left,
           color: isDark ? Colors.white : Colors.black,
         ),
         onPressed: () => Navigator.of(context).pop(),
@@ -374,25 +375,13 @@ class _DetailedChatPageState extends State<DetailedChatPage>
       ),
       actions: [
         IconButton(
-          icon: Icon(
-            Icons.videocam,
-            color: isDark ? Colors.white : Colors.black,
-          ),
-          onPressed: () {
-            // Action pour appel vidéo
-          },
-        ),
-        IconButton(
-          icon: Icon(Icons.call, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(Iconsax.call, color: isDark ? Colors.white : Colors.black),
           onPressed: () {
             // Action pour appel vocal
           },
         ),
         PopupMenuButton<String>(
-          icon: Icon(
-            Icons.more_vert,
-            color: isDark ? Colors.white : Colors.black,
-          ),
+          icon: Icon(Iconsax.more, color: isDark ? Colors.white : Colors.black),
           onSelected: (value) {
             // Gérer les actions du menu
           },
@@ -493,7 +482,7 @@ class _DetailedChatPageState extends State<DetailedChatPage>
       opacity: _fadeAnimation,
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 8),
         itemCount: _mockMessages.length,
         itemBuilder: (context, index) {
           final message = _mockMessages[index];
@@ -659,7 +648,7 @@ class _DetailedChatPageState extends State<DetailedChatPage>
       child: FloatingActionButton.small(
         onPressed: _scrollToBottom,
         backgroundColor: DMColors.primary,
-        child: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+        child: const Icon(Iconsax.send, color: Colors.white),
       ),
     );
   }
@@ -725,7 +714,7 @@ class _DetailedChatPageState extends State<DetailedChatPage>
                         _isTyping
                             ? IconButton(
                               icon: Icon(
-                                Icons.emoji_emotions_outlined,
+                                Iconsax.emoji_happy,
                                 color: DMColors.primary,
                               ),
                               onPressed: () {
@@ -748,12 +737,12 @@ class _DetailedChatPageState extends State<DetailedChatPage>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: _isTyping ? DMColors.primary : DMColors.darkGrey,
+                  color: DMColors.primary,
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
                   icon: Icon(
-                    _isTyping ? Icons.send : Icons.mic,
+                    _isTyping ? Iconsax.send1 : Iconsax.microphone,
                     color: Colors.white,
                     size: 20,
                   ),
