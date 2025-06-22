@@ -26,13 +26,18 @@ class Utilisateur {
   factory Utilisateur.fromMap(Map<String, dynamic> map, String id) {
     return Utilisateur(
       id: id,
-      nom: map['nom'],
-      prenom: map['prenom'],
-      email: map['email'],
-      telephone: map['telephone'],
+      nom: map['nom'] ?? '',
+      prenom: map['prenom'] ?? '',
+      email: map['email'] ?? '',
+      telephone: map['telephone'] ?? '',
       photoProfil: map['photoProfil'],
-      dateInscription: (map['dateInscription'] as Timestamp).toDate(),
-      dateNaissance: (map['dateNaissance'] as Timestamp).toDate(),
+      dateInscription:
+          (map['dateInscription'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      // Correction : gestion du champ optionnel
+      dateNaissance:
+          map['dateNaissance'] != null
+              ? (map['dateNaissance'] as Timestamp).toDate()
+              : null,
       genre: map['genre'],
     );
   }
@@ -44,9 +49,24 @@ class Utilisateur {
       'email': email,
       'telephone': telephone,
       'photoProfil': photoProfil,
-      'dateInscription': dateInscription,
-      'dateNaissance': dateNaissance,
+      'dateInscription': Timestamp.fromDate(dateInscription),
+      'dateNaissance':
+          dateNaissance != null ? Timestamp.fromDate(dateNaissance!) : null,
       'genre': genre,
     };
+  }
+
+  Utilisateur copyWith({String? photoProfil}) {
+    return Utilisateur(
+      id: id,
+      nom: nom,
+      prenom: prenom,
+      email: email,
+      telephone: telephone,
+      photoProfil: photoProfil ?? this.photoProfil,
+      dateInscription: dateInscription,
+      dateNaissance: dateNaissance,
+      genre: genre,
+    );
   }
 }

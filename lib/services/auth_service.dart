@@ -14,6 +14,14 @@ class AuthService {
     );
   }
 
+  // Delete current user account
+  Future<void> deleteAccount() async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      await user.delete();
+    }
+  }
+
   // Email & Password Sign Up
   Future<UserCredential> signUpWithEmail(
     String email,

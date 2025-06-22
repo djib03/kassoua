@@ -11,7 +11,7 @@ import 'package:kassoua/screens/signup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kassoua/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,15 +22,25 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
-  final _controller = TextEditingController();
+  final _identifierController = TextEditingController(); // Email ou téléphone
+  final _passwordController =
+      TextEditingController(); // AJOUTÉ: Contrôleur pour le mot de passe
+
   bool _isPhone = false;
   String? _phoneNumber;
   String? _email;
   bool _obscurePassword = true;
+  bool _isLoading = false; // AJOUTÉ: État de chargement
   final AuthService _authService = AuthService();
-  String? _verificationId; // Pour la connexion par SMS
+  String? _verificationId;
+
+  @override
+  void dispose() {
+    _identifierController.dispose();
+    _passwordController.dispose(); // AJOUTÉ: Dispose du contrôleur
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,15 +55,20 @@ class _LoginScreenState extends State<LoginScreen> {
           'Se connecter',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => MenuNavigation()),
-              );
-            },
+            onPressed:
+                _isLoading
+                    ? null
+                    : () {
+                      // MODIFIÉ: Désactiver si en cours de chargement
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MenuNavigation(),
+                        ),
+                      );
+                    },
             child: const Text(
               'Passer',
               style: TextStyle(color: DMColors.buttonPrimary),
@@ -74,31 +89,41 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Heureux de vous retrouver sur DM Shop !",
+                      "Heureux de vous retrouver sur Kassoua !",
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: DMSizes.sm),
                     Text(
-                      "Connecter avec votre numéro de téléphone ou email",
+                      "Connectez-vous avec votre numéro de téléphone ou email",
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
                 const SizedBox(height: DMSizes.spaceBtwSections),
+
+                // Champ Email ou Téléphone
                 if (_isPhone)
                   IntlPhoneField(
-                    controller: _controller,
+                    controller: _identifierController,
+                    enabled:
+                        !_isLoading, // MODIFIÉ: Désactiver si en cours de chargement
                     decoration: InputDecoration(
                       labelText: 'Numéro de téléphone',
                       prefixIcon: const Icon(Iconsax.call),
                       border: const OutlineInputBorder(),
                       suffixIcon: TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _isPhone = !_isPhone;
-                            _controller.clear();
-                          });
-                        },
+                        onPressed:
+                            _isLoading
+                                ? null
+                                : () {
+                                  // MODIFIÉ: Désactiver si en cours de chargement
+                                  setState(() {
+                                    _isPhone = !_isPhone;
+                                    _identifierController.clear();
+                                    _phoneNumber = null;
+                                    _email = null;
+                                  });
+                                },
                         child: Text(
                           "Utiliser l'email",
                           style: TextStyle(color: DMColors.buttonPrimary),
@@ -121,18 +146,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   )
                 else
                   TextFormField(
-                    controller: _controller,
+                    controller: _identifierController,
+                    enabled:
+                        !_isLoading, // MODIFIÉ: Désactiver si en cours de chargement
                     decoration: InputDecoration(
                       labelText: 'Email',
                       prefixIcon: Icon(Iconsax.message),
                       border: const OutlineInputBorder(),
                       suffixIcon: TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _isPhone = !_isPhone;
-                            _controller.clear();
-                          });
-                        },
+                        onPressed:
+                            _isLoading
+                                ? null
+                                : () {
+                                  // MODIFIÉ: Désactiver si en cours de chargement
+                                  setState(() {
+                                    _isPhone = !_isPhone;
+                                    _identifierController.clear();
+                                    _phoneNumber = null;
+                                    _email = null;
+                                  });
+                                },
                         child: Text(
                           "Utiliser le téléphone",
                           style: TextStyle(color: DMColors.buttonPrimary),
@@ -155,8 +188,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       });
                     },
                   ),
+
                 const SizedBox(height: DMSizes.spaceBtwInputFields),
+
+                // Champ Mot de passe - CORRIGÉ avec le bon contrôleur
                 TextFormField(
+                  controller:
+                      _passwordController, // CORRIGÉ: Utilise le bon contrôleur
+                  enabled:
+                      !_isLoading, // MODIFIÉ: Désactiver si en cours de chargement
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Mot de passe',
@@ -165,11 +205,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Icon(
                         _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed:
+                          _isLoading
+                              ? null
+                              : () {
+                                // MODIFIÉ: Désactiver si en cours de chargement
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
                     ),
                     border: const OutlineInputBorder(),
                   ),
@@ -177,10 +221,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre mot de passe';
                     }
+                    if (value.length < 6) {
+                      return 'Le mot de passe doit contenir au moins 6 caractères';
+                    }
                     return null;
                   },
                 ),
+
                 const SizedBox(height: DMSizes.spaceBtwInputFields / 2),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -188,7 +237,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Checkbox(value: true, onChanged: (value) {}),
+                          Checkbox(
+                            value: true,
+                            onChanged:
+                                _isLoading
+                                    ? null
+                                    : (
+                                      value,
+                                    ) {}, // MODIFIÉ: Désactiver si en cours de chargement
+                          ),
                           Flexible(
                             child: Text(
                               DMTexts.rememberMe,
@@ -199,7 +256,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed:
+                          _isLoading
+                              ? null
+                              : () {}, // MODIFIÉ: Désactiver si en cours de chargement
                       child: const Text(
                         'Mot de passe oublié ?',
                         style: TextStyle(color: DMColors.buttonPrimary),
@@ -207,94 +267,173 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: DMSizes.spaceBtwSections / 2),
+
                 Column(
                   children: [
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
-                            try {
-                              if (_isPhone) {
-                                // Connexion par téléphone
-                                if (_verificationId == null) {
-                                  // Démarre la vérification SMS
-                                  await _authService.verifyPhoneNumber(
-                                    phoneNumber: _phoneNumber!,
-                                    onVerificationCompleted: (
-                                      credential,
-                                    ) async {
-                                      // Connexion automatique (Android)
-                                      await _authService.signInWithSmsCode(
-                                        _verificationId!,
-                                        credential.smsCode!,
-                                      );
-                                      if (mounted) {
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) =>
-                                                    const MenuNavigation(),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    onVerificationFailed: (e) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            e.message ?? 'Erreur SMS',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    onCodeSent: (
-                                      verificationId,
-                                      resendToken,
-                                    ) async {
-                                      setState(() {
-                                        _verificationId = verificationId;
-                                      });
-                                      // Affiche un champ pour entrer le code SMS (à implémenter)
-                                      // Ici, tu peux afficher un dialog ou une nouvelle page pour saisir le code
-                                      // Exemple rapide :
-                                      String?
-                                      smsCode = await showDialog<String>(
-                                        context: context,
-                                        builder: (context) {
-                                          String code = '';
-                                          return AlertDialog(
-                                            title: const Text('Code SMS'),
-                                            content: TextField(
-                                              onChanged:
-                                                  (value) => code = value,
-                                              decoration: const InputDecoration(
-                                                labelText: 'Code reçu par SMS',
+                        onPressed:
+                            _isLoading
+                                ? null
+                                : () async {
+                                  // MODIFIÉ: Désactiver si en cours de chargement
+                                  if (_formKey.currentState!.validate()) {
+                                    setState(() {
+                                      _isLoading =
+                                          true; // AJOUTÉ: Activer le chargement
+                                    });
+
+                                    try {
+                                      if (_isPhone) {
+                                        // AMÉLIORATION: Validation des données
+                                        if (_phoneNumber == null ||
+                                            _phoneNumber!.isEmpty) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Numéro de téléphone manquant',
                                               ),
                                             ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () => Navigator.pop(
-                                                      context,
-                                                      code,
-                                                    ),
-                                                child: const Text('Valider'),
-                                              ),
-                                            ],
                                           );
-                                        },
-                                      );
-                                      if (smsCode != null &&
-                                          smsCode.isNotEmpty) {
-                                        await _authService.signInWithSmsCode(
-                                          _verificationId!,
-                                          smsCode,
+                                          return;
+                                        }
+
+                                        // Connexion par téléphone (logique SMS existante)
+                                        if (_verificationId == null) {
+                                          await _authService.verifyPhoneNumber(
+                                            phoneNumber: _phoneNumber!,
+                                            onVerificationCompleted: (
+                                              credential,
+                                            ) async {
+                                              await FirebaseAuth.instance
+                                                  .signInWithCredential(
+                                                    credential,
+                                                  );
+                                              if (mounted) {
+                                                Navigator.pushReplacement(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (context) =>
+                                                            const MenuNavigation(),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            onVerificationFailed: (e) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    e.message ?? 'Erreur SMS',
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            onCodeSent: (
+                                              verificationId,
+                                              resendToken,
+                                            ) async {
+                                              setState(() {
+                                                _verificationId =
+                                                    verificationId;
+                                              });
+
+                                              String?
+                                              smsCode = await showDialog<
+                                                String
+                                              >(
+                                                context: context,
+                                                builder: (context) {
+                                                  String code = '';
+                                                  return AlertDialog(
+                                                    title: const Text(
+                                                      'Code SMS',
+                                                    ),
+                                                    content: TextField(
+                                                      onChanged:
+                                                          (value) =>
+                                                              code = value,
+                                                      decoration:
+                                                          const InputDecoration(
+                                                            labelText:
+                                                                'Code reçu par SMS',
+                                                          ),
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed:
+                                                            () => Navigator.pop(
+                                                              context,
+                                                              code,
+                                                            ),
+                                                        child: const Text(
+                                                          'Valider',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              );
+
+                                              if (smsCode != null &&
+                                                  smsCode.isNotEmpty) {
+                                                await _authService
+                                                    .signInWithSmsCode(
+                                                      _verificationId!,
+                                                      smsCode,
+                                                    );
+                                                if (mounted) {
+                                                  Navigator.pushReplacement(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder:
+                                                          (context) =>
+                                                              const MenuNavigation(),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                            onCodeAutoRetrievalTimeout: (
+                                              verificationId,
+                                            ) {
+                                              setState(() {
+                                                _verificationId =
+                                                    verificationId;
+                                              });
+                                            },
+                                          );
+                                        }
+                                      } else {
+                                        // CORRIGÉ: Connexion par email avec le bon mot de passe
+                                        if (_email == null || _email!.isEmpty) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Email manquant'),
+                                            ),
+                                          );
+                                          return;
+                                        }
+
+                                        await _authService.signInWithEmail(
+                                          _email!,
+                                          _passwordController
+                                              .text, // CORRIGÉ: Utilise le bon contrôleur
                                         );
+
+                                        final prefs =
+                                            await SharedPreferences.getInstance();
+                                        await prefs.setBool('isLoggedIn', true);
+
                                         if (mounted) {
                                           Navigator.pushReplacement(
                                             context,
@@ -306,70 +445,69 @@ class _LoginScreenState extends State<LoginScreen> {
                                           );
                                         }
                                       }
-                                    },
-                                    onCodeAutoRetrievalTimeout: (
-                                      verificationId,
-                                    ) {
-                                      setState(() {
-                                        _verificationId = verificationId;
-                                      });
-                                    },
-                                  );
-                                }
-                              } else {
-                                // Connexion par email
-                                await _authService.signInWithEmail(
-                                  _email!,
-                                  _controller.text,
-                                );
-                                // Naviguer vers MenuNavigation
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.setBool('isLoggedIn', true);
-                                if (mounted) {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => const MenuNavigation(),
+                                    } on FirebaseAuthException catch (e) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            e.message ?? 'Erreur de connexion',
+                                          ),
+                                        ),
+                                      );
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isLoading =
+                                              false; // AJOUTÉ: Désactiver le chargement
+                                        });
+                                      }
+                                    }
+                                  }
+                                },
+                        child:
+                            _isLoading // MODIFIÉ: Afficher l'indicateur de chargement
+                                ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color.fromARGB(255, 147, 143, 224),
                                     ),
-                                  );
-                                }
-                              }
-                            } on FirebaseAuthException catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e.message ?? 'Erreur de connexion',
                                   ),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        child: const Text('Se connecter'),
+                                )
+                                : const Text('Se connecter'),
                       ),
                     ),
+
                     const SizedBox(height: DMSizes.spaceBtwItems),
+
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SignUpScreen(),
-                            ),
-                          );
-                        },
+                        onPressed:
+                            _isLoading
+                                ? null
+                                : () {
+                                  // MODIFIÉ: Désactiver si en cours de chargement
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SignUpScreen(),
+                                    ),
+                                  );
+                                },
                         child: const Text('Créer un compte'),
                       ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: DMSizes.spaceBtwSections),
                 const TFormDivider(dividerText: 'Se connecter avec'),
                 const SizedBox(height: DMSizes.spaceBtwItems),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -379,7 +517,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(100),
                       ),
                       child: IconButton(
-                        onPressed: () {},
+                        onPressed:
+                            _isLoading
+                                ? null
+                                : () {}, // MODIFIÉ: Désactiver si en cours de chargement
                         icon: Image.asset(
                           'assets/images/icons/icons-google.png',
                           width: DMSizes.iconMd,

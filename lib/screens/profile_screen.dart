@@ -1,4 +1,3 @@
-import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:kassoua/screens/address_management_screen.dart';
 import 'package:kassoua/screens/user_detail.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +6,10 @@ import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/screens/change_password_screen.dart';
 import 'package:kassoua/screens/notification_screen.dart';
 import 'package:kassoua/screens/login_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:kassoua/controllers/auth_controller.dart';
+import 'package:kassoua/models/user.dart';
+import 'package:panara_dialogs/panara_dialogs.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -26,7 +29,7 @@ class ProfileScreen extends StatelessWidget {
           border: Border.all(color: color.withOpacity(0.2)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
+              color: const Color.fromARGB(31, 93, 93, 93),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -204,14 +207,164 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  // Helper method for anonymous profile
+  Widget _buildAnonymousProfile(BuildContext context, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [DMColors.primaryDark, DMColors.accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[900] : Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: SizedBox(
+                  width: 100,
+                  height: 100,
+                  child: Image.asset(
+                    'assets/images/user.png', // Default image for anonymous
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            'Anonyme', // Display "Anonymous User"
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: isDark ? DMColors.textWhite : DMColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Connectez-vous pour voir vos informations', // Indication pour se connecter
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: DMColors.textSecondary, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method for logged-in user profile
+  Widget _buildUserProfile(
+    BuildContext context,
+    bool isDark,
+    Utilisateur user,
+  ) {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Avatar avec effet de bordure
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [DMColors.primaryDark, DMColors.accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[900] : Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: SizedBox(
+                  width: 100,
+                  height: 100,
+                  child:
+                      (user.photoProfil == null || user.photoProfil!.isEmpty)
+                          ? Image.asset(
+                            'assets/images/user.png',
+                            fit: BoxFit.cover,
+                          )
+                          : Image.network(
+                            user.photoProfil!,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (context, error, stackTrace) => Image.asset(
+                                  'assets/images/user.png',
+                                  fit: BoxFit.cover,
+                                ),
+                          ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            '${user.nom} ${user.prenom}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: isDark ? DMColors.textWhite : DMColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            user.email.isNotEmpty ? user.email : user.telephone,
+            style: const TextStyle(color: DMColors.textSecondary, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
+    final isLoggedIn = Provider.of<AuthController>(context).user != null;
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
         title: Text(
           'Profile',
           style: TextStyle(
@@ -232,77 +385,24 @@ class ProfileScreen extends StatelessWidget {
       ),
       backgroundColor: isDark ? DMColors.black : Colors.grey[50],
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
             // Section profil utilisateur
-            Container(
-              margin: const EdgeInsets.all(24),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey[900] : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Avatar avec effet de bordure
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [DMColors.primaryDark, DMColors.accent],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.grey[900] : Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(50),
-                        child: SizedBox(
-                          width: 100,
-                          height: 100,
-                          child: Image.asset(
-                            'assets/images/user.png',
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'DKDM',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                      color: isDark ? DMColors.textWhite : DMColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'dkdm@example.com',
-                    style: const TextStyle(
-                      color: DMColors.textSecondary,
-                      fontSize: 16,
-                    ),
-                  ),
-
-                  //
-                ],
-              ),
+            FutureBuilder<Utilisateur?>(
+              future:
+                  Provider.of<AuthController>(
+                    context,
+                    listen: false,
+                  ).fetchUserData(),
+              builder: (context, snapshot) {
+                Utilisateur? user = snapshot.data;
+                if (user == null) {
+                  // Affiche le profil anonyme si pas de données utilisateur
+                  return _buildAnonymousProfile(context, isDark);
+                }
+                // Affiche le profil utilisateur réel
+                return _buildUserProfile(context, isDark, user);
+              },
             ),
 
             // Cartes statistiques
@@ -340,10 +440,13 @@ class ProfileScreen extends StatelessWidget {
                     items: [
                       _buildMenuItem(
                         icon: Iconsax.setting,
-                        title:
-                            'Détails du compte', // Correction: "Detals" -> "Détails"
+                        title: 'Détails du compte',
                         subtitle: 'Voir les paramètres du compte',
                         onTap: () {
+                          if (!isLoggedIn) {
+                            _showLoginRequiredSnackBar(context);
+                            return;
+                          }
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -358,6 +461,10 @@ class ProfileScreen extends StatelessWidget {
                         title: 'Changer le mot de passe',
                         subtitle: 'Mettre à jour votre mot de passe',
                         onTap: () {
+                          if (!isLoggedIn) {
+                            _showLoginRequiredSnackBar(context);
+                            return;
+                          }
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -373,6 +480,10 @@ class ProfileScreen extends StatelessWidget {
                         title: 'Notifications',
                         subtitle: 'Gérer les notifications',
                         onTap: () {
+                          if (!isLoggedIn) {
+                            _showLoginRequiredSnackBar(context);
+                            return;
+                          }
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -388,6 +499,10 @@ class ProfileScreen extends StatelessWidget {
                         subtitle:
                             'Ajouter et gérer vos adresses', // Amélioration du texte
                         onTap: () {
+                          if (!isLoggedIn) {
+                            _showLoginRequiredSnackBar(context);
+                            return;
+                          }
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -408,26 +523,63 @@ class ProfileScreen extends StatelessWidget {
                     context,
                     title: 'Actions',
                     items: [
-                    _buildMenuItem(
-                    icon: Iconsax.login,
-                    title: 'Se connecter',
-                    subtitle: 'Connecter vous à votre compte compte',
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => LoginScreen(),
-                        ),
-                      );
-                    },
-                    color: DMColors.primary,
-                  ),
+                      _buildMenuItem(
+                        icon: Iconsax.login,
+                        title: 'Se connecter',
+                        subtitle: 'Connecter vous à votre compte compte',
+                        onTap: () {
+                          if (isLoggedIn) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Vous êtes déjà connecté',
+                                  style: TextStyle(
+                                    color:
+                                        isDark
+                                            ? DMColors.textWhite
+                                            : Colors.black,
+                                  ),
+                                ),
+                                backgroundColor: DMColors.primary,
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LoginScreen(),
+                            ),
+                          );
+                        },
+                        color: DMColors.primary,
+                      ),
                       _buildMenuItem(
                         icon: Iconsax.logout,
                         title: 'Déconnexion',
                         subtitle:
-                        'Se déconnecter de votre compte en toute sécurité',
-                        onTap: () {},
+                            'Se déconnecter de votre compte en toute sécurité',
+                        onTap: () {
+                          PanaraConfirmDialog.show(
+                            context,
+                            message:
+                                'Êtes vous sur de vouloir vous deconnecter',
+                            confirmButtonText: 'Oui ',
+                            cancelButtonText: 'Non',
+                            onTapConfirm: () async {
+                              // Call logout logic here
+                              await Provider.of<AuthController>(
+                                context,
+                                listen: false,
+                              ).signOut();
+                            },
+                            onTapCancel: () {
+                              Navigator.of(context).pop();
+                            },
+                            panaraDialogType: PanaraDialogType.custom,
+                            color: DMColors.error,
+                          );
+                        },
                         color: DMColors.secondary,
                       ),
                       _buildMenuItem(
@@ -435,11 +587,30 @@ class ProfileScreen extends StatelessWidget {
                         title: 'Supprimer le compte',
                         subtitle:
                             'Supprimez définitivement votre compte et vos données',
-                        onTap: () {},
+                        onTap: () {
+                          PanaraConfirmDialog.show(
+                            context,
+                            message:
+                                'Êtes vous sur de vouloir supprimer votre compte',
+                            confirmButtonText: 'Oui',
+                            cancelButtonText: 'Non',
+                            onTapConfirm: () async {
+                              // Call delete account logic here
+                              await Provider.of<AuthController>(
+                                context,
+                                listen: false,
+                              ).deleteAccount();
+                            },
+                            onTapCancel: () {
+                              Navigator.of(context).pop();
+                            },
+                            panaraDialogType: PanaraDialogType.custom,
+                            color: DMColors.error,
+                          );
+                        },
                         color: DMColors.error,
                         isDestructive: true,
                       ),
-
                     ],
                   ),
                 ],
@@ -449,6 +620,81 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLoginRequiredSnackBar(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.3),
+                      Colors.white.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.account_circle_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Connexion requise',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Connectez-vous pour continuer',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        action: SnackBarAction(
+          label: 'Se connecter',
+          textColor: Colors.white,
+          backgroundColor: Colors.white.withOpacity(0.25),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+            );
+          },
+        ),
+        backgroundColor: DMColors.primary,
+        duration: const Duration(seconds: 6),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.all(16),
+        elevation: 4,
+        dismissDirection: DismissDirection.horizontal,
       ),
     );
   }

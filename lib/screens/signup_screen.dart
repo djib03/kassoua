@@ -9,7 +9,7 @@ import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:email_validator/email_validator.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Ajouté
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kassoua/constants/text_string.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -31,7 +31,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _phoneNoController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true; // Ajouté pour la visibilité du mot de passe
+  bool _obscurePassword = true;
+  bool _isLoading = false; // Ajouté pour gérer l'état de chargement
 
   bool _isPhone = false;
   String? _phoneNumber;
@@ -62,7 +63,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Iconsax.arrow_left,
             color: isDark ? Colors.white : Colors.black,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed:
+              _isLoading
+                  ? null
+                  : () =>
+                      Navigator.pop(context), // Désactivé pendant le chargement
         ),
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
@@ -91,6 +96,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // Nom
               TextFormField(
                 controller: _firstNameController,
+                enabled: !_isLoading, // Désactivé pendant le chargement
                 decoration: InputDecoration(
                   labelText: 'nom',
                   prefixIcon: const Icon(Iconsax.user),
@@ -107,6 +113,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // Prénom
               TextFormField(
                 controller: _lastNameController,
+                enabled: !_isLoading, // Désactivé pendant le chargement
                 decoration: InputDecoration(
                   labelText: 'prénom',
                   prefixIcon: const Icon(Iconsax.user),
@@ -124,20 +131,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
               if (_isPhone)
                 IntlPhoneField(
                   controller: _phoneNoController,
+                  enabled: !_isLoading, // Désactivé pendant le chargement
                   decoration: InputDecoration(
                     labelText: 'Numéro de téléphone',
                     prefixIcon: const Icon(Iconsax.call),
                     border: const OutlineInputBorder(),
                     suffixIcon: TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _isPhone = !_isPhone;
-                          _phoneNoController.clear();
-                        });
-                      },
+                      onPressed:
+                          _isLoading
+                              ? null
+                              : () {
+                                setState(() {
+                                  _isPhone = !_isPhone;
+                                  _phoneNoController.clear();
+                                });
+                              },
                       child: Text(
                         "Utiliser l'email",
-                        style: TextStyle(color: DMColors.primary),
+                        style: TextStyle(
+                          color: _isLoading ? Colors.grey : DMColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -158,20 +171,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
               else
                 TextFormField(
                   controller: _emailController,
+                  enabled: !_isLoading, // Désactivé pendant le chargement
                   decoration: InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Iconsax.message),
                     border: const OutlineInputBorder(),
                     suffixIcon: TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _isPhone = !_isPhone;
-                          _emailController.clear();
-                        });
-                      },
+                      onPressed:
+                          _isLoading
+                              ? null
+                              : () {
+                                setState(() {
+                                  _isPhone = !_isPhone;
+                                  _emailController.clear();
+                                });
+                              },
                       child: Text(
                         "Utiliser le téléphone",
-                        style: TextStyle(color: DMColors.primary),
+                        style: TextStyle(
+                          color: _isLoading ? Colors.grey : DMColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -195,6 +214,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // Mot de passe
               TextFormField(
                 controller: _passwordController,
+                enabled: !_isLoading, // Désactivé pendant le chargement
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: DMTexts.password,
@@ -203,11 +223,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     icon: Icon(
                       _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                   ),
                   border: TTextFormFieldTheme.lightInputDecorationTheme.border,
                 ),
@@ -226,86 +249,140 @@ class _SignUpScreenState extends State<SignUpScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      String nom = _firstNameController.text.trim();
-                      String prenom = _lastNameController.text.trim();
-                      String email = _emailController.text.trim();
-                      String telephone = _phoneNoController.text.trim();
-                      String password = _passwordController.text;
+                  onPressed:
+                      _isLoading
+                          ? null
+                          : () async {
+                            if (_formKey.currentState!.validate()) {
+                              setState(() {
+                                _isLoading = true; // Commencer le chargement
+                              });
 
-                      if ((email.isEmpty && telephone.isEmpty) ||
-                          (email.isNotEmpty && telephone.isNotEmpty)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Veuillez remplir soit l'email, soit le téléphone, mais pas les deux.",
-                            ),
-                          ),
-                        );
-                        return;
-                      }
+                              String nom = _firstNameController.text.trim();
+                              String prenom = _lastNameController.text.trim();
+                              String email = _emailController.text.trim();
+                              String telephone = _phoneNoController.text.trim();
+                              String password = _passwordController.text;
 
-                      try {
-                        UserCredential userCredential;
+                              if ((email.isEmpty && telephone.isEmpty) ||
+                                  (email.isNotEmpty && telephone.isNotEmpty)) {
+                                setState(() {
+                                  _isLoading = false; // Arrêter le chargement
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Veuillez remplir soit l'email, soit le téléphone, mais pas les deux.",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
 
-                        if (email.isNotEmpty) {
-                          // Inscription avec email via AuthService
-                          userCredential = await _authService.signUpWithEmail(
-                            email,
-                            password,
-                            displayName: '$nom $prenom',
-                          );
-                        } else {
-                          // Inscription avec téléphone via AuthService
-                          // Ici, il faut gérer la vérification SMS AVANT d'appeler signInWithSmsCode
-                          // Par exemple, tu peux afficher un écran pour entrer le code reçu par SMS
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "L'inscription par téléphone nécessite la vérification SMS.",
-                              ),
-                            ),
-                          );
-                          return;
-                        }
+                              try {
+                                UserCredential userCredential;
 
-                        // Création de l'objet Utilisateur
-                        final utilisateur = Utilisateur(
-                          id: userCredential.user!.uid,
-                          nom: nom,
-                          prenom: prenom,
-                          email: email.isNotEmpty ? email : '',
-                          telephone: telephone.isNotEmpty ? telephone : '',
-                          dateInscription: DateTime.now(),
-                        );
+                                if (email.isNotEmpty) {
+                                  // Inscription avec email via AuthService
+                                  userCredential = await _authService
+                                      .signUpWithEmail(
+                                        email,
+                                        password,
+                                        displayName: '$nom $prenom',
+                                      );
+                                } else {
+                                  // Inscription avec téléphone via AuthService
+                                  setState(() {
+                                    _isLoading = false; // Arrêter le chargement
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "L'inscription par téléphone nécessite la vérification SMS.",
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
 
-                        // Enregistrement dans Firestore
-                        await FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(utilisateur.id)
-                            .set(utilisateur.toMap());
+                                // Création de l'objet Utilisateur
+                                final utilisateur = Utilisateur(
+                                  id: userCredential.user!.uid,
+                                  nom: nom,
+                                  prenom: prenom,
+                                  email: email.isNotEmpty ? email : '',
+                                  telephone:
+                                      telephone.isNotEmpty ? telephone : '',
+                                  dateInscription: DateTime.now(),
+                                );
 
-                        // Navigation ou message de succès
-                        if (mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
-                            ),
-                          );
-                        }
-                      } on FirebaseAuthException catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(e.message ?? 'Erreur d\'inscription'),
-                          ),
-                        );
-                      }
-                    }
-                  },
+                                // Enregistrement dans Firestore
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(utilisateur.id)
+                                    .set(utilisateur.toMap());
+
+                                setState(() {
+                                  _isLoading = false; // Arrêter le chargement
+                                });
+
+                                // Navigation ou message de succès
+                                if (mounted) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginScreen(),
+                                    ),
+                                  );
+                                }
+                              } on FirebaseAuthException catch (e) {
+                                setState(() {
+                                  _isLoading =
+                                      false; // Arrêter le chargement en cas d'erreur
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.message ?? 'Erreur d\'inscription',
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                setState(() {
+                                  _isLoading =
+                                      false; // Arrêter le chargement en cas d'erreur
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Une erreur s\'est produite: $e',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
                   style: DMElevatedButtonTheme.lightElevatedButtonTheme.style,
-                  child: Text(DMTexts.createAccount),
+                  child:
+                      _isLoading
+                          ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    isDark ? Colors.black : Colors.white,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text("Inscription en cours..."),
+                            ],
+                          )
+                          : Text(DMTexts.createAccount),
                 ),
               ),
               const SizedBox(height: DMSizes.spaceBtwItems),
@@ -322,7 +399,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(100),
                     ),
                     child: IconButton(
-                      onPressed: () {},
+                      onPressed:
+                          _isLoading
+                              ? null
+                              : () {}, // Désactivé pendant le chargement
                       icon: Image.asset(
                         'assets/images/icons/icons-google.png',
                         width: DMSizes.iconMd,
@@ -336,20 +416,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // Déjà un compte
               Center(
                 child: TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed:
+                      _isLoading
+                          ? null
+                          : () => Navigator.pop(
+                            context,
+                          ), // Désactivé pendant le chargement
                   child: Text.rich(
                     TextSpan(
                       children: [
                         TextSpan(
                           text: "Vous avez déjà un compte? ",
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
+                            color: _isLoading ? Colors.grey : null,
+                          ),
                         ),
                         TextSpan(
                           text: DMTexts.signIn,
                           style: Theme.of(
                             context,
                           ).textTheme.bodyMedium?.copyWith(
-                            color: DMColors.primary,
+                            color: _isLoading ? Colors.grey : DMColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
