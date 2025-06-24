@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/screens/login_screen.dart';
+import 'package:kassoua/screens/auth/login_screen.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
-import 'package:kassoua/screens/menu_navigation.dart';
-import 'package:kassoua/screens/auth_screen_selection.dart';
+import 'package:kassoua/screens/homepage/menu_navigation.dart';
+import 'package:kassoua/screens/auth/auth_screen_selection.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);

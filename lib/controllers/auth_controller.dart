@@ -122,19 +122,39 @@ class AuthController extends ChangeNotifier {
 
   // Récupérer les données utilisateur Firestore
   Future<Utilisateur?> fetchUserData() async {
-    if (!await isLoggedIn()) return null;
+    if (!await isLoggedIn()) {
+      print('Utilisateur non connecté');
+      return null;
+    }
     try {
       final user = _authService.currentUser;
-      if (user == null) return null;
-      print('Fetch Firestore for uid: ${user.uid}');
+      if (user == null) {
+        print('Aucun utilisateur Firebase connecté');
+        return null;
+      }
+      print('Récupération Firestore pour uid: ${user.uid}');
       final doc =
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .get();
-      if (!doc.exists) return null;
-      return Utilisateur.fromMap(doc.data()!, doc.id);
+      if (!doc.exists) {
+        print('Document Firestore inexistant pour uid: ${user.uid}');
+        return null;
+      }
+      final data = doc.data()!;
+      print('Données Firestore récupérées: $data');
+      // Remplir les champs manquants avec des valeurs par défaut
+      return Utilisateur.fromMap({
+        'nom': data['nom'] ?? '',
+        'prenom': data['prenom'] ?? '',
+        'email': data['email'] ?? '',
+        'telephone': data['telephone'] ?? '',
+        'photoProfil': data['photoProfil'] ?? '',
+        'dateInscription': data['dateInscription'],
+      }, doc.id);
     } catch (e) {
+      print('Erreur lors de la récupération des données utilisateur: $e');
       return null;
     }
   }

@@ -1,4 +1,4 @@
-import 'package:kassoua/screens/menu_navigation.dart';
+import 'package:kassoua/screens/homepage/menu_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
@@ -7,7 +7,7 @@ import 'package:email_validator/email_validator.dart';
 import 'package:kassoua/themes/customs/spacing_style.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/services.dart';
-import 'package:kassoua/screens/signup_screen.dart';
+import 'package:kassoua/screens/auth/signup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:kassoua/constants/colors.dart';

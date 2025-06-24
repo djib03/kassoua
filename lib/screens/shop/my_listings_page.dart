@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
-import 'package:kassoua/screens/add_edit_product_page.dart';
+import 'package:kassoua/screens/shop/add_edit_product_page.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
 

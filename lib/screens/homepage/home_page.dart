@@ -9,7 +9,7 @@ import 'package:kassoua/themes/widget/home_page/products_section.dart';
 import 'package:kassoua/constants/colors.dart';
 
 import 'package:kassoua/screens/search_page.dart';
-import 'package:kassoua/screens/favorite_products_screen.dart'; // Importe la page des favoris
+import 'package:kassoua/screens/homepage/favorite_products_screen.dart'; // Importe la page des favoris
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);

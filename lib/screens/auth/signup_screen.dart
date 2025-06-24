@@ -14,8 +14,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:kassoua/services/auth_service.dart';
-import 'package:kassoua/screens/login_screen.dart';
-import 'package:kassoua/screens/sms_code_screen.dart';
+import 'package:kassoua/screens/auth/login_screen.dart';
+import 'package:kassoua/screens/auth/sms_code_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);

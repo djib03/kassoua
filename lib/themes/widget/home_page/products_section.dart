@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/themes/widget/product_card.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/data/home_data.dart';
-import 'package:kassoua/screens/popular_product_screen.dart';
+import 'package:kassoua/screens/homepage/popular_product_screen.dart';
 
 class ProductsSection extends StatelessWidget {
   final bool isDark;

@@ -1,7 +1,7 @@
 // address_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/screens/add_edit_address_screen.dart';
+import 'package:kassoua/screens/profile/add_edit_address_screen.dart';
 // Importez votre fichier add_edit_address_screen.dart
 // import 'add_edit_address_screen.dart';
 

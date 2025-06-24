@@ -1,15 +1,15 @@
-import 'package:kassoua/screens/address_management_screen.dart';
-import 'package:kassoua/screens/user_detail.dart';
+import 'package:kassoua/screens/profile/address_management_screen.dart';
+import 'package:kassoua/screens/profile/user_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/screens/change_password_screen.dart';
-import 'package:kassoua/screens/notification_screen.dart';
+import 'package:kassoua/screens/profile/change_password_screen.dart';
+import 'package:kassoua/screens/profile/notification_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
-import 'package:kassoua/screens/auth_screen_selection.dart';
+import 'package:kassoua/screens/auth/auth_screen_selection.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -297,7 +297,6 @@ class ProfileScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Avatar avec effet de bordure
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -340,7 +339,9 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 15),
           Text(
-            '${user.nom} ${user.prenom}',
+            user.nom.isEmpty && user.prenom.isEmpty
+                ? 'Utilisateur'
+                : '${user.nom} ${user.prenom}'.trim(),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.bold,

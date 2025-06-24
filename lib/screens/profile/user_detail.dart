@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/screens/edit_user_details.dart';
+import 'package:kassoua/screens/profile/edit_user_details.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';

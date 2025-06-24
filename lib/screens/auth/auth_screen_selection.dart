@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:kassoua/themes/customs/form_divider.dart';
-import 'package:kassoua/screens/login_screen.dart';
-import 'package:kassoua/screens/phone_login_screen.dart';
-import 'package:kassoua/screens/signup_screen.dart';
-import 'package:kassoua/screens/menu_navigation.dart';
+import 'package:kassoua/screens/auth/login_screen.dart';
+import 'package:kassoua/screens/auth/phone_login_screen.dart';
+import 'package:kassoua/screens/auth/signup_screen.dart';
+import 'package:kassoua/screens/homepage/menu_navigation.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/services.dart';
 

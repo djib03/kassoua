@@ -6,9 +6,10 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kassoua/screens/sms_code_screen_login.dart';
-import 'package:kassoua/screens/menu_navigation.dart';
-import 'package:kassoua/screens/sms_code_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kassoua/screens/auth/sms_code_screen_login.dart';
+import 'package:kassoua/screens/homepage/menu_navigation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PhoneLoginScreen extends StatefulWidget {
   const PhoneLoginScreen({Key? key}) : super(key: key);
@@ -42,13 +43,40 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
         await FirebaseAuth.instance.verifyPhoneNumber(
           phoneNumber: _phoneNumber!,
           verificationCompleted: (PhoneAuthCredential credential) async {
-            // Connexion automatique si possible
-            await FirebaseAuth.instance.signInWithCredential(credential);
-            if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const MenuNavigation()),
-              );
+            // Connexion automatique
+            UserCredential userCredential = await FirebaseAuth.instance
+                .signInWithCredential(credential);
+            if (userCredential.user != null) {
+              // Mettre à jour SharedPreferences
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isLoggedIn', true);
+              await prefs.setString('userId', userCredential.user!.uid);
+
+              // Vérifier et créer un document Firestore si nécessaire
+              final userDoc = FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(userCredential.user!.uid);
+              final docSnapshot = await userDoc.get();
+              if (!docSnapshot.exists) {
+                // Créer un document utilisateur par défaut
+                await userDoc.set({
+                  'nom': '',
+                  'prenom': '',
+                  'email': '',
+                  'telephone': _phoneNumber,
+                  'photoProfil': '',
+                  'dateInscription': FieldValue.serverTimestamp(),
+                });
+              }
+
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MenuNavigation(),
+                  ),
+                );
+              }
             }
           },
           verificationFailed: (FirebaseAuthException e) {
@@ -68,8 +96,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
             setState(() {
               _isLoading = false;
             });
-
-            // Naviguer vers l'écran de saisie du code SMS
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -81,9 +107,7 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
               ),
             );
           },
-          codeAutoRetrievalTimeout: (String verificationId) {
-            // Timeout automatique
-          },
+          codeAutoRetrievalTimeout: (String verificationId) {},
           timeout: const Duration(seconds: 60),
         );
       } catch (e) {
