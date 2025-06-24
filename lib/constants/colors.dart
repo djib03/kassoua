@@ -4,7 +4,7 @@ class DMColors {
   DMColors._();
 
   //app basic colors
-  static const Color primary = Color(0xFF4F46E5);
+  static const Color primary = Color(0xff374ABE);
   static const Color primarylight = Color(0xFF818cf8);
   static const Color accent = Color(0xFFb0c7ff);
   static const Color primaryDark = Color(0xFF3730a3);
@@ -24,7 +24,7 @@ class DMColors {
   static Color darkContainer = DMColors.white.withOpacity(0.1);
 
   // Button Colors
-  static const Color buttonPrimary = Color(0xFF4F46E5);
+  static const Color buttonPrimary = Color(0xff374ABE);
   static const Color buttonSecondary = Color(0xFF6C757D);
   static const Color buttonDisabled = Color(0xFFC4C4C4);
 
@@ -36,7 +36,7 @@ class DMColors {
   static const Color error = Color(0xFFD32F2F);
   static const Color success = Color(0xFF388E3C);
   static const Color warning = Color(0xFFF57C00);
-  static const Color info = Color(0xFF1976D2);
+  static const Color info = Color(0xff7990DD);
 
   // Neutral Shades
   static const Color black = Color(0xFF232323);

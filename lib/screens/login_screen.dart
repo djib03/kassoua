@@ -55,27 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
           'Se connecter',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-        actions: [
-          TextButton(
-            onPressed:
-                _isLoading
-                    ? null
-                    : () {
-                      // MODIFIÉ: Désactiver si en cours de chargement
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MenuNavigation(),
-                        ),
-                      );
-                    },
-            child: const Text(
-              'Passer',
-              style: TextStyle(color: DMColors.buttonPrimary),
-            ),
-          ),
-        ],
-        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -153,24 +132,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Email',
                       prefixIcon: Icon(Iconsax.message),
                       border: const OutlineInputBorder(),
-                      suffixIcon: TextButton(
-                        onPressed:
-                            _isLoading
-                                ? null
-                                : () {
-                                  // MODIFIÉ: Désactiver si en cours de chargement
-                                  setState(() {
-                                    _isPhone = !_isPhone;
-                                    _identifierController.clear();
-                                    _phoneNumber = null;
-                                    _email = null;
-                                  });
-                                },
-                        child: Text(
-                          "Utiliser le téléphone",
-                          style: TextStyle(color: DMColors.buttonPrimary),
-                        ),
-                      ),
                     ),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
@@ -238,6 +199,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Checkbox(
+                            fillColor: WidgetStateProperty.all<Color>(
+                              DMColors.primary,
+                            ),
                             value: true,
                             onChanged:
                                 _isLoading
@@ -482,25 +446,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
 
                     const SizedBox(height: DMSizes.spaceBtwItems),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed:
-                            _isLoading
-                                ? null
-                                : () {
-                                  // MODIFIÉ: Désactiver si en cours de chargement
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SignUpScreen(),
-                                    ),
-                                  );
-                                },
-                        child: const Text('Créer un compte'),
-                      ),
-                    ),
                   ],
                 ),
 

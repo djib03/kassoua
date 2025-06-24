@@ -5,11 +5,11 @@ import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/screens/change_password_screen.dart';
 import 'package:kassoua/screens/notification_screen.dart';
-import 'package:kassoua/screens/login_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
+import 'package:kassoua/screens/auth_screen_selection.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -210,8 +210,8 @@ class ProfileScreen extends StatelessWidget {
   // Helper method for anonymous profile
   Widget _buildAnonymousProfile(BuildContext context, bool isDark) {
     return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.all(10),
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 10, top: 24),
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -548,7 +548,7 @@ class ProfileScreen extends StatelessWidget {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => LoginScreen(),
+                              builder: (context) => AuthSelectionScreen(),
                             ),
                           );
                         },
@@ -567,11 +567,18 @@ class ProfileScreen extends StatelessWidget {
                             confirmButtonText: 'Oui ',
                             cancelButtonText: 'Non',
                             onTapConfirm: () async {
-                              // Call logout logic here
                               await Provider.of<AuthController>(
                                 context,
                                 listen: false,
                               ).signOut();
+                              Navigator.of(context).pop(); // Ferme le dialog
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AuthSelectionScreen(),
+                                ),
+                                (route) => false,
+                              );
                             },
                             onTapCancel: () {
                               Navigator.of(context).pop();
@@ -684,12 +691,11 @@ class ProfileScreen extends StatelessWidget {
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => LoginScreen()),
+              MaterialPageRoute(builder: (context) => AuthSelectionScreen()),
             );
           },
         ),
         backgroundColor: DMColors.primary,
-        duration: const Duration(seconds: 6),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(16),

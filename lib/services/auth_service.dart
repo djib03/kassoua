@@ -72,4 +72,62 @@ class AuthService {
     );
     return _firebaseAuth.signInWithCredential(credential);
   }
+
+  // Démarre le processus d’authentification avec le numéro
+  Future<void> loginWithPhoneNumber({
+    required String phoneNumber,
+    required Function(String verificationId) onCodeSent,
+    required Function(String error) onError,
+    required Function() onAutoVerified,
+    required Function() onTimeout,
+  }) async {
+    try {
+      await _firebaseAuth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await _firebaseAuth.signInWithCredential(credential);
+          onAutoVerified();
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          onError(e.message ?? "Erreur lors de la vérification");
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          onCodeSent(verificationId);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          onTimeout();
+        },
+      );
+    } catch (e) {
+      onError(e.toString());
+    }
+  }
+
+  // Vérifie le code OTP manuellement
+  Future<void> verifyOtpCode({
+    required String verificationId,
+    required String smsCode,
+    required Function(User user) onSuccess,
+    required Function(String error) onError,
+  }) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
+
+      final user = userCredential.user;
+      if (user != null) {
+        onSuccess(user);
+      } else {
+        onError("Utilisateur non trouvé");
+      }
+    } catch (e) {
+      onError(e.toString());
+    }
+  }
 }

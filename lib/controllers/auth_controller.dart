@@ -126,6 +126,7 @@ class AuthController extends ChangeNotifier {
     try {
       final user = _authService.currentUser;
       if (user == null) return null;
+      print('Fetch Firestore for uid: ${user.uid}');
       final doc =
           await FirebaseFirestore.instance
               .collection('users')

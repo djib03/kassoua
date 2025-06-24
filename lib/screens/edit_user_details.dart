@@ -18,11 +18,8 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   // Contrôleurs pour les champs de texte
   final TextEditingController _nameController = TextEditingController();
@@ -35,26 +32,41 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   final List<String> _genderOptions = ['Masculin', 'Féminin', 'Autre'];
 
   bool _isLoading = false;
+  bool _isSaving = false;
+  bool _hasChanges = false;
   Utilisateur? _currentUser;
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
-    );
-
     _fetchUserData();
+    _setupChangeListeners();
+  }
+
+  void _setupChangeListeners() {
+    _nameController.addListener(_onFieldChanged);
+    _firstNameController.addListener(_onFieldChanged);
+    _emailController.addListener(_onFieldChanged);
+    _phoneController.addListener(_onFieldChanged);
+    _birthDateController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    if (!_hasChanges) {
+      setState(() {
+        _hasChanges = true;
+      });
+    }
   }
 
   @override
@@ -95,9 +107,9 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                 "${_currentUser!.dateNaissance!.day} ${_getMonthName(_currentUser!.dateNaissance!.month)} ${_currentUser!.dateNaissance!.year}";
           }
           _selectedGender = _currentUser!.genre ?? 'Autre';
+          _animationController.forward();
         }
       }
-      _animationController.forward();
     } catch (e) {
       print('Error fetching user data: $e');
       _showErrorSnackBar('Erreur lors du chargement des données utilisateur.');
@@ -108,430 +120,419 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     }
   }
 
-  Widget _buildAnimatedCard({required Widget child}) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(opacity: _fadeAnimation, child: child),
-    );
-  }
-
-  Widget _buildProfileHeader(Brightness brightness) {
-    final Color cardColor =
-        brightness == Brightness.dark ? Colors.grey[850]! : Colors.white;
-
-    return _buildAnimatedCard(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
+  Widget _buildSection(
+    String title,
+    List<Widget> children,
+    Brightness brightness, {
+    bool isLast = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, isLast ? 20 : 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      DMColors.primary,
+                      DMColors.primary.withOpacity(0.6),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color:
+                      brightness == Brightness.dark
+                          ? DMColors.white
+                          : DMColors.black,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+          if (!isLast) ...[
+            const SizedBox(height: 16),
+            Divider(
               color:
                   brightness == Brightness.dark
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.grey.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+                      ? Colors.grey[800]
+                      : Colors.grey[200],
+              thickness: 1,
             ),
           ],
-        ),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                Hero(
-                  tag: 'profile_photo',
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          DMColors.primary.withOpacity(0.8),
-                          DMColors.primary,
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: DMColors.primary.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(3),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(50),
-                        child:
-                            _currentUser?.photoProfil != null &&
-                                    _currentUser!.photoProfil!.isNotEmpty
-                                ? Image.network(
-                                  _currentUser!.photoProfil!,
-                                  fit: BoxFit.cover,
-                                )
-                                : Container(
-                                  color: Colors.grey[100],
-                                  child: Icon(
-                                    Iconsax.user,
-                                    size: 40,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: _isLoading ? null : _pickAndUploadImage,
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: DMColors.primary,
-                          boxShadow: [
-                            BoxShadow(
-                              color: DMColors.primary.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Iconsax.camera,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Modifier votre profil',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color:
-                    brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Mettez à jour vos informations personnelles',
-              style: TextStyle(
-                fontSize: 14,
-                color:
-                    brightness == Brightness.dark
-                        ? Colors.grey[400]
-                        : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildFormSection({
-    required String title,
-    required List<Widget> children,
+  Widget _buildEditableInfoRow({
+    required IconData icon,
+    required String label,
+    required Widget child,
     required Brightness brightness,
-    IconData? icon,
+    bool isRequired = false,
   }) {
-    final Color cardColor =
-        brightness == Brightness.dark ? Colors.grey[850]! : Colors.white;
-
-    return _buildAnimatedCard(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardColor,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  brightness == Brightness.dark
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          border: Border.all(
+            color:
+                brightness == Brightness.dark
+                    ? Colors.grey[800]!
+                    : Colors.grey[200]!,
+            width: 1,
+          ),
+          color:
+              brightness == Brightness.dark
+                  ? Colors.grey[900]?.withOpacity(0.3)
+                  : Colors.grey[50],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: Row(
-                children: [
-                  if (icon != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: DMColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(icon, size: 20, color: DMColors.primary),
-                    ),
-                    const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    DMColors.primary.withOpacity(0.1),
+                    DMColors.primary.withOpacity(0.05),
                   ],
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 18,
-                      color:
-                          brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black87,
-                    ),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Icon(icon, size: 20, color: DMColors.primary),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color:
+                              brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black87,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      if (isRequired) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '*',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  child,
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Column(children: children),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModernTextField({
+  Widget _buildTextField({
     required TextEditingController controller,
-    required IconData icon,
-    required String label,
     required String hint,
     required Brightness brightness,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
     bool readOnly = false,
     VoidCallback? onTap,
+    int maxLines = 1,
   }) {
     final Color textColor =
         brightness == Brightness.dark ? Colors.white : Colors.black87;
     final Color hintColor =
         brightness == Brightness.dark ? Colors.grey[400]! : Colors.grey[600]!;
-    final Color fillColor =
-        brightness == Brightness.dark ? Colors.grey[800]! : Colors.grey[50]!;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8, left: 4),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-                color: textColor,
-              ),
-            ),
-          ),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            readOnly: readOnly,
-            onTap: onTap,
-            style: TextStyle(color: textColor, fontSize: 16),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(color: hintColor, fontSize: 15),
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: DMColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 20, color: DMColors.primary),
-              ),
-              filled: true,
-              fillColor: fillColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: DMColors.primary, width: 2),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-            ),
-            validator: validator,
-          ),
-        ],
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      readOnly: readOnly,
+      onTap: onTap,
+      maxLines: maxLines,
+      style: TextStyle(
+        color: textColor,
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
+        height: 1.4,
       ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: hintColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor:
+            brightness == Brightness.dark
+                ? Colors.grey[800]?.withOpacity(0.3)
+                : Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        suffixIcon:
+            readOnly
+                ? Icon(
+                  Iconsax.calendar,
+                  color: DMColors.primary.withOpacity(0.7),
+                  size: 20,
+                )
+                : null,
+      ),
+      validator: validator,
     );
   }
 
-  Widget _buildModernDropdown(Brightness brightness) {
+  Widget _buildDropdownField(Brightness brightness) {
     final Color textColor =
         brightness == Brightness.dark ? Colors.white : Colors.black87;
-    final Color fillColor =
-        brightness == Brightness.dark ? Colors.grey[800]! : Colors.grey[50]!;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8, left: 4),
-            child: Text(
-              'Genre',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-                color: textColor,
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color:
+            brightness == Brightness.dark
+                ? Colors.grey[800]?.withOpacity(0.3)
+                : Colors.white,
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _selectedGender,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
-          DropdownButtonFormField<String>(
-            value: _selectedGender,
-            style: TextStyle(color: textColor, fontSize: 16),
-            decoration: InputDecoration(
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: DMColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+          filled: true,
+          fillColor: Colors.transparent,
+        ),
+        dropdownColor:
+            brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
+        items:
+            _genderOptions.map((String gender) {
+              return DropdownMenuItem<String>(
+                value: gender,
+                child: Row(
+                  children: [
+                    Icon(
+                      gender == 'Masculin'
+                          ? Iconsax.man
+                          : gender == 'Féminin'
+                          ? Iconsax.woman
+                          : Iconsax.user,
+                      size: 16,
+                      color: DMColors.primary.withOpacity(0.7),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(gender),
+                  ],
                 ),
-                child: Icon(Iconsax.user, size: 20, color: DMColors.primary),
-              ),
-              filled: true,
-              fillColor: fillColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: DMColors.primary, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-            ),
-            dropdownColor:
-                brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
-            items:
-                _genderOptions.map((String gender) {
-                  return DropdownMenuItem<String>(
-                    value: gender,
-                    child: Text(gender),
-                  );
-                }).toList(),
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  _selectedGender = newValue;
-                });
-              }
-            },
-          ),
-        ],
+              );
+            }).toList(),
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _selectedGender = newValue;
+            });
+          }
+        },
       ),
     );
   }
 
-  Widget _buildSaveButton(Brightness brightness) {
-    return _buildAnimatedCard(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        width: double.infinity,
-        height: 56,
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _saveProfile,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: DMColors.primary,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shadowColor: DMColors.primary.withOpacity(0.3),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ).copyWith(
-            elevation: MaterialStateProperty.resolveWith<double>((
-              Set<MaterialState> states,
-            ) {
-              if (states.contains(MaterialState.pressed)) return 8;
-              return 4;
-            }),
-          ),
-          child:
-              _isLoading
-                  ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                  : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Iconsax.tick_circle, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Sauvegarder les modifications',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+  Widget _buildProfileHeader(Brightness brightness) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          Hero(
+            tag: 'profile_image_edit',
+            child: Stack(
+              children: [
+                Container(
+                  width: 130,
+                  height: 130,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: DMColors.primary.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-        ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: DMColors.primary.withOpacity(0.3),
+                        width: 3,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(65),
+                      child:
+                          (_currentUser?.photoProfil == null ||
+                                  _currentUser!.photoProfil!.isEmpty)
+                              ? Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      DMColors.primary.withOpacity(0.1),
+                                      DMColors.primary.withOpacity(0.05),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                                child: Image.asset(
+                                  'assets/images/user.png',
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                              : Image.network(
+                                _currentUser!.photoProfil!,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (context, error, stackTrace) => Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            DMColors.primary.withOpacity(0.1),
+                                            DMColors.primary.withOpacity(0.05),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Image.asset(
+                                        'assets/images/user.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                              ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : _pickAndUploadImage,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            DMColors.primary,
+                            DMColors.primary.withOpacity(0.8),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(
+                          color:
+                              brightness == Brightness.dark
+                                  ? DMColors.black
+                                  : Colors.white,
+                          width: 3,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: DMColors.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child:
+                          _isLoading
+                              ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                              : Icon(
+                                Iconsax.camera,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Modifier votre photo',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color:
+                  brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.black54,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -541,14 +542,20 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
+            Icon(Iconsax.warning_2, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -558,14 +565,20 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
+            Icon(Iconsax.tick_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -579,9 +592,14 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(
-              context,
-            ).colorScheme.copyWith(primary: DMColors.primary),
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: DMColors.primary,
+              onPrimary: Colors.white,
+              surface:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[800]
+                      : Colors.white,
+            ),
           ),
           child: child!,
         );
@@ -635,7 +653,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        _isLoading = true;
+        _isSaving = true;
       });
 
       try {
@@ -670,14 +688,14 @@ class _EditProfileScreenState extends State<EditProfileScreen>
               .set(updatedUser.toMap());
 
           _showSuccessSnackBar('Profil mis à jour avec succès');
-          Navigator.pop(context);
+          Navigator.pop(context, true);
         }
       } catch (e) {
         print('Error updating user data: $e');
         _showErrorSnackBar('Erreur lors de la mise à jour du profil.');
       } finally {
         setState(() {
-          _isLoading = false;
+          _isSaving = false;
         });
       }
     }
@@ -699,7 +717,6 @@ class _EditProfileScreenState extends State<EditProfileScreen>
 
       final file = File(pickedFile.path);
 
-      // 🔄 Préparation de la requête vers Cloudinary
       final uri = Uri.parse(
         "https://api.cloudinary.com/v1_1/dzttvgpfs/image/upload",
       );
@@ -716,12 +733,9 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         final decoded = json.decode(responseData);
         final imageUrl = decoded['secure_url'];
 
-        print('✅ Image URL Cloudinary: $imageUrl');
-
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return;
 
-        // 🔥 Mise à jour Firestore avec l'URL
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -733,7 +747,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           }
         });
 
-        _showSuccessSnackBar('✅ Photo mise à jour !');
+        _showSuccessSnackBar('Photo mise à jour avec succès !');
       } else {
         print('❌ Erreur Cloudinary: ${response.statusCode}');
         _showErrorSnackBar("Erreur d'envoi (${response.statusCode})");
@@ -752,6 +766,12 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     final Brightness brightness = Theme.of(context).brightness;
     final Color backgroundColor =
         brightness == Brightness.dark ? DMColors.black : DMColors.white;
+    final Color cardColor =
+        brightness == Brightness.dark ? Colors.grey[900]! : DMColors.white;
+    final Color shadowColor =
+        brightness == Brightness.dark
+            ? Colors.black.withOpacity(0.3)
+            : Colors.grey.withOpacity(0.15);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -759,9 +779,9 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         title: Text(
           'Modifier le profil',
           style: TextStyle(
-            color:
-                brightness == Brightness.dark ? Colors.white : DMColors.black,
+            color: brightness == Brightness.dark ? Colors.white : Colors.black,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
         ),
         backgroundColor: backgroundColor,
@@ -769,106 +789,210 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         iconTheme: IconThemeData(
           color: brightness == Brightness.dark ? Colors.white : Colors.black,
         ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors:
+                        _hasChanges
+                            ? [
+                              DMColors.primary.withOpacity(0.2),
+                              DMColors.primary.withOpacity(0.1),
+                            ]
+                            : [
+                              Colors.grey.withOpacity(0.1),
+                              Colors.grey.withOpacity(0.05),
+                            ],
+                  ),
+                ),
+                child:
+                    _isSaving
+                        ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              DMColors.primary,
+                            ),
+                          ),
+                        )
+                        : Icon(
+                          Iconsax.tick_circle,
+                          color: _hasChanges ? DMColors.primary : Colors.grey,
+                          size: 20,
+                        ),
+              ),
+              onPressed: (_isSaving || !_hasChanges) ? null : _saveProfile,
+            ),
+          ),
+        ],
       ),
       body:
           _isLoading && _currentUser == null
-              ? const Center(child: CircularProgressIndicator())
-              : Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    children: [
-                      _buildProfileHeader(brightness),
-                      _buildFormSection(
-                        title: 'Informations personnelles',
-                        icon: Iconsax.user_octagon,
-                        brightness: brightness,
-                        children: [
-                          _buildModernTextField(
-                            controller: _nameController,
-                            icon: Iconsax.user_tag,
-                            label: 'Nom',
-                            hint: 'Entrez votre nom',
-                            brightness: brightness,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Veuillez entrer votre nom';
-                              }
-                              return null;
-                            },
-                          ),
-                          _buildModernTextField(
-                            controller: _firstNameController,
-                            icon: Iconsax.user,
-                            label: 'Prénom',
-                            hint: 'Entrez votre prénom',
-                            brightness: brightness,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Veuillez entrer votre prénom';
-                              }
-                              return null;
-                            },
-                          ),
-                          _buildModernTextField(
-                            controller: _emailController,
-                            icon: Iconsax.message,
-                            label: 'Email',
-                            hint: 'Entrez votre email',
-                            brightness: brightness,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Veuillez entrer votre email';
-                              }
-                              if (!value.contains('@')) {
-                                return 'Veuillez entrer un email valide';
-                              }
-                              return null;
-                            },
-                          ),
-                          _buildModernTextField(
-                            controller: _phoneController,
-                            icon: Iconsax.call,
-                            label: 'Téléphone',
-                            hint: 'Entrez votre numéro de téléphone',
-                            brightness: brightness,
-                            keyboardType: TextInputType.phone,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Veuillez entrer votre numéro de téléphone';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: DMColors.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Chargement des informations...',
+                      style: TextStyle(
+                        color:
+                            brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black54,
+                        fontSize: 16,
                       ),
-                      _buildFormSection(
-                        title: 'Informations complémentaires',
-                        icon: Iconsax.info_circle,
-                        brightness: brightness,
-                        children: [
-                          _buildModernTextField(
-                            controller: _birthDateController,
-                            icon: Iconsax.calendar,
-                            label: 'Date de naissance',
-                            hint: 'Sélectionnez votre date de naissance',
-                            brightness: brightness,
-                            readOnly: true,
-                            onTap: () => _selectDate(context),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Veuillez sélectionner votre date de naissance';
-                              }
-                              return null;
-                            },
+                    ),
+                  ],
+                ),
+              )
+              : FadeTransition(
+                opacity: _fadeAnimation,
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        _buildProfileHeader(brightness),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: cardColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: shadowColor,
+                                blurRadius: 25,
+                                offset: const Offset(0, 8),
+                                spreadRadius: 0,
+                              ),
+                            ],
                           ),
-                          _buildModernDropdown(brightness),
-                        ],
-                      ),
-                      _buildSaveButton(brightness),
-                    ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSection('Informations Personnelles', [
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.user_tag,
+                                  label: 'Nom',
+                                  brightness: brightness,
+                                  isRequired: true,
+                                  child: _buildTextField(
+                                    controller: _nameController,
+                                    hint: 'Entrez votre nom',
+                                    brightness: brightness,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Veuillez entrer votre nom';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.user,
+                                  label: 'Prénom',
+                                  brightness: brightness,
+                                  isRequired: true,
+                                  child: _buildTextField(
+                                    controller: _firstNameController,
+                                    hint: 'Entrez votre prénom',
+                                    brightness: brightness,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Veuillez entrer votre prénom';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.message,
+                                  label: 'Email',
+                                  brightness: brightness,
+                                  isRequired: true,
+                                  child: _buildTextField(
+                                    controller: _emailController,
+                                    hint: 'Entrez votre email',
+                                    brightness: brightness,
+                                    keyboardType: TextInputType.emailAddress,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Veuillez entrer votre email';
+                                      }
+                                      if (!value.contains('@')) {
+                                        return 'Veuillez entrer un email valide';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.call,
+                                  label: 'Téléphone',
+                                  brightness: brightness,
+                                  isRequired: true,
+                                  child: _buildTextField(
+                                    controller: _phoneController,
+                                    hint: 'Entrez votre numéro de téléphone',
+                                    brightness: brightness,
+                                    keyboardType: TextInputType.phone,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Veuillez entrer votre numéro de téléphone';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ], brightness),
+                              _buildSection(
+                                'Informations Supplémentaires',
+                                [
+                                  _buildEditableInfoRow(
+                                    icon: Iconsax.calendar,
+                                    label: 'Date de naissance',
+                                    brightness: brightness,
+                                    child: _buildTextField(
+                                      controller: _birthDateController,
+                                      hint:
+                                          'Sélectionnez votre date de naissance',
+                                      brightness: brightness,
+                                      readOnly: true,
+                                      onTap: () => _selectDate(context),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Veuillez sélectionner votre date de naissance';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  _buildEditableInfoRow(
+                                    icon: Iconsax.user4,
+                                    label: 'Genre',
+                                    brightness: brightness,
+                                    child: _buildDropdownField(brightness),
+                                  ),
+                                ],
+                                brightness,
+                                isLast: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
               ),

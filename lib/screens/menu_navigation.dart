@@ -5,6 +5,7 @@ import 'package:kassoua/screens/home_page.dart'; // Importez votre HomePage
 import 'package:kassoua/screens/Chat/conversations_list_page.dart';
 import 'package:kassoua/screens/my_listings_page.dart';
 import 'package:kassoua/screens/profile_screen.dart';
+import 'package:flutter/services.dart';
 
 class MenuNavigation extends StatefulWidget {
   const MenuNavigation({Key? key}) : super(key: key);
@@ -27,6 +28,8 @@ class _MenuNavigationState extends State<MenuNavigation> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+
+      HapticFeedback.lightImpact();
     });
   }
 

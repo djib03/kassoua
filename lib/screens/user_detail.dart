@@ -6,32 +6,101 @@ import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
 
-class UserDetailScreen extends StatelessWidget {
+class UserDetailScreen extends StatefulWidget {
   const UserDetailScreen({Key? key}) : super(key: key);
+
+  @override
+  State<UserDetailScreen> createState() => _UserDetailScreenState();
+}
+
+class _UserDetailScreenState extends State<UserDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   Widget _buildSection(
     String title,
     List<Widget> children,
-    Brightness brightness,
-  ) {
+    Brightness brightness, {
+    bool isLast = false,
+  }) {
     return Padding(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(24, 20, 24, isLast ? 20 : 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      DMColors.primary,
+                      DMColors.primary.withOpacity(0.6),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color:
+                      brightness == Brightness.dark
+                          ? DMColors.white
+                          : DMColors.black,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+          if (!isLast) ...[
+            const SizedBox(height: 12),
+            Divider(
               color:
                   brightness == Brightness.dark
-                      ? DMColors.white
-                      : DMColors.black, // Couleur du texte adaptée au thème
+                      ? Colors.grey[800]
+                      : Colors.grey[200],
+              thickness: 1,
+              indent: 0,
+              endIndent: 0,
             ),
-          ),
-          const SizedBox(height: 10),
-          ...children,
+          ],
         ],
       ),
     );
@@ -41,36 +110,211 @@ class UserDetailScreen extends StatelessWidget {
     required IconData icon,
     required String label,
     required String value,
-    required Brightness brightness, // Ajout du paramètre brightness
+    required Brightness brightness,
+    bool isClickable = false,
+    VoidCallback? onTap,
   }) {
+    final Color valueColor =
+        brightness == Brightness.dark ? Colors.white70 : Colors.black87;
+    final Color labelColor =
+        brightness == Brightness.dark ? Colors.white : Colors.black87;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-            child: Icon(
-              icon,
-              size: 20,
-              color: DMColors.primary,
-            ), // La couleur de l'icône reste bleue
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color:
+                isClickable
+                    ? (brightness == Brightness.dark
+                        ? Colors.grey[800]?.withOpacity(0.3)
+                        : Colors.grey[50])
+                    : Colors.transparent,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      DMColors.primary.withOpacity(0.1),
+                      DMColors.primary.withOpacity(0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                child: Icon(icon, size: 20, color: DMColors.primary),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: labelColor,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: valueColor,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              if (isClickable)
+                Icon(
+                  Iconsax.arrow_right_3,
+                  size: 16,
+                  color: DMColors.primary.withOpacity(0.7),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatBirthDate(DateTime? date) {
+    if (date == null) return 'Non renseignée';
+    const months = [
+      '',
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre',
+    ];
+    return '${date.day} ${months[date.month]} ${date.year}';
+  }
+
+  Widget _buildProfileHeader(Utilisateur user, Brightness brightness) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          Hero(
+            tag: 'profile_image',
+            child: Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: DMColors.primary.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: DMColors.primary.withOpacity(0.3),
+                    width: 3,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(65),
+                  child:
+                      (user.photoProfil == null || user.photoProfil!.isEmpty)
+                          ? Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  DMColors.primary.withOpacity(0.1),
+                                  DMColors.primary.withOpacity(0.05),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: Image.asset(
+                              'assets/images/user.png',
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                          : Image.network(
+                            user.photoProfil!,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (context, error, stackTrace) => Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        DMColors.primary.withOpacity(0.1),
+                                        DMColors.primary.withOpacity(0.05),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                  ),
+                                  child: Image.asset(
+                                    'assets/images/user.png',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                          ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            '${user.nom} ${user.prenom}',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color:
+                  brightness == Brightness.dark ? Colors.white : Colors.black,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [
+                  DMColors.primary.withOpacity(0.1),
+                  DMColors.primary.withOpacity(0.05),
+                ],
+              ),
+            ),
+            child: Text(
+              user.email.isNotEmpty ? user.email : 'Email non renseigné',
+              style: TextStyle(
+                fontSize: 14,
+                color: DMColors.primary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -80,57 +324,82 @@ class UserDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Brightness brightness =
-        Theme.of(context).brightness; // Récupère le thème actuel
+    final Brightness brightness = Theme.of(context).brightness;
     final Color backgroundColor =
-        brightness == Brightness.dark
-            ? Theme.of(context).colorScheme.surface
-            : DMColors.white;
+        brightness == Brightness.dark ? DMColors.black : DMColors.white;
     final Color cardColor =
-        brightness == Brightness.dark
-            ? Colors.grey[900]!
-            : DMColors.white; // Couleur de la carte
+        brightness == Brightness.dark ? Colors.grey[900]! : DMColors.white;
     final Color shadowColor =
         brightness == Brightness.dark
-            ? Colors.transparent
-            : Colors.grey.withOpacity(0.2); // Ombre adaptée
+            ? Colors.black.withOpacity(0.3)
+            : Colors.grey.withOpacity(0.15);
 
     return Scaffold(
-      backgroundColor: backgroundColor, // Fond de l'écran adapté au thème
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text(
-          'Informations du compte',
+          'Mon Profil',
           style: TextStyle(
-            color:
-                brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black, // Couleur du titre de l'AppBar
+            color: brightness == Brightness.dark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
         ),
-        backgroundColor: backgroundColor, // Fond de l'AppBar adapté au thème
-        elevation:
-            0, // Enlève l'ombre par défaut de l'AppBar pour un look plus propre
+        backgroundColor: backgroundColor,
+        elevation: 0,
         iconTheme: IconThemeData(
-          color:
-              brightness == Brightness.dark
-                  ? Colors.white
-                  : Colors.black, // Couleur des icônes de l'AppBar
+          color: brightness == Brightness.dark ? Colors.white : Colors.black,
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              Iconsax.edit,
-              color:
-                  brightness == Brightness.dark
-                      ? DMColors.white
-                      : DMColors.black,
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      DMColors.primary.withOpacity(0.1),
+                      DMColors.primary.withOpacity(0.05),
+                    ],
+                  ),
+                ),
+                child: Icon(Iconsax.edit, color: DMColors.primary, size: 20),
+              ),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder:
+                        (context, animation, secondaryAnimation) =>
+                            const EditProfileScreen(),
+                    transitionsBuilder: (
+                      context,
+                      animation,
+                      secondaryAnimation,
+                      child,
+                    ) {
+                      const begin = Offset(1.0, 0.0);
+                      const end = Offset.zero;
+                      const curve = Curves.easeInOut;
+                      final tween = Tween(
+                        begin: begin,
+                        end: end,
+                      ).chain(CurveTween(curve: curve));
+                      return SlideTransition(
+                        position: animation.drive(tween),
+                        child: child,
+                      );
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
+                );
+                if (result == true) {
+                  setState(() {});
+                }
+              },
             ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => EditProfileScreen()),
-              );
-            },
           ),
         ],
       ),
@@ -138,122 +407,201 @@ class UserDetailScreen extends StatelessWidget {
         future:
             Provider.of<AuthController>(context, listen: false).fetchUserData(),
         builder: (context, snapshot) {
-          final brightness = Theme.of(context).brightness;
-          final cardColor =
-              brightness == Brightness.dark
-                  ? Colors.grey[900]!
-                  : DMColors.white;
-          final shadowColor =
-              brightness == Brightness.dark
-                  ? Colors.transparent
-                  : Colors.grey.withOpacity(0.2);
-
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text('Aucune information utilisateur'));
-          }
-          final user = snapshot.data!;
-
-          return Padding(
-            padding: EdgeInsets.only(),
-            child: SingleChildScrollView(
+            return Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey, width: 4),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(60),
-                      child:
-                          (user.photoProfil == null ||
-                                  user.photoProfil!.isEmpty)
-                              ? Image.asset('assets/images/user.png')
-                              : Image.network(
-                                user.photoProfil!,
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) =>
-                                        Image.asset('assets/images/user.png'),
-                              ),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  Container(
-                    margin: EdgeInsets.symmetric(horizontal: 24),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
+                  CircularProgressIndicator(color: DMColors.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Chargement des informations...',
+                    style: TextStyle(
                       color:
-                          cardColor, // Couleur de fond de la carte adaptée au thème
-                      boxShadow: [
-                        BoxShadow(
-                          color: shadowColor,
-                          blurRadius: 20,
-                          offset: Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSection('Information Personnelle', [
-                          _buildInfoRow(
-                            icon: Iconsax.profile_2user,
-                            label: 'Nom Complet',
-                            value: '${user.nom} ${user.prenom}',
-                            brightness: brightness,
-                          ),
-                          _buildInfoRow(
-                            icon: Iconsax.message,
-                            label: 'Email',
-                            value:
-                                user.email.isNotEmpty
-                                    ? user.email
-                                    : 'Non renseigné',
-                            brightness: brightness,
-                          ),
-                          _buildInfoRow(
-                            icon: Iconsax.call,
-                            label: 'Téléphone',
-                            value:
-                                user.telephone.isNotEmpty
-                                    ? user.telephone
-                                    : 'Non renseigné',
-                            brightness: brightness,
-                          ),
-                          _buildInfoRow(
-                            icon: Iconsax.location,
-                            label: 'Adresse',
-                            value: 'Non renseignée',
-                            brightness: brightness,
-                          ),
-                        ], brightness),
-                        _buildSection('Plus d\'information', [
-                          _buildInfoRow(
-                            icon: Iconsax.calendar,
-                            label: 'Date de naissance',
-                            value:
-                                user.dateNaissance != null
-                                    ? '${user.dateNaissance!.day}/${user.dateNaissance!.month}/${user.dateNaissance!.year}'
-                                    : 'Non renseignée',
-                            brightness: brightness,
-                          ),
-                          _buildInfoRow(
-                            icon: Iconsax.user4,
-                            label: 'Genre',
-                            value: user.genre ?? 'Non renseigné',
-                            brightness: brightness,
-                          ),
-                        ], brightness), // Passage du paramètre brightness
-                      ],
+                          brightness == Brightness.dark
+                              ? Colors.white70
+                              : Colors.black54,
+                      fontSize: 16,
                     ),
                   ),
                 ],
+              ),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Iconsax.warning_2,
+                    size: 64,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Erreur de chargement',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Impossible de charger vos informations',
+                    style: TextStyle(
+                      color:
+                          brightness == Brightness.dark
+                              ? Colors.white70
+                              : Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Iconsax.user,
+                    size: 64,
+                    color: Colors.grey.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Aucune information disponible',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final user = snapshot.data!;
+
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildProfileHeader(user, brightness),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: cardColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: shadowColor,
+                            blurRadius: 25,
+                            offset: const Offset(0, 8),
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSection('Informations Personnelles', [
+                            _buildInfoRow(
+                              icon: Iconsax.user_tag,
+                              label: 'Nom',
+                              value:
+                                  user.nom.isNotEmpty
+                                      ? user.nom
+                                      : 'Non renseigné',
+                              brightness: brightness,
+                            ),
+                            _buildInfoRow(
+                              icon: Iconsax.user,
+                              label: 'Prénom',
+                              value:
+                                  user.prenom.isNotEmpty
+                                      ? user.prenom
+                                      : 'Non renseigné',
+                              brightness: brightness,
+                            ),
+                            _buildInfoRow(
+                              icon: Iconsax.call,
+                              label: 'Téléphone',
+                              value:
+                                  user.telephone.isNotEmpty
+                                      ? user.telephone
+                                      : 'Non renseigné',
+                              brightness: brightness,
+                              isClickable: user.telephone.isNotEmpty,
+                              onTap:
+                                  user.telephone.isNotEmpty
+                                      ? () {
+                                        // Logique pour appeler le numéro
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Appel de ${user.telephone}',
+                                            ),
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      : null,
+                            ),
+                            _buildInfoRow(
+                              icon: Iconsax.location,
+                              label: 'Adresse',
+                              value: 'Non renseignée',
+                              brightness: brightness,
+                            ),
+                          ], brightness),
+                          _buildSection(
+                            'Informations Supplémentaires',
+                            [
+                              _buildInfoRow(
+                                icon: Iconsax.calendar,
+                                label: 'Date de naissance',
+                                value: _formatBirthDate(user.dateNaissance),
+                                brightness: brightness,
+                              ),
+                              _buildInfoRow(
+                                icon: Iconsax.user4,
+                                label: 'Genre',
+                                value: user.genre ?? 'Non renseigné',
+                                brightness: brightness,
+                              ),
+                            ],
+                            brightness,
+                            isLast: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           );

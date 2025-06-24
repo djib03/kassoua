@@ -13,7 +13,7 @@ class KassouaApp extends StatelessWidget {
       darkTheme: DMappTheme.dmShopDarkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }

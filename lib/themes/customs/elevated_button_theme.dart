@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kassoua/constants/colors.dart';
 
 /// Light and Dark Elevated Button Themes
 class DMElevatedButtonTheme {
@@ -10,10 +11,10 @@ class DMElevatedButtonTheme {
     style: ElevatedButton.styleFrom(
       elevation: 4,
       foregroundColor: Colors.white,
-      backgroundColor: Color(0xFF4F46E5),
+      backgroundColor: DMColors.buttonPrimary,
       disabledForegroundColor: Colors.grey,
       disabledBackgroundColor: Colors.grey,
-      side: const BorderSide(color: Color(0xFF4F46E5)),
+      side: const BorderSide(color: DMColors.buttonPrimary),
       padding: const EdgeInsets.symmetric(vertical: 18),
       textStyle: const TextStyle(
         fontSize: 16,
@@ -29,10 +30,10 @@ class DMElevatedButtonTheme {
     style: ElevatedButton.styleFrom(
       elevation: 0,
       foregroundColor: Colors.white,
-      backgroundColor: Color(0xFF4F46E5),
+      backgroundColor: DMColors.buttonPrimary,
       disabledForegroundColor: Colors.grey,
       disabledBackgroundColor: Colors.grey,
-      side: const BorderSide(color: Color(0xFF4F46E5)),
+      side: const BorderSide(color: DMColors.buttonPrimary),
       padding: const EdgeInsets.symmetric(vertical: 18),
       textStyle: const TextStyle(
         fontSize: 16,

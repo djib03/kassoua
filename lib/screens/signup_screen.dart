@@ -9,13 +9,13 @@ import 'package:kassoua/themes/customs/form_divider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:email_validator/email_validator.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kassoua/constants/text_string.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:kassoua/services/auth_service.dart';
 import 'package:kassoua/screens/login_screen.dart';
+import 'package:kassoua/screens/sms_code_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -261,7 +261,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               String nom = _firstNameController.text.trim();
                               String prenom = _lastNameController.text.trim();
                               String email = _emailController.text.trim();
-                              String telephone = _phoneNoController.text.trim();
+                              String telephone = _phoneNumber ?? '';
                               String password = _passwordController.text;
 
                               if ((email.isEmpty && telephone.isEmpty) ||
@@ -293,15 +293,78 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 } else {
                                   // Inscription avec téléphone via AuthService
                                   setState(() {
-                                    _isLoading = false; // Arrêter le chargement
+                                    _isLoading =
+                                        true; // Commencer le chargement
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "L'inscription par téléphone nécessite la vérification SMS.",
-                                      ),
-                                    ),
+                                  // Ceci doit être fait avant d'appeler verifyPhoneNumber pour les tests
+                                  FirebaseAuth.instance.setSettings(
+                                    appVerificationDisabledForTesting: true,
                                   );
+
+                                  await FirebaseAuth.instance.verifyPhoneNumber(
+                                    phoneNumber: telephone,
+                                    verificationCompleted: (
+                                      PhoneAuthCredential credential,
+                                    ) async {
+                                      // Optionally sign in the user automatically here
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                    },
+                                    verificationFailed: (
+                                      FirebaseAuthException e,
+                                    ) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            e.message ??
+                                                'Erreur de vérification du téléphone',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    codeSent: (
+                                      String verificationId,
+                                      int? resendToken,
+                                    ) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Code de vérification envoyé. Veuillez vérifier votre téléphone.",
+                                          ),
+                                        ),
+                                      );
+                                      // Naviguer vers l'écran de saisie du code
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => SmsCodeScreen(
+                                                verificationId: verificationId,
+                                                phoneNumber: telephone,
+                                                nom: nom,
+                                                prenom: prenom,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    codeAutoRetrievalTimeout: (
+                                      String verificationId,
+                                    ) {
+                                      // Optionally handle timeout
+                                    },
+                                  );
+
                                   return;
                                 }
 
