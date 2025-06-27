@@ -70,7 +70,7 @@ class _CategoryListScreenState extends State<CategoryScreen> {
         ),
       ),
       body: StreamBuilder<List<Categorie>>(
-        stream: _categoryService.getCategoriesStream(),
+        stream: _categoryService.getParentCategoriesStream(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -117,7 +117,7 @@ class _CategoryListScreenState extends State<CategoryScreen> {
                       physics: const BouncingScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
+                            crossAxisCount: 3,
                             childAspectRatio: 1.1,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
@@ -160,23 +160,23 @@ class _CategoryListScreenState extends State<CategoryScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconUtils.buildCustomIcon(
-                  category.icone,
-                  size: 28,
-                  color: DMColors.primary,
-                  backgroundColor: DMColors.primary.withOpacity(0.1),
-                  backgroundRadius: 12,
+                Container(
+                  decoration: BoxDecoration(
+                    color: DMColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
                   padding: const EdgeInsets.all(16),
+                  child: IconUtils.buildCustomIcon(category.icone),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 3),
                 Text(
                   category.nom,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 10, // plus petit
                     fontWeight: FontWeight.w600,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

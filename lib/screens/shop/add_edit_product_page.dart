@@ -28,7 +28,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _quantityController = TextEditingController(text: '1');
+  // Removed _quantityController as it's not needed for marketplace announcement
+  // final _quantityController = TextEditingController(text: '1');
 
   final ImagePicker _picker = ImagePicker();
   List<File> _selectedImages = [];
@@ -36,9 +37,19 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   bool _isLoading = false;
 
   List<Categorie> _categories = [];
+  List<CategoryHierarchy> _categoryHierarchy = [];
   bool _categoriesLoading = true;
 
-  // Liste des catégories
+  // List of product conditions/states
+  final List<String> _productStates = [
+    'neuf',
+    'occasion',
+    'tres_bon_etat',
+    'bon_etat',
+    'etat_correct',
+  ];
+  String? _selectedProductState; // New: To hold selected product state
+
   Future<void> _loadCategories() async {
     setState(() {
       _categoriesLoading = true;
@@ -63,16 +74,65 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     }
   }
 
+  List<DropdownMenuItem<String>> _buildCategoryItems() {
+    List<DropdownMenuItem<String>> items = [];
+
+    for (CategoryHierarchy hierarchy in _categoryHierarchy) {
+      // Ajouter la catégorie parent avec icône
+      items.add(
+        DropdownMenuItem<String>(
+          value: hierarchy.parent.id,
+          child: Row(
+            children: [
+              IconUtils.buildCustomIcon(
+                hierarchy.parent.icone,
+                size: 20,
+                color: DMColors.primary,
+              ),
+              SizedBox(width: DMSizes.sm),
+              Text(
+                hierarchy.parent.nom,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: DMColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Ajouter les sous-catégories avec indentation
+      for (Categorie subCategory in hierarchy.subCategories) {
+        items.add(
+          DropdownMenuItem<String>(
+            value: subCategory.id,
+            child: Padding(
+              padding: EdgeInsets.only(left: DMSizes.lg),
+              child: Text(
+                '• ${subCategory.nom}',
+                style: TextStyle(color: DMColors.textSecondary, fontSize: 14),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return items;
+  }
+
   void _loadProductData() {
     // TODO: Charger les données du produit existant
-    // Pour l'instant, on simule avec des données factices
+    // For now, we simulate with dummy data
     if (widget.productId == 'prod_001') {
       _titleController.text = 'Smartphone Android X20';
       _descriptionController.text =
           'Smartphone en excellent état, 128GB, caméra 48MP.';
       _priceController.text = '75000';
-      _quantityController.text = '1';
+      // _quantityController.text = '1'; // Removed
       _selectedCategory = 'Électronique';
+      _selectedProductState = 'occasion'; // Set a default or loaded state
     }
   }
 
@@ -81,7 +141,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _quantityController.dispose();
+    // _quantityController.dispose(); // Removed
     super.dispose();
   }
 
@@ -277,35 +337,37 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
       });
 
       try {
-        // Récupère l'utilisateur connecté
+        // Retrieve logged-in user
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
           throw Exception("Utilisateur non connecté");
         }
 
-        // Crée le produit
+        // Create the product
         final produit = Produit(
           id: widget.productId ?? UniqueKey().toString(),
           nom: _titleController.text,
           description: _descriptionController.text,
-          prix: double.parse(_priceController.text),
-          statut: 'disponible',
+          prix: double.parse(
+            _priceController.text.replaceAll(' ', ''),
+          ), // Remove spaces before parsing
+          etat: _selectedProductState ?? 'occasion', // Use selected state
+          // quantite: 1, // Quantity is always 1 for marketplace announcements
+          statut: 'disponible', // Default status for new announcements
           dateAjout: DateTime.now(),
           vendeurId: user.uid,
           categorieId: _selectedCategory ?? '',
-          adresseId: '', // À adapter si tu gères les adresses
+          adresseId: '', // To be adapted if you manage addresses
         );
 
-        // Enregistre dans Firestore
+        // Save to Firestore
         await FirestoreService().addProduit(produit);
 
-        // TODO: Gérer l'upload des images (_selectedImages) si besoin
-        // 1. Ajout du produit
-        await FirestoreService().addProduit(produit);
-
-        // 2. Upload des images sur Cloudinary et création des documents ImageProduit
+        // Upload images to Cloudinary and create ImageProduit documents
         for (var imageFile in _selectedImages) {
-          final url = await uploadImageToCloudinary(imageFile); // à implémenter
+          final url = await uploadImageToCloudinary(
+            imageFile,
+          ); // Implement this function
           if (url != null) {
             final imageProduit = ImageProduit(
               id: UniqueKey().toString(),
@@ -320,8 +382,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
           SnackBar(
             content: Text(
               widget.productId != null
-                  ? 'Produit modifié avec succès!'
-                  : 'Produit ajouté avec succès!',
+                  ? 'Annonce modifiée avec succès!'
+                  : 'Annonce publiée avec succès!',
             ),
             backgroundColor: DMColors.success,
           ),
@@ -346,6 +408,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   @override
   void initState() {
     super.initState();
+    _selectedProductState = _productStates.first; // Set initial product state
     if (widget.productId != null) {
       _loadProductData();
     }
@@ -356,6 +419,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     setState(() => _categoriesLoading = true);
     try {
       _categories = await CategoryService().getCategories();
+      _categoryHierarchy = await CategoryService().getCategoryHierarchy();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur chargement catégories: $e')),
@@ -423,7 +487,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     SizedBox(height: DMSizes.md),
                     _buildTextField(
                       controller: _titleController,
-                      label: 'Titre du produit',
+                      label: 'Titre de l\'annonce', // Changed label
                       hint: 'ex: iPhone 15 Pro Max',
                       icon: Iconsax.tag,
                       validator: (value) {
@@ -439,8 +503,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     SizedBox(height: DMSizes.md),
                     _buildTextField(
                       controller: _descriptionController,
-                      label: 'Description',
-                      hint: 'Décrivez votre produit en détail...',
+                      label: 'Description de l\'annonce', // Changed label
+                      hint: 'Décrivez votre annonce en détail...',
                       icon: Iconsax.document_text,
                       maxLines: 4,
                       validator: (value) {
@@ -455,8 +519,12 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     ),
                     SizedBox(height: DMSizes.spaceBtwSections),
 
-                    // Section Prix et Stock
-                    _buildSectionTitle('Prix'),
+                    // Section Détails de l'annonce
+                    _buildSectionTitle('Détails de l\'annonce'),
+                    SizedBox(height: DMSizes.md),
+                    _buildCategoryDropdown(),
+                    SizedBox(height: DMSizes.md),
+                    _buildProductStateDropdown(), // New: Product State dropdown
                     SizedBox(height: DMSizes.md),
                     Row(
                       children: [
@@ -478,7 +546,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                               if (value == null || value.isEmpty) {
                                 return 'Veuillez entrer un prix';
                               }
-                              // Enlève les espaces pour la conversion
+                              // Remove spaces for conversion
                               final price = double.tryParse(
                                 value.replaceAll(' ', ''),
                               );
@@ -491,15 +559,13 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: DMSizes.md),
-                    _buildCategoryDropdown(),
                     SizedBox(height: DMSizes.spaceBtwSections),
                   ],
                 ),
               ),
             ),
 
-            // Bouton de sauvegarde fixe en bas
+            // Fixed save button at the bottom
             Container(
               padding: EdgeInsets.all(DMSizes.lg),
               decoration: BoxDecoration(
@@ -547,7 +613,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                               SizedBox(width: DMSizes.sm),
                               Text(
                                 isEditing
-                                    ? 'Modifier le produit'
+                                    ? 'Modifier l\'annonce' // Changed text
                                     : 'Publier l\'annonce',
                                 style: Theme.of(
                                   context,
@@ -629,6 +695,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     if (_categoriesLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
     return Container(
       decoration: BoxDecoration(
         color:
@@ -657,13 +724,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
           fillColor: Colors.transparent,
           contentPadding: EdgeInsets.all(DMSizes.md),
         ),
-        items:
-            _categories.map((cat) {
-              return DropdownMenuItem<String>(
-                value: cat.id,
-                child: Text(cat.nom),
-              );
-            }).toList(),
+        items: _buildCategoryItems(),
         onChanged: (String? newValue) {
           setState(() {
             _selectedCategory = newValue;
@@ -672,6 +733,81 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
         validator: (value) {
           if (value == null || value.isEmpty) {
             return 'Veuillez sélectionner une catégorie';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  // New Widget for Product State Dropdown
+  Widget _buildProductStateDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        color:
+            Brightness.dark == Theme.of(context).brightness
+                ? const Color.fromARGB(255, 36, 36, 36)
+                : DMColors.light,
+        borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+        boxShadow: [
+          BoxShadow(
+            color: DMColors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _selectedProductState,
+        decoration: InputDecoration(
+          labelText: 'État du produit',
+          prefixIcon: const Icon(
+            Iconsax.health,
+            color: DMColors.primary,
+          ), // You can choose a suitable icon
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.transparent,
+          contentPadding: EdgeInsets.all(DMSizes.md),
+        ),
+        items:
+            _productStates.map((state) {
+              String displayText;
+              switch (state) {
+                case 'neuf':
+                  displayText = 'Neuf';
+                  break;
+                case 'occasion':
+                  displayText = 'Occasion';
+                  break;
+                case 'tres_bon_etat':
+                  displayText = 'Très bon état';
+                  break;
+                case 'bon_etat':
+                  displayText = 'Bon état';
+                  break;
+                case 'etat_correct':
+                  displayText = 'État correct';
+                  break;
+                default:
+                  displayText = state;
+              }
+              return DropdownMenuItem<String>(
+                value: state,
+                child: Text(displayText),
+              );
+            }).toList(),
+        onChanged: (String? newValue) {
+          setState(() {
+            _selectedProductState = newValue;
+          });
+        },
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Veuillez sélectionner l\'état du produit';
           }
           return null;
         },
@@ -696,7 +832,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
       child: Column(
         children: [
           if (_selectedImages.isEmpty) ...[
-            // État vide - bouton d'ajout principal
+            // Empty state - primary add button
             InkWell(
               onTap: _showImageSourceDialog,
               borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
@@ -748,7 +884,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
               ),
             ),
           ] else ...[
-            // Grille d'images sélectionnées
+            // Grid of selected images
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -760,7 +896,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
               itemCount: _selectedImages.length + 1,
               itemBuilder: (context, index) {
                 if (index == _selectedImages.length) {
-                  // Bouton d'ajout d'image supplémentaire
+                  // Additional image add button
                   return InkWell(
                     onTap: _showImageSourceDialog,
                     borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
@@ -780,7 +916,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                   );
                 }
 
-                // Affichage des images sélectionnées
+                // Display selected images
                 return Stack(
                   children: [
                     Container(

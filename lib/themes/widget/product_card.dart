@@ -27,7 +27,6 @@ class ProductCard extends StatelessWidget {
           name: product['name'],
           description: 'Description du produit...',
           price: product['price'].toDouble(),
-          quantity: 1,
           imageUrl: 'https://via.placeholder.com/150',
           sellerId: 'seller_123',
           sellerName: 'Vendeur',

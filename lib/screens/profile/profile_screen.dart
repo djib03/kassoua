@@ -11,6 +11,7 @@ import 'package:kassoua/models/user.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:kassoua/screens/auth/auth_screen_selection.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -215,11 +216,11 @@ class ProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       width: 300,
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey[900] : Colors.white,
+        color: isDark ? DMColors.dark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: isDark ? Colors.black26.withOpacity(0.1) : Colors.white,
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -288,11 +289,14 @@ class ProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       width: 300,
       decoration: BoxDecoration(
-        color: isDark ? Colors.black26.withOpacity(0.1) : Colors.white,
+        color: isDark ? DMColors.dark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color:
+                isDark
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.08),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -316,6 +320,7 @@ class ProfileScreen extends StatelessWidget {
                 color: isDark ? Colors.grey[900] : Colors.white,
                 shape: BoxShape.circle,
               ),
+
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(50),
                 child: SizedBox(
@@ -327,11 +332,17 @@ class ProfileScreen extends StatelessWidget {
                             'assets/images/user.png',
                             fit: BoxFit.cover,
                           )
-                          : Image.network(
-                            user.photoProfil!,
+                          : CachedNetworkImage(
+                            imageUrl: user.photoProfil!,
                             fit: BoxFit.cover,
-                            errorBuilder:
-                                (context, error, stackTrace) => Image.asset(
+                            placeholder:
+                                (context, url) => Center(
+                                  child: CircularProgressIndicator(
+                                    color: DMColors.primary,
+                                  ),
+                                ),
+                            errorWidget:
+                                (context, url, error) => Image.asset(
                                   'assets/images/user.png',
                                   fit: BoxFit.cover,
                                 ),

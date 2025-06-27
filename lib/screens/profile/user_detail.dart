@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/screens/profile/edit_user_details.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:kassoua/screens/profile/add_edit_address_screen.dart';
+import 'package:kassoua/services/firestore_service.dart';
 
 class UserDetailScreen extends StatefulWidget {
   const UserDetailScreen({Key? key}) : super(key: key);
@@ -357,6 +361,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final FirestoreService _firestoreService = FirestoreService();
 
     // Force la couleur de la status bar à chaque affichage de l'écran
     SystemChrome.setSystemUIOverlayStyle(
@@ -574,11 +579,38 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                                       }
                                       : null,
                             ),
-                            _buildInfoRow(
-                              icon: Iconsax.location,
-                              label: 'Adresse',
-                              value: 'Non renseignée',
-                              brightness: brightness,
+                            FutureBuilder<List<Adresse>>(
+                              future:
+                                  user != null
+                                      ? _firestoreService
+                                          .getDefaultAdresses(user.id)
+                                          .first
+                                      : Future.value([]),
+                              builder: (context, addressSnapshot) {
+                                String addressValue = 'Non renseignée';
+                                if (addressSnapshot.hasData &&
+                                    addressSnapshot.data!.isNotEmpty) {
+                                  final Adresse adresse =
+                                      addressSnapshot.data!.first;
+                                  addressValue = adresse.description;
+                                }
+                                return _buildInfoRow(
+                                  icon: Iconsax.location,
+                                  label: 'Adresse',
+                                  value: addressValue,
+                                  brightness: brightness,
+                                  isClickable: true,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => AddEditAddressScreen(),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
                             ),
                           ], brightness),
                           _buildSection(

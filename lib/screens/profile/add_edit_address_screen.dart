@@ -59,6 +59,12 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
               ? DMColors.black
               : Colors.white,
       appBar: AppBar(
+        iconTheme: IconThemeData(
+          color:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Colors.black,
+        ),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor:
               Colors.transparent, // Transparente pour un meilleur rendu

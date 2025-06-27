@@ -2,57 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:kassoua/screens/shop/add_edit_product_page.dart';
+import 'package:kassoua/services/firestore_service.dart';
+import 'package:kassoua/models/product.dart';
+import 'package:kassoua/models/image_produit.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-// --- Page "Mes Annonces" Améliorée ---
-class MyListingsPage extends StatelessWidget {
+class MyListingsPage extends StatefulWidget {
   const MyListingsPage({Key? key}) : super(key: key);
 
-  // Données factices pour simuler les produits d'un vendeur
-  final List<Map<String, dynamic>> mockProducts = const [
-    {
-      'id': 'prod_001',
-      'name': 'Smartphone Android X20',
-      'imageUrl': '',
-      'price': 75000.0,
-      'quantity': 1,
-      'status': 'disponible',
-      'description': 'Smartphone en excellent état, 128GB, caméra 48MP.',
-    },
-    {
-      'id': 'prod_002',
-      'name': 'Vélo VTT Sportif',
-      'imageUrl': '',
-      'price': 120000.0,
-      'quantity': 1,
-      'status': 'vendu',
-      'description': 'Vélo tout-terrain, peu utilisé, freins à disque.',
-    },
-    {
-      'id': 'prod_003',
-      'name': 'Kit de Couteaux de Cuisine',
-      'imageUrl': '',
-      'price': 15000.0,
-      'quantity': 3,
-      'status': 'disponible',
-      'description': 'Ensemble de 5 couteaux de cuisine en acier inoxydable.',
-    },
-    {
-      'id': 'prod_004',
-      'name': 'Table Basse Design',
-      'imageUrl': '',
-      'price': 45000.0,
-      'quantity': 1,
-      'status': 'disponible',
-      'description':
-          'Table basse moderne en bois et métal, idéale pour votre salon.',
-    },
-  ];
+  @override
+  State<MyListingsPage> createState() => _MyListingsPageState();
+}
+
+class _MyListingsPageState extends State<MyListingsPage> {
+  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String? get currentUserId => _auth.currentUser?.uid;
 
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: isDark ? DMColors.black : DMColors.white,
       appBar: AppBar(
@@ -90,9 +64,126 @@ class MyListingsPage extends StatelessWidget {
         ],
       ),
       body:
-          mockProducts.isEmpty
-              ? _buildEmptyState(context)
-              : _buildProductList(context),
+          currentUserId == null
+              ? _buildNotLoggedInState(context)
+              : StreamBuilder<List<Produit>>(
+                stream: _firestoreService.getUserProducts(currentUserId!),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return _buildLoadingState(context);
+                  }
+
+                  if (snapshot.hasError) {
+                    return _buildErrorState(context, snapshot.error.toString());
+                  }
+
+                  final products = snapshot.data ?? [];
+
+                  if (products.isEmpty) {
+                    return _buildEmptyState(context);
+                  }
+
+                  return _buildProductList(context, products);
+                },
+              ),
+    );
+  }
+
+  Widget _buildNotLoggedInState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(DMSizes.lg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Iconsax.user,
+              size: DMSizes.iconLg * 2,
+              color: DMColors.primary,
+            ),
+            SizedBox(height: DMSizes.spaceBtwItems),
+            Text(
+              'Veuillez vous connecter',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: DMColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: DMSizes.xs),
+            Text(
+              'Connectez-vous pour voir vos annonces',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: DMColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: DMColors.primary),
+          SizedBox(height: DMSizes.spaceBtwItems),
+          Text(
+            'Chargement de vos annonces...',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: DMColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String error) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(DMSizes.lg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Iconsax.warning_2,
+              size: DMSizes.iconLg * 2,
+              color: DMColors.error,
+            ),
+            SizedBox(height: DMSizes.spaceBtwItems),
+            Text(
+              'Erreur de chargement',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: DMColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: DMSizes.xs),
+            Text(
+              'Impossible de charger vos annonces',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: DMColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: DMSizes.spaceBtwSections),
+            ElevatedButton(
+              onPressed: () => setState(() {}),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DMColors.primary,
+                padding: EdgeInsets.symmetric(
+                  horizontal: DMSizes.xl,
+                  vertical: DMSizes.md,
+                ),
+              ),
+              child: Text('Réessayer', style: TextStyle(color: DMColors.white)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -167,230 +258,307 @@ class MyListingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildProductList(BuildContext context) {
+  Widget _buildProductList(BuildContext context, List<Produit> products) {
     return ListView.builder(
       padding: EdgeInsets.all(DMSizes.md),
-      itemCount: mockProducts.length,
+      itemCount: products.length,
       itemBuilder: (context, index) {
-        final product = mockProducts[index];
-        final bool isSold = product['status'] == 'vendu';
-
+        final product = products[index];
         return Container(
           margin: EdgeInsets.only(bottom: DMSizes.md),
+          padding: EdgeInsets.all(DMSizes.sm),
           decoration: BoxDecoration(
             color:
                 Theme.of(context).brightness == Brightness.dark
-                    ? DMColors.dark.withOpacity(0.3)
+                    ? const Color.fromARGB(255, 36, 36, 36)
                     : DMColors.white,
-            borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
+            borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+                color: DMColors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              // Contenu principal de la carte
-              Padding(
-                padding: EdgeInsets.all(DMSizes.md),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image du produit avec badge de statut
-                    Stack(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Images du produit
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
+                    child: StreamBuilder<List<ImageProduit>>(
+                      stream: _firestoreService.getImagesProduit(product.id),
+                      builder: (context, imageSnapshot) {
+                        String imageUrl = product.imageUrl ?? '';
+                        if (imageSnapshot.hasData &&
+                            imageSnapshot.data!.isNotEmpty) {
+                          imageUrl = imageSnapshot.data!.first.url;
+                        }
+                        return Image.network(
+                          imageUrl,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (context, error, stackTrace) => Container(
+                                width: 100,
+                                height: 100,
+                                color: DMColors.grey.withOpacity(0.3),
+                                child: const Icon(
+                                  Iconsax.gallery_slash,
+                                  color: DMColors.textSecondary,
+                                ),
+                              ),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(width: DMSizes.md),
+                  // Infos du produit
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(
+                          product.nom,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: DMSizes.xs),
+                        Text(
+                          '${product.prix.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ')} FCFA',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.headlineSmall?.copyWith(
+                            color: DMColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: DMSizes.xs),
                         Container(
-                          width: DMSizes.imageThumbSize,
-                          height: DMSizes.imageThumbSize,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DMSizes.xs,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
+                            color: _getEtatColor(product.etat).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(
-                              DMSizes.borderRadiusMd,
+                              DMSizes.borderRadiusSm,
                             ),
-                            color: DMColors.grey.withOpacity(0.1),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              DMSizes.borderRadiusMd,
-                            ),
-                            child: Image.network(
-                              product['imageUrl']!,
-                              fit: BoxFit.cover,
-                              errorBuilder:
-                                  (context, error, stackTrace) => Icon(
-                                    Iconsax.image,
-                                    size: DMSizes.iconMd,
-                                    color: DMColors.darkGrey,
-                                  ),
+                          child: Text(
+                            product.etatText,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: _getEtatColor(product.etat),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                        // Badge de statut
-                        Positioned(
-                          top: DMSizes.xs,
-                          right: DMSizes.xs,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: DMSizes.xs,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSold ? DMColors.error : DMColors.success,
-                              borderRadius: BorderRadius.circular(
-                                DMSizes.borderRadiusSm,
+                        SizedBox(height: DMSizes.sm),
+                        if (product.isVendu)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: DMSizes.sm,
+                                vertical: DMSizes.xs,
                               ),
-                            ),
-                            child: Text(
-                              isSold ? 'VENDU' : 'DISPO',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.labelSmall?.copyWith(
-                                color: DMColors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
+                              decoration: BoxDecoration(
+                                color: DMColors.error.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Vendu',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.labelLarge?.copyWith(
+                                  color: DMColors.error,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                        ),
                       ],
                     ),
-                    SizedBox(width: DMSizes.md),
-
-                    // Détails du produit
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product['name']!,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color:
-                                  Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? DMColors.white
-                                      : Colors.black,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: DMSizes.xs),
-                          Text(
-                            '${product['price']?.toStringAsFixed(0)} FCFA',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleLarge?.copyWith(
-                              color: DMColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 19,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Barre d'actions en bas - VERSION UNIFORME
-              Container(
-                decoration: BoxDecoration(
-                  color:
-                      Theme.of(context).brightness == Brightness.dark
-                          ? DMColors.dark.withOpacity(0.3)
-                          : DMColors.grey.withOpacity(0.05),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(DMSizes.borderRadiusLg),
-                    bottomRight: Radius.circular(DMSizes.borderRadiusLg),
                   ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(DMSizes.sm),
-                  child: Row(
-                    children: [
-                      // Bouton Modifier - toujours présent
-                      _buildActionButton(
-                        context: context,
-                        icon: Iconsax.edit,
-                        label: 'Modifier',
-                        color: DMColors.primary,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => AddEditProductPage(
-                                    productId: product['id'],
-                                  ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      // Séparateur vertical
-                      Container(
-                        height: 30,
-                        width: 1,
-                        color: DMColors.grey.withOpacity(0.3),
-                        margin: EdgeInsets.symmetric(horizontal: DMSizes.xs),
-                      ),
-
-                      // Bouton Status - adapté selon l'état
-                      _buildActionButton(
-                        context: context,
-                        icon: isSold ? Iconsax.refresh : Iconsax.tick_circle,
-                        label: isSold ? 'Remettre' : 'Vendu',
-                        color: isSold ? DMColors.info : DMColors.success,
-                        onPressed: () {
-                          if (isSold) {
-                            _showReactivateConfirmationDialog(
-                              context,
-                              product['name']!,
-                            );
-                          } else {
-                            _showMarkAsSoldConfirmationDialog(
-                              context,
-                              product['name']!,
-                            );
-                          }
-                        },
-                      ),
-
-                      // Séparateur vertical
-                      Container(
-                        height: 30,
-                        width: 1,
-                        color: DMColors.grey.withOpacity(0.3),
-                        margin: EdgeInsets.symmetric(horizontal: DMSizes.xs),
-                      ),
-
-                      // Bouton Supprimer - toujours présent
-                      _buildActionButton(
-                        context: context,
-                        icon: Iconsax.trash,
-                        label: 'Supprimer',
-                        color: DMColors.error,
-                        onPressed: () {
-                          _showDeleteConfirmationDialog(
-                            context,
-                            product['name']!,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                ],
               ),
+              // Ajouter la barre d'actions
+              _buildActionBar(context, product),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildProductImage(Produit product, bool isSold) {
+    return Stack(
+      children: [
+        Hero(
+          tag: 'product_image_${product.id}',
+          child: Container(
+            width: DMSizes.imageThumbSize,
+            height: DMSizes.imageThumbSize,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+              color: DMColors.grey.withOpacity(0.1),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+              child: StreamBuilder<List<ImageProduit>>(
+                stream: _firestoreService.getImagesProduit(product.id),
+                builder: (context, imageSnapshot) {
+                  if (imageSnapshot.hasData && imageSnapshot.data!.isNotEmpty) {
+                    // Utiliser la première image trouvée
+                    final imageUrl = imageSnapshot.data!.first.url;
+                    return Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (context, error, stackTrace) => Icon(
+                            Iconsax.image,
+                            size: DMSizes.iconMd,
+                            color: DMColors.darkGrey,
+                          ),
+                    );
+                  } else if (product.imageUrl != null &&
+                      product.imageUrl!.isNotEmpty) {
+                    // Fallback vers l'imageUrl du produit si elle existe
+                    return Image.network(
+                      product.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (context, error, stackTrace) => Icon(
+                            Iconsax.image,
+                            size: DMSizes.iconMd,
+                            color: DMColors.darkGrey,
+                          ),
+                    );
+                  } else {
+                    // Pas d'image disponible
+                    return Icon(
+                      Iconsax.image,
+                      size: DMSizes.iconMd,
+                      color: DMColors.darkGrey,
+                    );
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+        // Badge de statut
+        Positioned(
+          top: DMSizes.xs,
+          right: DMSizes.xs,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: DMSizes.xs, vertical: 2),
+            decoration: BoxDecoration(
+              color: isSold ? DMColors.error : DMColors.success,
+              borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
+            ),
+            child: Text(
+              isSold ? 'VENDU' : 'DISPO',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: DMColors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionBar(BuildContext context, Produit product) {
+    final bool isSold = product.isVendu; // Correction ici
+
+    return Container(
+      decoration: BoxDecoration(
+        color:
+            Theme.of(context).brightness == Brightness.dark
+                ? DMColors.dark.withOpacity(0.3)
+                : DMColors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(DMSizes.borderRadiusLg),
+          bottomRight: Radius.circular(DMSizes.borderRadiusLg),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(DMSizes.sm),
+        child: Row(
+          children: [
+            // Bouton Modifier
+            _buildActionButton(
+              context: context,
+              icon: Iconsax.edit,
+              label: 'Modifier',
+              color: DMColors.primary,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => AddEditProductPage(productId: product.id),
+                  ),
+                );
+              },
+            ),
+
+            // Séparateur vertical
+            Container(
+              height: 30,
+              width: 1,
+              color: DMColors.grey.withOpacity(0.3),
+              margin: EdgeInsets.symmetric(horizontal: DMSizes.xs),
+            ),
+
+            // Bouton Status
+            _buildActionButton(
+              context: context,
+              icon: isSold ? Iconsax.refresh : Iconsax.tick_circle,
+              label: isSold ? 'Remettre' : 'Vendu',
+              color: isSold ? DMColors.info : DMColors.success,
+              onPressed: () {
+                if (isSold) {
+                  _showReactivateConfirmationDialog(context, product);
+                } else {
+                  _showMarkAsSoldConfirmationDialog(context, product);
+                }
+              },
+            ),
+
+            // Séparateur vertical
+            Container(
+              height: 30,
+              width: 1,
+              color: DMColors.grey.withOpacity(0.3),
+              margin: EdgeInsets.symmetric(horizontal: DMSizes.xs),
+            ),
+
+            // Bouton Supprimer
+            _buildActionButton(
+              context: context,
+              icon: Iconsax.trash,
+              label: 'Supprimer',
+              color: DMColors.error,
+              onPressed: () {
+                _showDeleteConfirmationDialog(context, product);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -426,23 +594,55 @@ class MyListingsPage extends StatelessWidget {
     );
   }
 
-  // Fonction pour afficher la boîte de dialogue de confirmation de suppression
-  void _showDeleteConfirmationDialog(BuildContext context, String productName) {
+  Color _getEtatColor(String etat) {
+    switch (etat.toLowerCase()) {
+      case 'neuf':
+        return DMColors.success;
+      case 'tres_bon_etat':
+        return DMColors.info;
+      case 'bon_etat':
+        return DMColors.primary;
+      case 'etat_correct':
+        return DMColors.warning;
+      case 'occasion':
+      default:
+        return DMColors.textSecondary;
+    }
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, Produit product) {
     PanaraConfirmDialog.show(
       context,
       title: 'Supprimer l\'annonce',
-      message: 'Êtes-vous sûr de vouloir supprimer l\'annonce "$productName" ?',
+      message:
+          'Êtes-vous sûr de vouloir supprimer l\'annonce "${product.nom}" ?',
       confirmButtonText: 'Supprimer',
       cancelButtonText: 'Annuler',
-
-      onTapConfirm: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Annonce "$productName" supprimée (simulation).'),
-            backgroundColor: DMColors.error,
-          ),
-        );
-        Navigator.of(context).pop();
+      onTapConfirm: () async {
+        try {
+          await _firestoreService.deleteProduct(product.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Annonce "${product.nom}" supprimée avec succès.',
+                ),
+                backgroundColor: DMColors.success,
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Erreur lors de la suppression: $e'),
+                backgroundColor: DMColors.error,
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        }
       },
       onTapCancel: () {
         Navigator.of(context).pop();
@@ -454,28 +654,40 @@ class MyListingsPage extends StatelessWidget {
     );
   }
 
-  // Fonction pour afficher la boîte de dialogue de confirmation "Marquer comme vendu"
   void _showMarkAsSoldConfirmationDialog(
     BuildContext context,
-    String productName,
+    Produit product,
   ) {
     PanaraConfirmDialog.show(
       context,
       title: 'Marquer comme vendu',
       message:
-          'Êtes-vous sûr de vouloir marquer l\'annonce "$productName" comme vendue ?',
+          'Êtes-vous sûr de vouloir marquer l\'annonce "${product.nom}" comme vendue ?',
       confirmButtonText: 'Marquer comme vendu',
       cancelButtonText: 'Annuler',
-      onTapConfirm: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Annonce "$productName" marquée comme vendue (simulation).',
-            ),
-            backgroundColor: DMColors.success,
-          ),
-        );
-        Navigator.of(context).pop();
+      onTapConfirm: () async {
+        try {
+          await _firestoreService.markProductAsSold(product.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Annonce "${product.nom}" marquée comme vendue.'),
+                backgroundColor: DMColors.success,
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Erreur lors de la mise à jour: $e'),
+                backgroundColor: DMColors.error,
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        }
       },
       onTapCancel: () {
         Navigator.of(context).pop();
@@ -487,27 +699,39 @@ class MyListingsPage extends StatelessWidget {
     );
   }
 
-  // Nouvelle fonction pour remettre en vente un produit vendu
   void _showReactivateConfirmationDialog(
     BuildContext context,
-    String productName,
+    Produit product,
   ) {
     PanaraConfirmDialog.show(
       context,
       title: 'Remettre en vente',
-      message: 'Voulez-vous remettre l\'annonce "$productName" en vente ?',
+      message: 'Voulez-vous remettre l\'annonce "${product.nom}" en vente ?',
       confirmButtonText: 'Confirmer',
       cancelButtonText: 'Annuler',
-      onTapConfirm: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Annonce "$productName" remise en vente (simulation).',
-            ),
-            backgroundColor: DMColors.info,
-          ),
-        );
-        Navigator.of(context).pop();
+      onTapConfirm: () async {
+        try {
+          await _firestoreService.reactivateProduct(product.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Annonce "${product.nom}" remise en vente.'),
+                backgroundColor: DMColors.info,
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Erreur lors de la mise à jour: $e'),
+                backgroundColor: DMColors.error,
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        }
       },
       onTapCancel: () {
         Navigator.of(context).pop();

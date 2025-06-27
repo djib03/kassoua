@@ -12,13 +12,149 @@ import 'package:geolocator/geolocator.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+  final String _collection = 'products';
   FirestoreService() {
     // Activer la persistance hors ligne
     _firestore.settings = const Settings(persistenceEnabled: true);
   }
 
   // --- Produits ---
+
+  Stream<List<Produit>> getProductsByCategoryStream(String categorieId) {
+    return _firestore
+        .collection(_collection)
+        .where('categorieId', isEqualTo: categorieId)
+        .where(
+          'statut',
+          isEqualTo: 'disponible',
+        ) // Seulement les produits disponibles
+        .orderBy('dateAjout', descending: true)
+        .limit(20) // Limiter à 20 produits par catégorie pour les performances
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return Produit.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
+  }
+
+  /// Récupérer un produit spécifique
+  Future<Produit?> getProduct(String productId) async {
+    try {
+      final doc = await _firestore.collection(_collection).doc(productId).get();
+      if (doc.exists) {
+        return Produit.fromMap(doc.data()!, doc.id);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Erreur lors de la récupération du produit: $e');
+    }
+  }
+
+  /// Récupérer tous les produits disponibles
+  Stream<List<Produit>> getAllProductsStream() {
+    return _firestore
+        .collection(_collection)
+        .where('statut', isEqualTo: 'disponible')
+        .orderBy('dateAjout', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return Produit.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
+  }
+
+  /// Rechercher des produits par nom
+  Stream<List<Produit>> searchProductsStream(String query) {
+    return _firestore
+        .collection(_collection)
+        .where('statut', isEqualTo: 'disponible')
+        .orderBy('dateAjout', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => Produit.fromMap(doc.data(), doc.id))
+              .where(
+                (product) =>
+                    product.nom.toLowerCase().contains(query.toLowerCase()) ||
+                    product.description.toLowerCase().contains(
+                      query.toLowerCase(),
+                    ),
+              )
+              .toList();
+        });
+  }
+
+  Stream<List<Produit>> getUserProducts(String userId) {
+    return _firestore
+        .collection('products')
+        .where('vendeurId', isEqualTo: userId)
+        .orderBy('dateAjout', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Produit.fromMap(doc.data(), doc.id))
+                  .toList(),
+        );
+  }
+
+  // Mettre à jour un produit
+  Future<void> updateProduct(Produit produit) async {
+    await _firestore
+        .collection('products')
+        .doc(produit.id)
+        .update(produit.toMap());
+  }
+
+  // Supprimer un produit
+  Future<void> deleteProduct(String productId) async {
+    try {
+      // Supprimer d'abord les images associées au produit
+      final imagesQuery =
+          await _firestore
+              .collection('imagesProduits')
+              .where('produitId', isEqualTo: productId)
+              .get();
+
+      // Supprimer toutes les images du produit
+      for (var doc in imagesQuery.docs) {
+        await doc.reference.delete();
+      }
+
+      // Supprimer les favoris associés au produit
+      final favorisQuery =
+          await _firestore
+              .collection('favoris')
+              .where('produitId', isEqualTo: productId)
+              .get();
+
+      for (var doc in favorisQuery.docs) {
+        await doc.reference.delete();
+      }
+
+      // Enfin, supprimer le produit lui-même
+      await _firestore.collection('products').doc(productId).delete();
+    } catch (e) {
+      print('Erreur lors de la suppression du produit: $e');
+      rethrow;
+    }
+  }
+
+  // Marquer un produit comme vendu
+  Future<void> markProductAsSold(String productId) async {
+    await _firestore.collection('products').doc(productId).update({
+      'statut': 'vendu',
+    });
+  }
+
+  // Remettre un produit en vente
+  Future<void> reactivateProduct(String productId) async {
+    await _firestore.collection('products').doc(productId).update({
+      'statut': 'disponible',
+    });
+  }
 
   // Ajouter un produit
   Future<void> addProduit(Produit produit) async {
@@ -29,7 +165,8 @@ class FirestoreService {
   }
 
   // Récupérer un produit
-  Future<Produit?> getProduit(String produitId) async {
+  Future<Produit?> getProduct1(String produitId) async {
+    // Renamed from getProduit for consistency
     final doc = await _firestore.collection('products').doc(produitId).get();
     if (doc.exists) {
       return Produit.fromMap(doc.data()!, doc.id);
@@ -197,6 +334,21 @@ class FirestoreService {
     return _firestore
         .collection('adresses')
         .where('idUtilisateur', isEqualTo: userId)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Adresse.fromMap(doc.data(), doc.id))
+                  .toList(),
+        );
+  }
+
+  // Récupère l'adresse par défaut d'un utilisateur
+  Stream<List<Adresse>> getDefaultAdresses(String userId) {
+    return _firestore
+        .collection('adresses')
+        .where('idUtilisateur', isEqualTo: userId)
+        .where('isDefaut', isEqualTo: true)
         .snapshots()
         .map(
           (snapshot) =>
@@ -377,6 +529,24 @@ class FirestoreService {
                   .map((doc) => ImageProduit.fromMap(doc.data(), doc.id))
                   .toList(),
         );
+  }
+
+  // New method to delete all images for a specific product
+  Future<void> deleteImagesForProduct(String productId) async {
+    try {
+      final imagesQuery =
+          await _firestore
+              .collection('imagesProduits')
+              .where('produitId', isEqualTo: productId)
+              .get();
+
+      for (var doc in imagesQuery.docs) {
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      print('Error deleting images for product $productId: $e');
+      rethrow;
+    }
   }
 
   // --- Utilisateurs ---

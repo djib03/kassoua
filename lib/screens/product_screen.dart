@@ -9,26 +9,20 @@ class Product {
   final String name;
   final String description;
   final double price;
-  final int quantity;
   final String imageUrl;
   final String sellerId;
   final String sellerName;
   final String? sellerProfileImageUrl;
-  final double? rating; // Nouvelle propriété pour la note
-  final int? reviewCount; // Nouvelle propriété pour le nombre d'avis
 
   Product({
     required this.id,
     required this.name,
     required this.description,
     required this.price,
-    required this.quantity,
     required this.imageUrl,
     required this.sellerId,
     required this.sellerName,
     this.sellerProfileImageUrl,
-    this.rating,
-    this.reviewCount,
   });
 }
 
@@ -46,7 +40,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool isFavorite = false;
-  int selectedQuantity = 1;
 
   @override
   void initState() {
@@ -427,17 +420,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 ],
               ),
               child: ElevatedButton.icon(
-                onPressed:
-                    widget.product.quantity > 0
-                        ? () {
-                          // Logique pour contacter le vendeur
-                          String currentUserId = 'mock_buyer_id_123';
-                          String conversationId =
-                              'mock_conv_id_${widget.product.id}_${widget.product.sellerId}_$currentUserId';
-
-                          // Navigation vers le chat
-                        }
-                        : null,
+                onPressed: null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
