@@ -5,6 +5,7 @@ class Produit {
   final String nom;
   final String description;
   final double prix;
+  // final String etat;
   final String statut;
   final DateTime dateAjout;
   final String vendeurId;

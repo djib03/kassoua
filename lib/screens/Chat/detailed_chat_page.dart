@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/constants/size.dart';
+
 import 'package:iconsax/iconsax.dart';
 
 class DetailedChatPage extends StatefulWidget {
@@ -319,10 +319,10 @@ class _DetailedChatPageState extends State<DetailedChatPage>
               CircleAvatar(
                 radius: 20,
                 backgroundColor: DMColors.primary.withOpacity(0.1),
-                backgroundImage:
-                    widget.productImageUrl != null
-                        ? NetworkImage(widget.productImageUrl!)
-                        : null,
+                // backgroundImage:
+                //     widget.productImageUrl != null
+                //         ? NetworkImage(widget.productImageUrl!)
+                //         : null,
                 child:
                     widget.productImageUrl == null
                         ? Icon(Icons.person, color: DMColors.primary)

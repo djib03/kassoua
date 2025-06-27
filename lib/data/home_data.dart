@@ -21,7 +21,6 @@ class HomeData {
     {'id': '3', 'name': 'Lampe LED Design', 'price': 49000},
     {'id': '4', 'name': 'Ballon de Football', 'price': 15000},
   ];
-
   static final List<Map<String, String>> banners = [
     {
       'text': 'Offre spéciale\n-20% sur l\'électronique !',

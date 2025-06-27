@@ -145,7 +145,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         centerTitle: true,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       body: SingleChildScrollView(
         child: Padding(

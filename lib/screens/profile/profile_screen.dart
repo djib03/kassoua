@@ -10,6 +10,7 @@ import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:kassoua/screens/auth/auth_screen_selection.dart';
+import 'package:flutter/services.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -210,8 +211,9 @@ class ProfileScreen extends StatelessWidget {
   // Helper method for anonymous profile
   Widget _buildAnonymousProfile(BuildContext context, bool isDark) {
     return Container(
-      margin: const EdgeInsets.all(10),
-      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 10, top: 24),
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
+      width: 300,
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -284,8 +286,9 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(24),
       padding: const EdgeInsets.all(24),
+      width: 300,
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey[900] : Colors.white,
+        color: isDark ? Colors.black26.withOpacity(0.1) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -362,9 +365,17 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final isLoggedIn = Provider.of<AuthController>(context).user != null;
     return Scaffold(
       appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor:
+              Colors.transparent, // Transparente pour un meilleur rendu
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness:
+              isDark ? Brightness.dark : Brightness.light, // Pour iOS
+        ),
         elevation: 0,
         title: Text(
           'Profile',
@@ -415,7 +426,7 @@ class ProfileScreen extends StatelessWidget {
                     icon: Iconsax.shopping_bag,
                     title: 'Mes achats',
                     value: '3',
-                    color: DMColors.accent,
+                    color: DMColors.primary,
                   ),
                   const SizedBox(width: 16),
                   _buildActionCard(

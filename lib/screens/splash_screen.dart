@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/screens/auth/login_screen.dart';
-import 'package:kassoua/controllers/auth_controller.dart';
-import 'package:kassoua/screens/homepage/menu_navigation.dart';
-import 'package:kassoua/screens/auth/auth_screen_selection.dart';
+import 'package:kassoua/controllers/auth_controller.dart'; // Assurez-vous que c'est le bon chemin
+import 'package:kassoua/screens/homepage/menu_navigation.dart'; // Assurez-vous que c'est le bon chemin
+import 'package:kassoua/screens/auth/auth_screen_selection.dart'; // Assurez-vous que c'est le bon chemin
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kassoua/services/firestore_service.dart'; // Importez votre service Firestore
+import 'package:flutter/services.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -25,8 +27,8 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
   bool _canSkip = true;
   String _loadingText = "Initialisation...";
 
-  // Services
-  // final AuthService _authService = AuthService(); // Uncomment if you have this service
+  final FirestoreService _firestoreService =
+      FirestoreService(); // Instanciez votre service
 
   @override
   void initState() {
@@ -36,37 +38,27 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
   }
 
   void _initializeAnimations() {
-    // Logo animation controller
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-
-    // Progress animation controller
     _progressController = AnimationController(
       duration: const Duration(seconds: 4),
       vsync: this,
     );
-
-    // Logo scale animation
     _logoAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
-
-    // Fade animation
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoController,
         curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
       ),
     );
-
-    // Progress animation
     _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
     );
 
-    // Add listeners for text updates
     _progressController.addListener(() {
       if (_progressController.value < 0.3) {
         _updateLoadingText("Chargement des ressources...");
@@ -90,20 +82,13 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
 
   Future<void> _startSplashSequence() async {
     try {
-      // Preload images
       await _preloadImages();
-
-      // Start logo animation
       _logoController.forward();
-
-      // Start progress animation
       await Future.delayed(const Duration(milliseconds: 500));
       _progressController.forward();
-
-      // Initialize services and check authentication
       await _initializeApp();
 
-      // Wait for animations to complete or minimum time
+      // Attendre la fin des animations ou un temps minimum
       await Future.delayed(const Duration(seconds: 4));
 
       if (mounted && _canSkip) {
@@ -128,15 +113,10 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _initializeApp() async {
-    // Simulate app initialization
+    // Simuler l'initialisation de l'application
     await Future.delayed(const Duration(milliseconds: 1000));
 
-    // Here you would typically:
-    // - Initialize Firebase
-    // - Setup analytics
-    // - Load user preferences
-    // - Check for app updates
-    // - Initialize other services
+    // Ici, vous pouvez ajouter d'autres initialisations si nécessaire
   }
 
   void _navigateToNextScreen() async {
@@ -145,23 +125,54 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
     _canSkip = false;
 
     try {
-      // Check authentication status
       AuthController authController = AuthController();
       bool isLoggedIn = await authController.isLoggedIn();
+      User? currentUser = FirebaseAuth.instance.currentUser;
 
-      Widget nextScreen =
-          isLoggedIn ? const MenuNavigation() : const AuthSelectionScreen();
-
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-      );
+      if (isLoggedIn && currentUser != null) {
+        // L'utilisateur est connecté. Vérifier et créer l'adresse par défaut.
+        _updateLoadingText("Vérification de votre adresse...");
+        await _firestoreService.createDefaultAddressFromCurrentLocation(
+          currentUser.uid,
+        );
+        _updateLoadingText("Prêt !");
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder:
+                (context, animation, secondaryAnimation) =>
+                    const MenuNavigation(),
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 800),
+          ),
+        );
+      } else {
+        // L'utilisateur n'est pas connecté
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder:
+                (context, animation, secondaryAnimation) =>
+                    const AuthSelectionScreen(),
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 800),
+          ),
+        );
+      }
     } catch (error) {
       _handleError(error);
     }
@@ -176,6 +187,15 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
     );
   }
 
+  SystemUiOverlayStyle get systemOverlayStyle => SystemUiOverlayStyle(
+    statusBarColor: DMColors.primary, // Couleur de la barre d'état
+    statusBarIconBrightness: Brightness.light, // Icônes claires
+    statusBarBrightness: Brightness.light, // Texte sombre
+    systemNavigationBarColor:
+        DMColors.primary, // Couleur de la barre de navigation
+    systemNavigationBarIconBrightness: Brightness.light, // Icônes claires
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(body: _buildSplashBody(context));
@@ -188,10 +208,7 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            // Main content
             _buildMainContent(),
-
-            // Accessibility announcements
             Semantics(
               label: "Écran de chargement de l'application Kassoua",
               child: const SizedBox.shrink(),
@@ -206,7 +223,6 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        // Animated logo
         AnimatedBuilder(
           animation: _logoController,
           builder: (context, child) {
@@ -219,10 +235,7 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
             );
           },
         ),
-
         const SizedBox(height: 30),
-
-        // App name with animation
         Column(
           children: [
             AnimatedBuilder(
@@ -265,10 +278,7 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
             ),
           ],
         ),
-
         const SizedBox(height: 40),
-
-        // Loading text
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           child: Text(
@@ -278,10 +288,7 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
             semanticsLabel: _loadingText,
           ),
         ),
-
         const SizedBox(height: 20),
-
-        // Custom progress indicator
         _buildProgressIndicator(),
       ],
     );

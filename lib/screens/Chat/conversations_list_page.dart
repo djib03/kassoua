@@ -22,13 +22,10 @@ class _ConversationsListPageState extends State<ConversationsListPage>
     {
       'conversationId': 'conv_1_prod_A',
       'otherParticipantName': 'Vendeur Mariam',
-      'otherParticipantAvatar':
-          'https://images.unsplash.com/photo-1494790108755-2616b612b647?w=150',
+      'otherParticipantAvatar': '',
       'productName': 'Robe Traditionnelle Africaine',
-      'productImageUrl':
-          'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=100',
-      'lastMessage':
-          'Bonjour, le prix est négociable si vous prenez plus d\'une pièce.',
+      'productImageUrl': '',
+      'lastMessage': '',
       'lastMessageTime': '14:30',
       'unreadCount': 2,
       'isOnline': true,
@@ -37,11 +34,9 @@ class _ConversationsListPageState extends State<ConversationsListPage>
     {
       'conversationId': 'conv_2_prod_B',
       'otherParticipantName': 'Ali Chaussures',
-      'otherParticipantAvatar':
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      'otherParticipantAvatar': '',
       'productName': 'Paire de Sneakers Blanches',
-      'productImageUrl':
-          'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=100',
+      'productImageUrl': '',
       'lastMessage': 'Oui, il est encore disponible. Taille 42.',
       'lastMessageTime': 'Hier',
       'unreadCount': 0,
@@ -51,11 +46,9 @@ class _ConversationsListPageState extends State<ConversationsListPage>
     {
       'conversationId': 'conv_3_prod_C',
       'otherParticipantName': 'Electronique Pro',
-      'otherParticipantAvatar':
-          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+      'otherParticipantAvatar': '',
       'productName': 'Téléviseur Smart TV 55"',
-      'productImageUrl':
-          'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=100',
+      'productImageUrl': '',
       'lastMessage': 'Je peux vous livrer demain matin.',
       'lastMessageTime': '23 Mai',
       'unreadCount': 1,
@@ -65,11 +58,9 @@ class _ConversationsListPageState extends State<ConversationsListPage>
     {
       'conversationId': 'conv_4_prod_D',
       'otherParticipantName': 'Fatima Bijoux',
-      'otherParticipantAvatar':
-          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+      'otherParticipantAvatar': '',
       'productName': 'Bracelet en Argent',
-      'productImageUrl':
-          'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=100',
+      'productImageUrl': '',
       'lastMessage': 'Non, le prix est fixe sur cet article.',
       'lastMessageTime': '20 Mai',
       'unreadCount': 0,

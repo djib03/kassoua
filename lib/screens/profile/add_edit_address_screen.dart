@@ -1,44 +1,13 @@
-// add_edit_address_screen.dart
 import 'package:flutter/material.dart';
-// Importez votre modèle Address
-// import 'models/address.dart';
-
-// Si vous n'avez pas encore créé le fichier models/address.dart,
-// copiez cette classe depuis address_management_screen.dart
-class Address {
-  final String id;
-  final String name;
-  final String city;
-  final String phoneNumber;
-  final bool isDefault;
-
-  Address({
-    required this.id,
-    required this.name,
-    required this.city,
-    required this.phoneNumber,
-    this.isDefault = false,
-  });
-
-  Address copyWith({
-    String? id,
-    String? name,
-    String? city,
-    String? phoneNumber,
-    bool? isDefault,
-  }) {
-    return Address(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      city: city ?? this.city,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-      isDefault: isDefault ?? this.isDefault,
-    );
-  }
-}
+import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/models/adresse.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:flutter/services.dart';
 
 class AddEditAddressScreen extends StatefulWidget {
-  final Address? address;
+  final Adresse? address;
 
   const AddEditAddressScreen({Key? key, this.address}) : super(key: key);
 
@@ -48,39 +17,69 @@ class AddEditAddressScreen extends StatefulWidget {
 
 class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _phoneController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final TextEditingController _quartierController = TextEditingController();
+  final TextEditingController _villeController = TextEditingController();
+
   bool _isDefault = false;
+  bool _isLoadingLocation = false;
+  double? _latitude;
+  double? _longitude;
 
   bool get isEditing => widget.address != null;
+  String? get currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
     super.initState();
     if (isEditing) {
-      _nameController.text = widget.address!.name;
-      _cityController.text = widget.address!.city;
-      _phoneController.text = widget.address!.phoneNumber;
-      _isDefault = widget.address!.isDefault;
+      // Mode modification : pré-remplir avec les données existantes
+      _descriptionController.text = widget.address!.description;
+      _latitude = widget.address!.latitude;
+      _longitude = widget.address!.longitude;
+      _isDefault = widget.address!.isDefaut;
+      _quartierController.text = widget.address!.quartier ?? '';
+      _villeController.text = widget.address!.ville ?? '';
     }
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _cityController.dispose();
-    _phoneController.dispose();
+    _descriptionController.dispose();
+    _quartierController.dispose();
+    _villeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.dark
+              ? DMColors.black
+              : Colors.white,
       appBar: AppBar(
-        title: Text(isEditing ? 'Modifier l\'adresse' : 'Ajouter une adresse'),
-        backgroundColor: Colors.green[600],
-
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor:
+              Colors.transparent, // Transparente pour un meilleur rendu
+          statusBarIconBrightness:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Brightness.light
+                  : Brightness.dark,
+          statusBarBrightness:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Brightness.dark
+                  : Brightness.light, // Pour iOS
+        ),
+        title: Text(
+          isEditing ? 'Modifier l\'adresse' : 'Ajouter une adresse',
+          style: TextStyle(
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+          ),
+        ),
         elevation: 0,
       ),
       body: Form(
@@ -109,13 +108,15 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Nom de l'adresse
+                      // Description de l'adresse
                       TextFormField(
-                        controller: _nameController,
+                        controller: _descriptionController,
+                        maxLines: 3,
                         decoration: InputDecoration(
-                          labelText: 'Nom de l\'adresse*',
-                          hintText: 'Ex: Ma maison, Bureau, Chez maman...',
-                          prefixIcon: const Icon(Icons.label_outline),
+                          labelText: 'Description de l\'adresse*',
+                          hintText:
+                              'Ex: Plateau, près de la pharmacie centrale, immeuble bleu au 3ème étage...',
+                          prefixIcon: const Icon(Icons.description_outlined),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -126,19 +127,21 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Veuillez saisir un nom pour cette adresse';
+                            return 'Veuillez saisir une description pour cette adresse';
+                          }
+                          if (value.trim().length < 10) {
+                            return 'La description doit contenir au moins 10 caractères';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
 
-                      // Ville/Quartier
+                      // Champ pour le Quartier (auto-rempli)
                       TextFormField(
-                        controller: _cityController,
+                        controller: _quartierController,
                         decoration: InputDecoration(
-                          labelText: 'Ville/Quartier*',
-                          hintText: 'Ex: Plateau, Cocody, Yopougon...',
+                          labelText: 'Quartier (auto-rempli)',
                           prefixIcon: const Icon(Icons.location_city),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -148,23 +151,15 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                             borderSide: BorderSide(color: Colors.green[600]!),
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Veuillez saisir la ville ou le quartier';
-                          }
-                          return null;
-                        },
                       ),
                       const SizedBox(height: 16),
 
-                      // Numéro de téléphone
+                      // Champ pour la Ville (auto-rempli)
                       TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
+                        controller: _villeController,
                         decoration: InputDecoration(
-                          labelText: 'Numéro de téléphone*',
-                          hintText: 'Ex: +225 07 12 34 56 78',
-                          prefixIcon: const Icon(Icons.phone),
+                          labelText: 'Ville (auto-remplie)',
+                          prefixIcon: const Icon(Icons.map),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -173,15 +168,6 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                             borderSide: BorderSide(color: Colors.green[600]!),
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Veuillez saisir un numéro de téléphone';
-                          }
-                          if (value.trim().length < 8) {
-                            return 'Numéro de téléphone trop court';
-                          }
-                          return null;
-                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -195,7 +181,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                                 _isDefault = value ?? false;
                               });
                             },
-                            activeColor: Colors.green[600],
+                            activeColor: DMColors.primary,
                           ),
                           const Expanded(
                             child: Text(
@@ -223,32 +209,44 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Bouton futur pour géolocalisation
+              // Bouton pour géolocalisation
               Card(
                 elevation: 1,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: ListTile(
-                  leading: Icon(Icons.my_location, color: Colors.grey[400]),
+                  leading:
+                      _isLoadingLocation
+                          ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : Icon(Icons.my_location, color: DMColors.primary),
                   title: Text(
-                    'Utiliser ma position actuelle',
-                    style: TextStyle(color: Colors.grey[400]),
+                    _latitude != null && _longitude != null
+                        ? 'Position enregistrée ✓'
+                        : 'Utiliser ma position actuelle',
+                    style: TextStyle(
+                      color:
+                          _isLoadingLocation
+                              ? Colors.grey[500]
+                              : (_latitude != null && _longitude != null)
+                              ? Colors.green[600]
+                              : DMColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   subtitle: Text(
-                    'Fonctionnalité bientôt disponible',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                    _isLoadingLocation
+                        ? 'Récupération de la position...'
+                        : _latitude != null && _longitude != null
+                        ? 'Lat: ${_latitude!.toStringAsFixed(6)}, Lng: ${_longitude!.toStringAsFixed(6)}'
+                        : 'Obtenir automatiquement mes coordonnées GPS',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Fonctionnalité de géolocalisation bientôt disponible',
-                        ),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
+                  onTap: _isLoadingLocation ? null : _getCurrentLocation,
                 ),
               ),
               const SizedBox(height: 24),
@@ -273,7 +271,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                     child: ElevatedButton(
                       onPressed: _saveAddress,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green[600],
+                        backgroundColor: DMColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -292,17 +290,149 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
     );
   }
 
+  Future<void> _getCurrentLocation() async {
+    if (currentUserId == null) {
+      _showSnackBar(
+        'Veuillez vous connecter pour utiliser cette fonctionnalité',
+        Colors.red,
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showSnackBar(
+          'Les services de localisation sont désactivés',
+          Colors.orange,
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showSnackBar('Permission de localisation refusée', Colors.red);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _showSnackBar(
+          'Permission de localisation refusée définitivement',
+          Colors.red,
+        );
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+      });
+
+      // Géocodage inversée pour obtenir l'adresse
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks.first;
+          setState(() {
+            _quartierController.text =
+                place.subLocality ?? place.locality ?? '';
+            _villeController.text =
+                place.administrativeArea ?? place.country ?? '';
+            if (_descriptionController.text.isEmpty) {
+              _descriptionController.text =
+                  "${place.street ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? ''}";
+              _descriptionController.text = _descriptionController.text
+                  .trim()
+                  .replaceAll(RegExp(r',\s*$'), '');
+            }
+          });
+          _showSnackBar(
+            'Position et adresse approximative obtenues avec succès',
+            Colors.green,
+          );
+        } else {
+          _showSnackBar(
+            'Position obtenue, mais impossible de trouver l\'adresse approximative',
+            Colors.orange,
+          );
+        }
+      } catch (e) {
+        _showSnackBar(
+          'Position obtenue, erreur lors du géocodage: $e',
+          Colors.orange,
+        );
+      }
+    } catch (e) {
+      _showSnackBar(
+        'Erreur lors de la récupération de la position: $e',
+        Colors.red,
+      );
+    } finally {
+      setState(() {
+        _isLoadingLocation = false;
+      });
+    }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    }
+  }
+
   void _saveAddress() {
+    if (currentUserId == null) {
+      _showSnackBar(
+        'Veuillez vous connecter pour sauvegarder une adresse',
+        Colors.red,
+      );
+      return;
+    }
+
+    if (_latitude == null || _longitude == null) {
+      _showSnackBar(
+        'Veuillez d\'abord obtenir votre position GPS',
+        Colors.orange,
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
-      final address = Address(
+      final address = Adresse(
         id:
             isEditing
                 ? widget.address!.id
                 : DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _nameController.text.trim(),
-        city: _cityController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
-        isDefault: _isDefault,
+        description: _descriptionController.text.trim(),
+        latitude: _latitude!,
+        longitude: _longitude!,
+        isDefaut: _isDefault,
+        idUtilisateur: currentUserId!,
+        quartier:
+            _quartierController.text.trim().isNotEmpty
+                ? _quartierController.text.trim()
+                : null,
+        ville:
+            _villeController.text.trim().isNotEmpty
+                ? _villeController.text.trim()
+                : null,
       );
 
       Navigator.of(context).pop(address);

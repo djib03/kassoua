@@ -69,7 +69,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   : () =>
                       Navigator.pop(context), // Désactivé pendant le chargement
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(DMSizes.defaultSpace),

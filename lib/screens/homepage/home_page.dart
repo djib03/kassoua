@@ -126,9 +126,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 children: [
                   const SizedBox(height: 20),
                   BannerCarousel(isDark: isDark),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 19),
                   CategorySection(isDark: isDark),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
                   ProductsSection(
                     isDark: isDark,
                     isFavorite: _isFavorite,

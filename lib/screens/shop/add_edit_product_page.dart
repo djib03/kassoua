@@ -4,6 +4,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kassoua/services/firestore_service.dart';
+import 'package:kassoua/models/product.dart';
+import 'package:kassoua/models/categorie.dart';
+import 'package:kassoua/services/categorie_service.dart';
+import 'package:kassoua/services/cloudinary_service.dart';
+import 'package:kassoua/models/image_produit.dart';
+import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
+import 'package:flutter/services.dart';
 
 class AddEditProductPage extends StatefulWidget {
   final String? productId;
@@ -26,23 +35,31 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   String? _selectedCategory;
   bool _isLoading = false;
 
-  // Liste des catégories
-  final List<String> _categories = [
-    'Électronique',
-    'Mode & Vêtements',
-    'Maison & Jardin',
-    'Sports & Loisirs',
-    'Véhicules',
-    'Immobilier',
-    'Emploi & Services',
-    'Autres',
-  ];
+  List<Categorie> _categories = [];
+  bool _categoriesLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.productId != null) {
-      _loadProductData();
+  // Liste des catégories
+  Future<void> _loadCategories() async {
+    setState(() {
+      _categoriesLoading = true;
+    });
+
+    try {
+      final categories = await CategoryService().getCategories();
+      setState(() {
+        _categories = categories;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors du chargement des catégories: $e'),
+          backgroundColor: DMColors.error,
+        ),
+      );
+    } finally {
+      setState(() {
+        _categoriesLoading = false;
+      });
     }
   }
 
@@ -260,8 +277,44 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
       });
 
       try {
-        // TODO: Implémenter la logique de sauvegarde
-        await Future.delayed(const Duration(seconds: 2)); // Simulation
+        // Récupère l'utilisateur connecté
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception("Utilisateur non connecté");
+        }
+
+        // Crée le produit
+        final produit = Produit(
+          id: widget.productId ?? UniqueKey().toString(),
+          nom: _titleController.text,
+          description: _descriptionController.text,
+          prix: double.parse(_priceController.text),
+          statut: 'disponible',
+          dateAjout: DateTime.now(),
+          vendeurId: user.uid,
+          categorieId: _selectedCategory ?? '',
+          adresseId: '', // À adapter si tu gères les adresses
+        );
+
+        // Enregistre dans Firestore
+        await FirestoreService().addProduit(produit);
+
+        // TODO: Gérer l'upload des images (_selectedImages) si besoin
+        // 1. Ajout du produit
+        await FirestoreService().addProduit(produit);
+
+        // 2. Upload des images sur Cloudinary et création des documents ImageProduit
+        for (var imageFile in _selectedImages) {
+          final url = await uploadImageToCloudinary(imageFile); // à implémenter
+          if (url != null) {
+            final imageProduit = ImageProduit(
+              id: UniqueKey().toString(),
+              produitId: produit.id,
+              url: url,
+            );
+            await FirestoreService().addImageProduit(imageProduit);
+          }
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -291,6 +344,27 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.productId != null) {
+      _loadProductData();
+    }
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    setState(() => _categoriesLoading = true);
+    try {
+      _categories = await CategoryService().getCategories();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur chargement catégories: $e')),
+      );
+    }
+    setState(() => _categoriesLoading = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bool isEditing = widget.productId != null;
 
@@ -308,18 +382,26 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
             color:
                 Theme.of(context).brightness == Brightness.dark
                     ? DMColors.textWhite
-                    : Colors.black,
+                    : DMColors.black,
             fontWeight: FontWeight.w600,
           ),
         ),
 
         elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor:
+            Brightness.dark == Theme.of(context).brightness
+                ? DMColors.black
+                : DMColors.light,
+
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
+      backgroundColor:
+          Brightness.dark == Theme.of(context).brightness
+              ? DMColors.black
+              : DMColors.light,
       body: Form(
         key: _formKey,
         child: Column(
@@ -383,14 +465,23 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                           child: _buildTextField(
                             controller: _priceController,
                             label: 'Prix (FCFA)',
-                            hint: '50000',
+                            hint: '50 000',
                             icon: Iconsax.money,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              CurrencyInputFormatter(
+                                thousandSeparator: ThousandSeparator.Space,
+                                mantissaLength: 0,
+                              ),
+                            ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Veuillez entrer un prix';
                               }
-                              final price = double.tryParse(value);
+                              // Enlève les espaces pour la conversion
+                              final price = double.tryParse(
+                                value.replaceAll(' ', ''),
+                              );
                               if (price == null || price <= 0) {
                                 return 'Prix invalide';
                               }
@@ -412,10 +503,13 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
             Container(
               padding: EdgeInsets.all(DMSizes.lg),
               decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color:
+                    Brightness.dark == Theme.of(context).brightness
+                        ? DMColors.black
+                        : DMColors.light,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: DMColors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),
@@ -423,7 +517,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
               ),
               child: SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 60,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveForm,
                   style: ElevatedButton.styleFrom(
@@ -436,7 +530,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                   child:
                       _isLoading
                           ? const SizedBox(
-                            width: 20,
+                            width: 25,
                             height: 20,
                             child: CircularProgressIndicator(
                               color: DMColors.white,
@@ -490,14 +584,18 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color:
+            Brightness.dark == Theme.of(context).brightness
+                ? const Color.fromARGB(255, 36, 36, 36)
+                : DMColors.light,
         borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: DMColors.black.withOpacity(0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -508,6 +606,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
         validator: validator,
         keyboardType: keyboardType,
         maxLines: maxLines,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -527,13 +626,19 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   }
 
   Widget _buildCategoryDropdown() {
+    if (_categoriesLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color:
+            Brightness.dark == Theme.of(context).brightness
+                ? const Color.fromARGB(255, 36, 36, 36)
+                : DMColors.light,
         borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: DMColors.black.withOpacity(0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -553,10 +658,10 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
           contentPadding: EdgeInsets.all(DMSizes.md),
         ),
         items:
-            _categories.map((String category) {
+            _categories.map((cat) {
               return DropdownMenuItem<String>(
-                value: category,
-                child: Text(category),
+                value: cat.id,
+                child: Text(cat.nom),
               );
             }).toList(),
         onChanged: (String? newValue) {
@@ -578,7 +683,10 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     return Container(
       padding: EdgeInsets.all(DMSizes.md),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color:
+            Brightness.dark == Theme.of(context).brightness
+                ? const Color.fromARGB(255, 36, 36, 36)
+                : DMColors.light,
         borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
         border: Border.all(
           color: DMColors.grey.withOpacity(0.2),

@@ -67,7 +67,7 @@ class MyListingsPage extends StatelessWidget {
           ),
         ),
         elevation: 0,
-        backgroundColor: isDark ? DMColors.black : DMColors.white,
+        backgroundColor: isDark ? DMColors.black : Colors.white,
         actions: [
           Container(
             margin: EdgeInsets.only(right: DMSizes.md),
@@ -178,11 +178,14 @@ class MyListingsPage extends StatelessWidget {
         return Container(
           margin: EdgeInsets.only(bottom: DMSizes.md),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? DMColors.dark.withOpacity(0.3)
+                    : DMColors.white,
             borderRadius: BorderRadius.circular(DMSizes.borderRadiusLg),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),

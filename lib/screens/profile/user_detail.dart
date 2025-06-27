@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/screens/profile/edit_user_details.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class UserDetailScreen extends StatefulWidget {
   const UserDetailScreen({Key? key}) : super(key: key);
@@ -212,9 +214,13 @@ class _UserDetailScreenState extends State<UserDetailScreen>
     return '${date.day} ${months[date.month]} ${date.year}';
   }
 
-  Widget _buildProfileHeader(Utilisateur user, Brightness brightness) {
+  Widget _buildProfileHeader(
+    Utilisateur? user,
+    Brightness brightness, {
+    bool isLoading = false,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       child: Column(
         children: [
           Hero(
@@ -243,7 +249,25 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(65),
                   child:
-                      (user.photoProfil == null || user.photoProfil!.isEmpty)
+                      isLoading || user == null
+                          ? Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  DMColors.primary.withOpacity(0.1),
+                                  DMColors.primary.withOpacity(0.05),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: Image.asset(
+                              'assets/images/user.png',
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                          : (user.photoProfil == null ||
+                              user.photoProfil!.isEmpty)
                           ? Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -287,7 +311,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            '${user.nom} ${user.prenom}',
+            textAlign: TextAlign.center,
+            isLoading || user == null
+                ? 'Nom Prénom'
+                : '${user.nom} ${user.prenom}',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -295,6 +322,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                   brightness == Brightness.dark ? Colors.white : Colors.black,
               letterSpacing: 0.5,
             ),
+            maxLines: 2,
           ),
           const SizedBox(height: 8),
           Container(
@@ -309,7 +337,11 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               ),
             ),
             child: Text(
-              user.email.isNotEmpty ? user.email : 'Email non renseigné',
+              isLoading || user == null
+                  ? 'email@exemple.com'
+                  : (user.email.isNotEmpty
+                      ? user.email
+                      : 'Email non renseigné'),
               style: TextStyle(
                 fontSize: 14,
                 color: DMColors.primary,
@@ -324,6 +356,16 @@ class _UserDetailScreenState extends State<UserDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Force la couleur de la status bar à chaque affichage de l'écran
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: isDark ? DMColors.black : Colors.white,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
+    );
+
     final Brightness brightness = Theme.of(context).brightness;
     final Color backgroundColor =
         brightness == Brightness.dark ? DMColors.black : DMColors.white;
@@ -407,28 +449,6 @@ class _UserDetailScreenState extends State<UserDetailScreen>
         future:
             Provider.of<AuthController>(context, listen: false).fetchUserData(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: DMColors.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Chargement des informations...',
-                    style: TextStyle(
-                      color:
-                          brightness == Brightness.dark
-                              ? Colors.white70
-                              : Colors.black54,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
           if (snapshot.hasError) {
             return Center(
               child: Column(
@@ -466,44 +486,24 @@ class _UserDetailScreenState extends State<UserDetailScreen>
             );
           }
 
-          if (!snapshot.hasData || snapshot.data == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Iconsax.user,
-                    size: 64,
-                    color: Colors.grey.withOpacity(0.7),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucune information disponible',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color:
-                          brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+          // Détermine si on doit afficher le skeleton
+          final bool isLoading =
+              snapshot.connectionState == ConnectionState.waiting;
+          final Utilisateur? user = snapshot.data;
 
-          final user = snapshot.data!;
-
-          return FadeTransition(
-            opacity: _fadeAnimation,
+          return Skeletonizer(
+            enabled: isLoading,
             child: SlideTransition(
               position: _slideAnimation,
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   children: [
-                    _buildProfileHeader(user, brightness),
+                    _buildProfileHeader(
+                      isLoading ? null : user,
+                      brightness,
+                      isLoading: isLoading,
+                    ),
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
@@ -526,7 +526,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                               icon: Iconsax.user_tag,
                               label: 'Nom',
                               value:
-                                  user.nom.isNotEmpty
+                                  user != null && user.nom.isNotEmpty
                                       ? user.nom
                                       : 'Non renseigné',
                               brightness: brightness,
@@ -535,7 +535,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                               icon: Iconsax.user,
                               label: 'Prénom',
                               value:
-                                  user.prenom.isNotEmpty
+                                  user != null && user.prenom.isNotEmpty
                                       ? user.prenom
                                       : 'Non renseigné',
                               brightness: brightness,
@@ -544,15 +544,19 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                               icon: Iconsax.call,
                               label: 'Téléphone',
                               value:
-                                  user.telephone.isNotEmpty
+                                  user != null && user.telephone.isNotEmpty
                                       ? user.telephone
                                       : 'Non renseigné',
                               brightness: brightness,
-                              isClickable: user.telephone.isNotEmpty,
+                              isClickable:
+                                  !isLoading &&
+                                  user != null &&
+                                  user.telephone.isNotEmpty,
                               onTap:
-                                  user.telephone.isNotEmpty
+                                  !isLoading &&
+                                          user != null &&
+                                          user.telephone.isNotEmpty
                                       ? () {
-                                        // Logique pour appeler le numéro
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
@@ -583,13 +587,19 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                               _buildInfoRow(
                                 icon: Iconsax.calendar,
                                 label: 'Date de naissance',
-                                value: _formatBirthDate(user.dateNaissance),
+                                value:
+                                    user != null
+                                        ? _formatBirthDate(user.dateNaissance)
+                                        : 'Non renseignée',
                                 brightness: brightness,
                               ),
                               _buildInfoRow(
                                 icon: Iconsax.user4,
                                 label: 'Genre',
-                                value: user.genre ?? 'Non renseigné',
+                                value:
+                                    user != null && user.genre != null
+                                        ? user.genre!
+                                        : 'Non renseigné',
                                 brightness: brightness,
                               ),
                             ],

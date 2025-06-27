@@ -399,13 +399,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                         await prefs.setBool('isLoggedIn', true);
 
                                         if (mounted) {
-                                          Navigator.pushReplacement(
+                                          Navigator.pushAndRemoveUntil(
                                             context,
                                             MaterialPageRoute(
                                               builder:
                                                   (context) =>
                                                       const MenuNavigation(),
                                             ),
+                                            (route) => false,
                                           );
                                         }
                                       }

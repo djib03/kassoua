@@ -919,19 +919,13 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                                   icon: Iconsax.message,
                                   label: 'Email',
                                   brightness: brightness,
-                                  isRequired: true,
+                                  isRequired: false,
                                   child: _buildTextField(
                                     controller: _emailController,
                                     hint: 'Entrez votre email',
                                     brightness: brightness,
                                     keyboardType: TextInputType.emailAddress,
                                     validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Veuillez entrer votre email';
-                                      }
-                                      if (!value.contains('@')) {
-                                        return 'Veuillez entrer un email valide';
-                                      }
                                       return null;
                                     },
                                   ),

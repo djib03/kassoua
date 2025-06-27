@@ -1,26 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/services/categorie_service.dart';
+import 'package:kassoua/models/categorie.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
 
   @override
-  State<CategoryScreen> createState() => _CategoryScreenState();
+  State<CategoryScreen> createState() => _CategoryListScreenState();
 }
 
-class _CategoryScreenState extends State<CategoryScreen> {
-  final List<Map<String, dynamic>> _categories = [
-    {'name': 'Mode', 'icon': Icons.checkroom_outlined},
-    {'name': 'Électronique', 'icon': Icons.devices_other_outlined},
-    {'name': 'Maison', 'icon': Icons.home_outlined},
-    {'name': 'Beauté & Santé', 'icon': Icons.spa_outlined},
-    {'name': 'Alimentation', 'icon': Icons.restaurant_outlined},
-    {'name': 'Informatique', 'icon': Icons.computer_outlined},
-    {'name': 'Sports & Loisirs', 'icon': Icons.sports_soccer_outlined},
-    {'name': 'Auto & Moto', 'icon': Icons.directions_car_outlined},
-    {'name': 'Livres & Papeterie', 'icon': Icons.menu_book_outlined},
-    {'name': 'Téléphonie & Internet', 'icon': Icons.smartphone_outlined},
-  ];
+class _CategoryListScreenState extends State<CategoryScreen> {
+  final CategoryService _categoryService = CategoryService();
+  bool _isInitializing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCategories();
+  }
+
+  Future<void> _initializeCategories() async {
+    setState(() {
+      _isInitializing = true;
+    });
+
+    try {
+      await _categoryService.initializeDefaultCategories();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur d\'initialisation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +60,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
-
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(
@@ -46,52 +69,75 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   : Colors.black,
         ),
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Découvrez nos catégories',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Trouvez exactement ce que vous cherchez',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: GridView.builder(
-                physics: const BouncingScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.1,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  return _buildCategoryCard(category, context);
-                },
+      body: StreamBuilder<List<Categorie>>(
+        stream: _categoryService.getCategoriesStream(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                  const SizedBox(height: 16),
+                  Text('Erreur: ${snapshot.error}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _initializeCategories,
+                    child: const Text('Réessayer'),
+                  ),
+                ],
               ),
+            );
+          }
+
+          final categories = snapshot.data ?? [];
+
+          if (categories.isEmpty && !_isInitializing) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.category_outlined, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text('Aucune catégorie disponible'),
+                ],
+              ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Skeletonizer(
+                    enabled: _isInitializing,
+                    child: GridView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1.1,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        return _buildCategoryCard(categories[index]);
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCategoryCard(
-    Map<String, dynamic> category,
-    BuildContext context,
-  ) {
+  Widget _buildCategoryCard(Categorie category) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -108,29 +154,28 @@ class _CategoryScreenState extends State<CategoryScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => _onCategoryTap(category['name']),
+          onTap: () => _onCategoryTap(category),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(12),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
+                IconUtils.buildCustomIcon(
+                  category.icone,
+                  size: 28,
+                  color: DMColors.primary,
+                  backgroundColor: DMColors.primary.withOpacity(0.1),
+                  backgroundRadius: 12,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: DMColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    category['icon'],
-                    color: DMColors.primary,
-                    size: 28,
-                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Text(
-                  category['name'],
+                  category.nom,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -142,18 +187,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
     );
   }
 
-  void _onCategoryTap(String categoryName) {
-    // Afficher un feedback visuel
+  void _onCategoryTap(Categorie category) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Catégorie sélectionnée: $categoryName'),
+        content: Text('Catégorie sélectionnée: ${category.nom}'),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
-
-    // Ici vous pouvez ajouter la navigation vers l'écran de la catégorie
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryDetailScreen(categoryName: categoryName)));
   }
 }
