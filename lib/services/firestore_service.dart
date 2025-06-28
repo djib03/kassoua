@@ -329,6 +329,14 @@ class FirestoreService {
 
   // --- Adresses ---
 
+  Future<Adresse?> getAdresseById(String adresseId) async {
+    final doc = await _firestore.collection('adresses').doc(adresseId).get();
+    if (doc.exists) {
+      return Adresse.fromMap(doc.data()!, doc.id);
+    }
+    return null;
+  }
+
   // Récupère toutes les adresses d'un utilisateur
   Stream<List<Adresse>> getAdressesStream(String userId) {
     return _firestore

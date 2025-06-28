@@ -20,7 +20,6 @@ class MyListingsPage extends StatefulWidget {
 class _MyListingsPageState extends State<MyListingsPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
   String? get currentUserId => _auth.currentUser?.uid;
 
   @override
@@ -31,7 +30,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
       backgroundColor: isDark ? DMColors.black : DMColors.white,
       appBar: AppBar(
         title: Text(
-          'Ma Boutique',
+          'Mes annonces',
           style: TextStyle(
             color:
                 Theme.of(context).brightness == Brightness.dark
@@ -259,141 +258,177 @@ class _MyListingsPageState extends State<MyListingsPage> {
   }
 
   Widget _buildProductList(BuildContext context, List<Produit> products) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListView.builder(
       padding: EdgeInsets.all(DMSizes.md),
       itemCount: products.length,
       itemBuilder: (context, index) {
         final product = products[index];
-        return Container(
-          margin: EdgeInsets.only(bottom: DMSizes.md),
-          padding: EdgeInsets.all(DMSizes.sm),
-          decoration: BoxDecoration(
+        return Padding(
+          // Ajout d'un Padding pour la marge du bas
+          padding: EdgeInsets.only(bottom: DMSizes.md),
+          child: Material(
+            // Le Material widget gère la couleur de fond et le borderRadius pour InkWell
             color:
-                Theme.of(context).brightness == Brightness.dark
-                    ? const Color.fromARGB(255, 36, 36, 36)
-                    : DMColors.white,
+                isDark
+                    ? DMColors.dark.withOpacity(0.3)
+                    : DMColors.white, // La couleur de fond du Material
             borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
-            boxShadow: [
-              BoxShadow(
-                color: DMColors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Images du produit
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
-                    child: StreamBuilder<List<ImageProduit>>(
-                      stream: _firestoreService.getImagesProduit(product.id),
-                      builder: (context, imageSnapshot) {
-                        String imageUrl = product.imageUrl ?? '';
-                        if (imageSnapshot.hasData &&
-                            imageSnapshot.data!.isNotEmpty) {
-                          imageUrl = imageSnapshot.data!.first.url;
-                        }
-                        return Image.network(
-                          imageUrl,
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (context, error, stackTrace) => Container(
-                                width: 100,
-                                height: 100,
-                                color: DMColors.grey.withOpacity(0.3),
-                                child: const Icon(
-                                  Iconsax.gallery_slash,
-                                  color: DMColors.textSecondary,
-                                ),
-                              ),
-                        );
-                      },
-                    ),
+            shadowColor: DMColors.dark.withOpacity(0.3), // Couleur de l'ombre
+            elevation: 8, // L'élévation pour l'ombre
+            child: InkWell(
+              onTap: () {
+                print('Produit ${product.nom} cliqué !');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => AddEditProductPage(productId: product.id),
                   ),
-                  SizedBox(width: DMSizes.md),
-                  // Infos du produit
-                  Expanded(
-                    child: Column(
+                );
+              },
+              // Configurez les couleurs de splash et highlight
+              splashColor: DMColors.primary.withOpacity(0.2),
+              highlightColor: DMColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(
+                DMSizes.borderRadiusMd,
+              ), // Doit correspondre au Material borderRadius
+              // L'enfant de InkWell est maintenant un Container qui n'a plus de couleur de fond
+              child: Container(
+                padding: EdgeInsets.all(DMSizes.sm),
+                decoration: BoxDecoration(
+                  // Maintenez la bordure ici si vous voulez, mais la couleur de fond est gérée par le Material
+                  border: Border.all(
+                    color: DMColors.primary.withOpacity(0.3),
+                    width: 1,
+                  ),
+                  borderRadius: BorderRadius.circular(
+                    DMSizes.borderRadiusMd,
+                  ), // Important
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          product.nom,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: DMSizes.xs),
-                        Text(
-                          '${product.prix.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ')} FCFA',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.headlineSmall?.copyWith(
-                            color: DMColors.primary,
-                            fontWeight: FontWeight.bold,
+                        // Images du produit
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            DMSizes.borderRadiusSm,
                           ),
-                        ),
-                        SizedBox(height: DMSizes.xs),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DMSizes.xs,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getEtatColor(product.etat).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(
-                              DMSizes.borderRadiusSm,
+                          child: StreamBuilder<List<ImageProduit>>(
+                            stream: _firestoreService.getImagesProduit(
+                              product.id,
                             ),
-                          ),
-                          child: Text(
-                            product.etatText,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.labelSmall?.copyWith(
-                              color: _getEtatColor(product.etat),
-                              fontWeight: FontWeight.w600,
-                            ),
+                            builder: (context, imageSnapshot) {
+                              String imageUrl = product.imageUrl ?? '';
+                              if (imageSnapshot.hasData &&
+                                  imageSnapshot.data!.isNotEmpty) {
+                                imageUrl = imageSnapshot.data!.first.url;
+                              }
+                              return CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                errorWidget:
+                                    (context, url, error) => Container(
+                                      width: 100,
+                                      height: 100,
+                                      color: DMColors.grey.withOpacity(0.3),
+                                      child: const Icon(
+                                        Iconsax.gallery_slash,
+                                        color: DMColors.textSecondary,
+                                      ),
+                                    ),
+                              );
+                            },
                           ),
                         ),
-                        SizedBox(height: DMSizes.sm),
-                        if (product.isVendu)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: DMSizes.sm,
-                                vertical: DMSizes.xs,
+                        SizedBox(width: DMSizes.md),
+                        // Infos du produit
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.nom,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              decoration: BoxDecoration(
-                                color: DMColors.error.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'Vendu',
+                              SizedBox(height: DMSizes.xs),
+                              Text(
+                                '${product.prix.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ')} FCFA',
                                 style: Theme.of(
                                   context,
-                                ).textTheme.labelLarge?.copyWith(
-                                  color: DMColors.error,
+                                ).textTheme.headlineSmall?.copyWith(
+                                  color: DMColors.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
+                              SizedBox(height: DMSizes.xs),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: DMSizes.xs,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _getEtatColor(
+                                    product.etat,
+                                  ).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                    DMSizes.borderRadiusSm,
+                                  ),
+                                ),
+                                child: Text(
+                                  product.etatText,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.labelSmall?.copyWith(
+                                    color: _getEtatColor(product.etat),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: DMSizes.sm),
+                              if (product.isVendu)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: DMSizes.sm,
+                                      vertical: DMSizes.xs,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: DMColors.error.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      'Vendu',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.labelLarge?.copyWith(
+                                        color: DMColors.error,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
-                  ),
-                ],
+                    // Ajouter la barre d'actions
+                    _buildActionBar(context, product),
+                  ],
+                ),
               ),
-              // Ajouter la barre d'actions
-              _buildActionBar(context, product),
-            ],
+            ),
           ),
         );
       },
@@ -501,7 +536,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
             // Bouton Modifier
             _buildActionButton(
               context: context,
-              icon: Iconsax.edit,
+              icon: Icons.edit,
               label: 'Modifier',
               color: DMColors.primary,
               onPressed: () {
@@ -528,7 +563,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
               context: context,
               icon: isSold ? Iconsax.refresh : Iconsax.tick_circle,
               label: isSold ? 'Remettre' : 'Vendu',
-              color: isSold ? DMColors.info : DMColors.success,
+              color: isSold ? DMColors.info : DMColors.primary,
               onPressed: () {
                 if (isSold) {
                   _showReactivateConfirmationDialog(context, product);
@@ -549,9 +584,9 @@ class _MyListingsPageState extends State<MyListingsPage> {
             // Bouton Supprimer
             _buildActionButton(
               context: context,
-              icon: Iconsax.trash,
+              icon: Icons.delete,
               label: 'Supprimer',
-              color: DMColors.error,
+              color: DMColors.primary,
               onPressed: () {
                 _showDeleteConfirmationDialog(context, product);
               },

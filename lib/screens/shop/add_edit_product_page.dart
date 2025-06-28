@@ -5,6 +5,7 @@ import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:kassoua/models/product.dart';
 import 'package:kassoua/models/categorie.dart';
@@ -28,6 +29,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
+  String? _selectedAdresseId;
   // Removed _quantityController as it's not needed for marketplace announcement
   // final _quantityController = TextEditingController(text: '1');
 
@@ -122,17 +124,20 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     return items;
   }
 
-  void _loadProductData() {
-    // TODO: Charger les données du produit existant
-    // For now, we simulate with dummy data
-    if (widget.productId == 'prod_001') {
-      _titleController.text = 'Smartphone Android X20';
-      _descriptionController.text =
-          'Smartphone en excellent état, 128GB, caméra 48MP.';
-      _priceController.text = '75000';
-      // _quantityController.text = '1'; // Removed
-      _selectedCategory = 'Électronique';
-      _selectedProductState = 'occasion'; // Set a default or loaded state
+  Future<void> _loadProductData() async {
+    if (widget.productId == null) return;
+
+    final produit = await FirestoreService().getProduct(widget.productId!);
+    if (produit != null) {
+      setState(() {
+        _titleController.text = produit.nom;
+        _descriptionController.text = produit.description;
+        _priceController.text = produit.prix.toStringAsFixed(0);
+        _selectedCategory = produit.categorieId;
+        _selectedProductState = produit.etat;
+        _selectedAdresseId = produit.adresseId;
+        // Tu peux aussi charger les images si tu veux les afficher
+      });
     }
   }
 
@@ -357,7 +362,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
           dateAjout: DateTime.now(),
           vendeurId: user.uid,
           categorieId: _selectedCategory ?? '',
-          adresseId: '', // To be adapted if you manage addresses
+          adresseId: _selectedAdresseId ?? '',
         );
 
         // Save to Firestore
@@ -525,6 +530,30 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     _buildCategoryDropdown(),
                     SizedBox(height: DMSizes.md),
                     _buildProductStateDropdown(), // New: Product State dropdown
+                    SizedBox(height: DMSizes.md),
+                    StreamBuilder<List<Adresse>>(
+                      stream: FirestoreService().getAdressesStream(
+                        FirebaseAuth.instance.currentUser!.uid,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        if (snapshot.hasError) {
+                          return Text('Erreur lors du chargement des adresses');
+                        }
+                        final adresses = snapshot.data ?? [];
+                        if (adresses.isEmpty) {
+                          return Text(
+                            'Aucune adresse trouvée. Veuillez en ajouter une.',
+                          );
+                        }
+                        return _buildAdresseDropdown(adresses);
+                      },
+                    ),
                     SizedBox(height: DMSizes.md),
                     Row(
                       children: [
@@ -695,7 +724,6 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     if (_categoriesLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-
     return Container(
       decoration: BoxDecoration(
         color:
@@ -737,6 +765,42 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
           return null;
         },
       ),
+    );
+  }
+
+  // Ajoute ce widget dans ton formulaire, par exemple après la catégorie
+  Widget _buildAdresseDropdown(List<Adresse> adresses) {
+    if (_selectedAdresseId != null &&
+        !adresses.any((a) => a.id == _selectedAdresseId)) {
+      _selectedAdresseId = null;
+    }
+    return DropdownButtonFormField<String>(
+      value: _selectedAdresseId,
+      decoration: InputDecoration(
+        labelText: 'Adresse',
+        prefixIcon: Icon(Icons.location_on, color: DMColors.primary),
+      ),
+      items:
+          adresses.map((adresse) {
+            return DropdownMenuItem<String>(
+              value: adresse.id,
+              child: Text(
+                '${adresse.quartier ?? ''} ${adresse.ville ?? ''}'.trim(),
+                style: TextStyle(fontSize: 13),
+              ),
+            );
+          }).toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedAdresseId = value;
+        });
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Veuillez sélectionner une adresse';
+        }
+        return null;
+      },
     );
   }
 

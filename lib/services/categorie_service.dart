@@ -105,6 +105,19 @@ class CategoryService {
     }
   }
 
+  // FirestoreService
+  Future<String?> getCategoryNameById(String categorieId) async {
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('categories')
+            .doc(categorieId)
+            .get();
+    if (doc.exists) {
+      return doc.data()?['nom'] as String?;
+    }
+    return null;
+  }
+
   /// Initialiser les catégories par défaut (à exécuter une seule fois)
   Future<void> initializeDefaultCategories() async {
     try {

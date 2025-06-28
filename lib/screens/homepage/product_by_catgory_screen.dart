@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
+import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/models/categorie.dart';
 import 'package:kassoua/models/product.dart';
 import 'package:kassoua/services/categorie_service.dart';
@@ -91,19 +92,6 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
                             : DMColors.black,
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    // Navigation vers tous les produits de cette catégorie
-                  },
-                  child: Text(
-                    'View all',
-                    style: TextStyle(
-                      color: DMColors.primary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -114,24 +102,24 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
           StreamBuilder<List<Produit>>(
             stream: _productService.getProductsByCategoryStream(subCategory.id),
             builder: (context, productSnapshot) {
-              // ... reste du code identique
-
               if (productSnapshot.hasError) {
                 return _buildProductErrorState();
               }
 
               if (productSnapshot.connectionState == ConnectionState.waiting) {
-                return _buildProductLoadingState();
+                return Center(
+                  child: CircularProgressIndicator(color: DMColors.primary),
+                );
               }
 
               final products = productSnapshot.data ?? [];
-
               if (products.isEmpty) {
                 return _buildEmptyProductsState();
               }
 
               return SizedBox(
-                height: 280,
+                height: 160,
+
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -152,15 +140,16 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
   Widget _buildProductCard(Produit product) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      width: 180, // Réduire la largeur
+      width: 240, // LARGEUR AUGMENTÉE
+      height: 140, // HAUTEUR RÉDUITE pour format rectangulaire
       margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
         color: isDark ? DMColors.dark : Colors.white,
-        borderRadius: BorderRadius.circular(20), // Plus arrondi
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -172,71 +161,92 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
           onTap: () => _onProductTap(product),
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              // LAYOUT HORIZONTAL
               children: [
-                // Container image avec badge et cœur
-                Stack(
-                  children: [
-                    Container(
-                      height: 120,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: DMColors.primary.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child:
-                          product.imageUrl != null
-                              ? ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  product.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return _buildPlaceholderImage();
-                                  },
-                                ),
-                              )
-                              : _buildPlaceholderImage(),
-                    ),
-
-                    // Icône cœur pour favoris
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.favorite_border,
-                          color: isDark ? DMColors.textWhite : DMColors.black,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Nom et marque du produit
-                Text(
-                  product.nom,
-                  style: TextStyle(
-                    color: isDark ? DMColors.textWhite : DMColors.black,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                // IMAGE (à gauche)
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[100],
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child:
+                        product.imageUrl != null
+                            ? Image.network(
+                              product.imageUrl!,
+                              fit: BoxFit.cover,
+                            )
+                            : _buildPlaceholderImage(),
+                  ),
                 ),
 
-                const Spacer(),
+                const SizedBox(width: 12),
 
-                // Prix avec ancien prix barré si applicable
+                // INFOS (à droite)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // NOM
+                      Text(
+                        product.nom,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      // LOCALISATION
+                      FutureBuilder<Adresse?>(
+                        future: _productService.getAdresseById(
+                          product.adresseId,
+                        ),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const SizedBox(
+                              child: LinearProgressIndicator(),
+                            );
+                          }
+                          if (snapshot.hasData &&
+                              (snapshot.data?.quartier != null ||
+                                  snapshot.data?.ville != null)) {
+                            final adresse = snapshot.data!;
+                            return Text(
+                              '${adresse.quartier ?? ''} ${adresse.ville ?? ''}'
+                                  .trim(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+
+                      // PRIX
+                      Text(
+                        '${product.prix.toStringAsFixed(0)} FCFA',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: DMColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -247,8 +257,8 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
 
   Widget _buildPlaceholderImage() {
     return Container(
-      height: 140,
-      width: double.infinity,
+      height: 70,
+      width: 40,
       decoration: BoxDecoration(
         color: DMColors.primary.withOpacity(0.1),
         borderRadius: const BorderRadius.only(
@@ -260,123 +270,25 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
     );
   }
 
-  Color _getEtatColor(String etat) {
-    switch (etat.toLowerCase()) {
-      case 'neuf':
-        return Colors.green;
-      case 'tres_bon_etat':
-        return Colors.blue;
-      case 'bon_etat':
-        return Colors.orange;
-      case 'etat_correct':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
   Widget _buildLoadingState() {
     return Skeletonizer(
       enabled: true,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: 3,
+        itemCount: 3, // Nombre de sous-catégories fictives
         itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Nom de sous-catégorie'),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 280,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 3,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        width: 200,
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 140,
-                              width: double.infinity,
-                              color: Colors.grey,
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Nom du produit'),
-                                  SizedBox(height: 8),
-                                  Text('État'),
-                                  SizedBox(height: 8),
-                                  Text('Prix'),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+          return _buildSubCategorySection(
+            Categorie(
+              id: 'skeleton_$index',
+              nom: 'Nom de catégorie skeleton', // Texte qui sera skeletonisé
+              parentId: '',
+              icone: '', // Valeur fictive ou par défaut
+              ordre: 0, // Valeur fictive ou par défaut
+              isActive: true, // Valeur fictive ou par défaut
+              createdAt: DateTime.now(), // Valeur fictive ou par défaut
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildProductLoadingState() {
-    return Skeletonizer(
-      enabled: true,
-      child: SizedBox(
-        height: 280,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: 3,
-          itemBuilder: (context, index) {
-            return Container(
-              width: 200,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    height: 140,
-                    width: double.infinity,
-                    color: Colors.grey,
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Nom du produit'),
-                        SizedBox(height: 8),
-                        Text('État'),
-                        SizedBox(height: 8),
-                        Text('Prix'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
       ),
     );
   }
@@ -418,8 +330,8 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      height: 280,
-      padding: const EdgeInsets.all(24),
+      height: 130,
+      padding: const EdgeInsets.all(27),
       decoration: BoxDecoration(
         color: isDark ? DMColors.dark : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -428,24 +340,23 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+
           children: [
-            Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: 12),
+            Icon(Icons.inventory_2_outlined, size: 41, color: Colors.grey[400]),
             Text(
               'Aucun produit',
               style: TextStyle(
                 color: isDark ? DMColors.textWhite : Colors.grey[600],
-                fontSize: 14,
+                fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 4),
             Text(
               'disponible pour le moment',
               style: TextStyle(
                 color:
                     isDark
-                        ? DMColors.textWhite.withOpacity(0.7)
+                        ? DMColors.textWhite.withAlpha((0.7 * 255).toInt())
                         : Colors.grey[500],
                 fontSize: 12,
               ),
