@@ -20,7 +20,7 @@ class TFormDivider extends StatelessWidget {
       children: [
         Flexible(
           child: Divider(
-            color: dark ? DMColors.darkGrey : DMColors.grey,
+            color: dark ? AppColors.darkGrey : AppColors.grey,
             thickness: 0.5,
             indent: 60,
             endIndent: 5,
@@ -29,7 +29,7 @@ class TFormDivider extends StatelessWidget {
         Text(dividerText, style: Theme.of(context).textTheme.labelMedium),
         Flexible(
           child: Divider(
-            color: dark ? DMColors.darkGrey : DMColors.grey,
+            color: dark ? AppColors.darkGrey : AppColors.grey,
             thickness: 0.5,
             indent:
                 5, // Swapped indent and endIndent for symmetry or adjust as needed

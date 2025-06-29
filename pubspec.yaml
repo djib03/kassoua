@@ -17,6 +17,7 @@ dependencies:
   carousel_slider: ^5.1.1
   font_awesome_flutter: ^10.8.0
   flutter_multi_formatter: ^2.13.7
+  flutter_smart_dialog: ^4.9.8+8
 
 
 
@@ -59,6 +60,8 @@ dependencies:
   skeletonizer: ^1.4.3
   cached_network_image: ^3.3.1
   url_launcher: ^6.3.1
+  smooth_page_indicator: ^1.2.1
+  flutter_svg: ^2.2.0
   
 
 dev_dependencies:

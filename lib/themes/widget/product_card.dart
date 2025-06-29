@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
-import 'package:kassoua/screens/product_screen.dart';
+import 'package:kassoua/views/product_screen.dart';
 
 class ProductCard extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -40,7 +40,7 @@ class ProductCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? DMColors.dark : Colors.white,
+          color: isDark ? AppColors.dark : Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -63,7 +63,7 @@ class ProductCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color:
                           isDark
-                              ? DMColors.grey.withOpacity(0.3)
+                              ? AppColors.grey.withOpacity(0.3)
                               : Colors.grey[100],
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(16),
@@ -72,7 +72,7 @@ class ProductCard extends StatelessWidget {
                     child: Center(
                       child: Icon(
                         Iconsax.image,
-                        color: DMColors.primary,
+                        color: AppColors.primary,
                         size: DMSizes.iconLg,
                       ),
                     ),
@@ -127,7 +127,7 @@ class ProductCard extends StatelessWidget {
                       child: Text(
                         product['name'],
                         style: TextStyle(
-                          color: isDark ? DMColors.textWhite : DMColors.black,
+                          color: isDark ? AppColors.textWhite : AppColors.black,
                           fontSize:
                               13, // Slightly increased for better readability
                           fontWeight: FontWeight.w600,
@@ -143,7 +143,7 @@ class ProductCard extends StatelessWidget {
                           size: 12,
                           color:
                               isDark
-                                  ? DMColors.textSecondary
+                                  ? AppColors.textSecondary
                                   : Colors.grey[600],
                         ),
                         const SizedBox(width: 4),
@@ -153,7 +153,7 @@ class ProductCard extends StatelessWidget {
                             style: TextStyle(
                               color:
                                   isDark
-                                      ? DMColors.textSecondary
+                                      ? AppColors.textSecondary
                                       : Colors.grey[600],
                               fontSize: 11,
                             ),
@@ -166,7 +166,7 @@ class ProductCard extends StatelessWidget {
                     Text(
                       '${product['price'].toInt()} FCFA',
                       style: const TextStyle(
-                        color: DMColors.primary,
+                        color: AppColors.primary,
                         fontSize:
                             13, // Slightly increased for better readability
                         fontWeight: FontWeight.bold,

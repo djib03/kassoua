@@ -20,6 +20,14 @@ class FirestoreService {
 
   // --- Produits ---
 
+  // nombre de vue d un produit
+  Future<void> incrementProductViews(String productId) async {
+    await _firestore.collection('products').doc(productId).update({
+      'vues': FieldValue.increment(1),
+    });
+  }
+
+  //recuperer produit par categorie
   Stream<List<Produit>> getProductsByCategoryStream(String categorieId) {
     return _firestore
         .collection(_collection)

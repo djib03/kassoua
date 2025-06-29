@@ -13,6 +13,7 @@ class Produit {
   final String categorieId;
   final String adresseId;
   final String? imageUrl; // Image principale (optionnelle pour compatibilité)
+  final int vues;
 
   Produit({
     required this.id,
@@ -27,6 +28,7 @@ class Produit {
     required this.categorieId,
     required this.adresseId,
     this.imageUrl,
+    this.vues = 0,
   });
 
   factory Produit.fromMap(Map<String, dynamic> map, String id) {
@@ -46,6 +48,7 @@ class Produit {
       categorieId: map['categorieId'] ?? '',
       adresseId: map['adresseId'] ?? '',
       imageUrl: map['imageUrl'], // Peut être null
+      vues: map['vues'] ?? 0, // Nombre de vues, par défaut 0
     );
   }
 
@@ -62,6 +65,7 @@ class Produit {
       'categorieId': categorieId,
       'adresseId': adresseId,
       'imageUrl': imageUrl,
+      'vues': vues, // Nombre de vues
     };
   }
 
@@ -100,6 +104,7 @@ class Produit {
     String? categorieId,
     String? adresseId,
     String? imageUrl,
+    int? vues,
   }) {
     return Produit(
       id: id ?? this.id,
@@ -114,6 +119,7 @@ class Produit {
       categorieId: categorieId ?? this.categorieId,
       adresseId: adresseId ?? this.adresseId,
       imageUrl: imageUrl ?? this.imageUrl,
+      vues: vues ?? this.vues,
     );
   }
 }

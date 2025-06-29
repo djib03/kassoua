@@ -395,7 +395,7 @@ class IconUtils {
   static Widget buildCustomIcon(
     String iconName, {
     double size = 24.0,
-    Color color = DMColors.primary,
+    Color color = AppColors.primary,
     Color? backgroundColor,
     double? backgroundRadius,
     EdgeInsets? padding,
