@@ -4,12 +4,13 @@ import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/views/screen/homepage/section/app_bar_action.dart';
 import 'package:kassoua/views/screen/homepage/section/banner_carousel.dart';
 import 'package:kassoua/views/screen/homepage/section/category_section.dart';
-
 import 'package:kassoua/views/screen/homepage/section/products_section.dart';
 import 'package:kassoua/constants/colors.dart';
-
 import 'package:kassoua/views/search_page.dart';
-import 'package:kassoua/views/screen/homepage/favorite_products_screen.dart'; // Importe la page des favoris
+import 'package:kassoua/views/screen/homepage/favorite_products_screen.dart';
+import 'package:kassoua/services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kassoua/models/favori.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -21,7 +22,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  Set<String> _favoriteProducts = {}; // Ton état actuel des favoris
+
+  // ✅ Vérifications null ajoutées
+  final FirestoreService _firestoreService = FirestoreService();
+  final Set<String> _favoriteProductIds = <String>{};
+  String? _currentUserId;
+  bool _isInitialized = false; // ✅ Ajouté pour éviter les erreurs de chargement
 
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
@@ -29,6 +35,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
+    _initializeUser();
+  }
+
+  // ✅ Séparation de l'initialisation des animations
+  void _initializeAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -37,7 +49,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
-    _loadFavorites();
   }
 
   @override
@@ -46,72 +57,134 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _loadFavorites() {
-    setState(() {
-      _favoriteProducts = {};
-      // Ici, tu chargerais les favoris depuis le stockage local (SharedPreferences)
-      // ou une API si tu en as une.
-      // Par exemple :
-      // SharedPreferences.getInstance().then((prefs) {
-      //   setState(() {
-      //     _favoriteProducts = prefs.getStringList('favoriteProductIds')?.toSet() ?? {};
-      //   });
-      // });
-    });
+  // ✅ Initialisation avec gestion d'erreurs
+  void _initializeUser() {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        _currentUserId = user.uid;
+        _loadFavorites();
+      }
+      setState(() {
+        _isInitialized = true;
+      });
+    } catch (e) {
+      print('Erreur lors de l\'initialisation de l\'utilisateur: $e');
+      setState(() {
+        _isInitialized = true; // Permettre l'affichage même en cas d'erreur
+      });
+    }
   }
 
-  void _toggleFavorite(String productId) {
-    setState(() {
-      if (_favoriteProducts.contains(productId)) {
-        _favoriteProducts.remove(productId);
+  // ✅ Chargement des favoris avec gestion d'erreurs
+  void _loadFavorites() {
+    if (_currentUserId == null) return;
+
+    try {
+      _firestoreService
+          .getFavoris(_currentUserId!)
+          .listen(
+            (favoris) {
+              if (mounted) {
+                setState(() {
+                  _favoriteProductIds.clear();
+                  _favoriteProductIds.addAll(favoris.map((f) => f.produitId));
+                });
+              }
+            },
+            onError: (error) {
+              print('Erreur lors du chargement des favoris: $error');
+              // Ne pas bloquer l'interface même en cas d'erreur
+            },
+          );
+    } catch (e) {
+      print('Erreur lors de l\'écoute des favoris: $e');
+    }
+  }
+
+  // ✅ Toggle des favoris avec vérifications null
+  Future<void> _toggleFavorite(String productId) async {
+    if (_currentUserId == null) {
+      _showSnackBar(
+        'Veuillez vous connecter pour gérer les favoris',
+        Icons.error,
+        Colors.orange,
+      );
+      return;
+    }
+
+    try {
+      if (_favoriteProductIds.contains(productId)) {
+        // Retirer des favoris
+        final favorisStream = _firestoreService.getFavoris(_currentUserId!);
+        final favoris = await favorisStream.first;
+        final favorisToRemove = favoris.where((f) => f.produitId == productId);
+
+        for (var favori in favorisToRemove) {
+          await _firestoreService.removeFavori(favori.id, favori.produitId);
+        }
+
         _showSnackBar(
           'Produit retiré des favoris',
           Icons.heart_broken,
           Colors.grey,
         );
       } else {
-        _favoriteProducts.add(productId);
+        // Ajouter aux favoris
+        final newFavori = Favori(
+          id: _firestoreService.generateNewFavoriId(),
+          userId: _currentUserId!,
+          produitId: productId,
+          dateAjout: DateTime.now(),
+        );
+        await _firestoreService.addFavori(newFavori);
+
         _showSnackBar('Produit ajouté aux favoris', Icons.favorite, Colors.red);
       }
-    });
-    _saveFavorites();
-  }
-
-  void _saveFavorites() {
-    // Implémentation de la sauvegarde des favoris
-    // Par exemple, en utilisant SharedPreferences:
-    // SharedPreferences.getInstance().then((prefs) {
-    //   prefs.setStringList('favoriteProductIds', _favoriteProducts.toList());
-    // });
+    } catch (e) {
+      print('Erreur lors de la modification des favoris: $e');
+      _showSnackBar(
+        'Erreur lors de la modification des favoris',
+        Icons.error,
+        Colors.red,
+      );
+    }
   }
 
   void _showSnackBar(String message, IconData icon, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(message),
-          ],
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      );
+    }
   }
-
-  bool _isFavorite(String productId) {
-    return _favoriteProducts.contains(productId);
-  }
-
-  // Cette méthode est maintenant remplacée par la navigation vers la page
-  // void _showFavoritesDialog() { ... } // Supprime ou commente cette méthode
 
   @override
   Widget build(BuildContext context) {
     final isDark = _isDarkMode(context);
+
+    // ✅ Écran de chargement pendant l'initialisation
+    if (!_isInitialized) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.black : Colors.grey[50],
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.black : Colors.grey[50],
@@ -125,16 +198,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  BannerCarousel(isDark: isDark),
-                  const SizedBox(height: 19),
-                  CategorySection(isDark: isDark),
-                  const SizedBox(height: 20),
-                  ProductsSection(
-                    isDark: isDark,
-                    isFavorite: _isFavorite,
-                    onToggleFavorite: _toggleFavorite,
-                  ),
-                  const SizedBox(height: 24),
+                  // ✅ Vérification avant d'afficher les composants
+                  if (_isInitialized) ...[
+                    BannerCarousel(isDark: isDark),
+                    const SizedBox(height: 19),
+                    CategorySection(isDark: isDark),
+                    const SizedBox(height: 20),
+                    // ✅ Container avec hauteur fixe pour éviter les problèmes de layout
+                    Container(
+                      height: MediaQuery.of(context).size.height * 0.6,
+                      child: ProductsSection(isDark: isDark),
+                    ),
+                    const SizedBox(height: 24),
+                  ] else ...[
+                    // ✅ Placeholder si pas encore initialisé
+                    const SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -186,26 +272,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           isDark: isDark,
         ),
         AppBarAction(
-          icon: Iconsax.heart, // L'icône de cœur
+          icon: Iconsax.heart,
           onPressed: () {
-            // Naviguer vers la nouvelle page des favoris
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => FavoriteProductsScreen(
-                      favoriteProductIds:
-                          _favoriteProducts, // Passe les IDs des favoris
-                      onToggleFavorite:
-                          _toggleFavorite, // Passe la fonction de basculement
-                    ),
-              ),
-            ).then((_) {
-              // Optionnel: Recharger les favoris quand on revient de la page
-              // Si tu as un système de sauvegarde des favoris (SharedPreferences, etc.),
-              // c'est un bon endroit pour les recharger pour t'assurer que la HomePage est à jour.
-              _loadFavorites();
-            });
+            // ✅ Vérification avant navigation
+            if (_currentUserId != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => FavoriteProductsScreen(
+                        favoriteProductIds: _favoriteProductIds,
+                        onToggleFavorite: _toggleFavorite,
+                      ),
+                ),
+              ).then((_) {
+                // Recharger les favoris au retour
+                _loadFavorites();
+              });
+            } else {
+              _showSnackBar(
+                'Veuillez vous connecter pour voir vos favoris',
+                Icons.error,
+                Colors.orange,
+              );
+            }
           },
           isDark: isDark,
         ),

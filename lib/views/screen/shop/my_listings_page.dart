@@ -333,27 +333,53 @@ class _MyListingsPageState extends State<MyListingsPage> {
                             stream: _firestoreService.getImagesProduit(
                               product.id,
                             ),
-                            builder: (context, imageSnapshot) {
-                              String imageUrl = product.imageUrl ?? '';
-                              if (imageSnapshot.hasData &&
-                                  imageSnapshot.data!.isNotEmpty) {
-                                imageUrl = imageSnapshot.data!.first.url;
-                              }
-                              return CachedNetworkImage(
-                                imageUrl: imageUrl,
-                                width: 100,
-                                height: 100,
-                                fit: BoxFit.cover,
-                                errorWidget:
-                                    (context, url, error) => Container(
-                                      width: 100,
-                                      height: 100,
-                                      color: AppColors.grey.withOpacity(0.3),
-                                      child: const Icon(
-                                        Iconsax.gallery_slash,
-                                        color: AppColors.textSecondary,
-                                      ),
+                            builder: (
+                              BuildContext context,
+                              AsyncSnapshot<List<ImageProduit>> snapshot,
+                            ) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Container(
+                                  width: DMSizes.imageThumbSize,
+                                  height: DMSizes.imageThumbSize,
+                                  color: AppColors.grey.withOpacity(0.1),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
                                     ),
+                                  ),
+                                );
+                              }
+                              if (snapshot.hasData &&
+                                  snapshot.data!.isNotEmpty) {
+                                final imageUrl = snapshot.data!.first.url;
+                                return CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  width: DMSizes.imageThumbSize,
+                                  height: DMSizes.imageThumbSize,
+                                  fit: BoxFit.cover,
+                                  placeholder:
+                                      (context, url) => Container(
+                                        color: AppColors.grey.withOpacity(0.1),
+                                      ),
+                                  errorWidget:
+                                      (context, url, error) => Icon(
+                                        Iconsax.image,
+                                        size: DMSizes.iconMd,
+                                        color: AppColors.darkGrey,
+                                      ),
+                                );
+                              }
+                              return Container(
+                                width: DMSizes.imageThumbSize,
+                                height: DMSizes.imageThumbSize,
+                                color: AppColors.grey.withOpacity(0.1),
+                                child: Icon(
+                                  Iconsax.image,
+                                  size: DMSizes.iconMd,
+                                  color: AppColors.darkGrey,
+                                ),
                               );
                             },
                           ),
@@ -408,7 +434,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
                               SizedBox(height: DMSizes.sm),
                               if (product.isVendu)
                                 Align(
-                                  alignment: Alignment.centerRight,
+                                  alignment: Alignment.centerLeft,
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: DMSizes.sm,
@@ -426,6 +452,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
                                         color: AppColors.error,
                                         fontWeight: FontWeight.bold,
                                       ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ),
@@ -468,19 +495,6 @@ class _MyListingsPageState extends State<MyListingsPage> {
                     final imageUrl = imageSnapshot.data!.first.url;
                     return Image.network(
                       imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (context, error, stackTrace) => Icon(
-                            Iconsax.image,
-                            size: DMSizes.iconMd,
-                            color: AppColors.darkGrey,
-                          ),
-                    );
-                  } else if (product.imageUrl != null &&
-                      product.imageUrl!.isNotEmpty) {
-                    // Fallback vers l'imageUrl du produit si elle existe
-                    return Image.network(
-                      product.imageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder:
                           (context, error, stackTrace) => Icon(
@@ -657,46 +671,177 @@ class _MyListingsPageState extends State<MyListingsPage> {
   }
 
   void _showDeleteConfirmationDialog(BuildContext context, Produit product) {
-    PanaraConfirmDialog.show(
-      context,
-      title: 'Supprimer l\'annonce',
-      message:
-          'Êtes-vous sûr de vouloir supprimer l\'annonce "${product.nom}" ?',
-      confirmButtonText: 'Supprimer',
-      cancelButtonText: 'Annuler',
-      onTapConfirm: () async {
-        try {
-          await _firestoreService.deleteProduct(product.id);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Annonce "${product.nom}" supprimée avec succès.',
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      isDismissible: false, // Empêche la fermeture en tapant hors de la feuille
+      enableDrag: false, // Empêche la fermeture par glissement
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(ctx).brightness == Brightness.dark
+                    ? AppColors.dark
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                backgroundColor: AppColors.success,
-              ),
-            );
-            Navigator.of(context).pop();
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Erreur lors de la suppression: $e'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-            Navigator.of(context).pop();
-          }
-        }
+
+                // Icône d’avertissement (image ou icône)
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Image.asset(
+                    'assets/images/icons/warning.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Titre
+                const Text(
+                  'Supprimer l\'annonce',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'poppins',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Êtes-vous sûr de vouloir supprimer l\'annonce "${product.nom}" ?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Boutons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[100],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Annuler',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            await _firestoreService.deleteProduct(product.id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Annonce "${product.nom}" supprimée avec succès.',
+                                  ),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Erreur lors de la suppression: $e',
+                                  ),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (ctx.mounted) Navigator.of(ctx).pop();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.delete_outline, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Supprimer',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Espace pour éviter le clavier, au cas où
+                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom),
+              ],
+            ),
+          ),
+        );
       },
-      onTapCancel: () {
-        Navigator.of(context).pop();
-      },
-      panaraDialogType: PanaraDialogType.custom,
-      color: AppColors.error,
-      barrierDismissible: false,
-      imagePath: 'assets/images/icons/warning.png',
     );
   }
 
@@ -704,44 +849,171 @@ class _MyListingsPageState extends State<MyListingsPage> {
     BuildContext context,
     Produit product,
   ) {
-    PanaraConfirmDialog.show(
-      context,
-      title: 'Marquer comme vendu',
-      message:
-          'Êtes-vous sûr de vouloir marquer l\'annonce "${product.nom}" comme vendue ?',
-      confirmButtonText: 'Marquer comme vendu',
-      cancelButtonText: 'Annuler',
-      onTapConfirm: () async {
-        try {
-          await _firestoreService.markProductAsSold(product.id);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Annonce "${product.nom}" marquée comme vendue.'),
-                backgroundColor: AppColors.success,
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(ctx).brightness == Brightness.dark
+                    ? AppColors.dark
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
               ),
-            );
-            Navigator.of(context).pop();
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Erreur lors de la mise à jour: $e'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-            Navigator.of(context).pop();
-          }
-        }
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Icône de validation
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Image.asset(
+                    'assets/images/icons/tick-circle.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Titre
+                const Text(
+                  'Marquer comme vendu',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'poppins',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Êtes-vous sûr de vouloir marquer l\'annonce "${product.nom}" comme vendue ?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Boutons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[100],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Annuler',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            await _firestoreService.markProductAsSold(
+                              product.id,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Annonce "${product.nom}" marquée comme vendue.',
+                                  ),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Erreur lors de la mise à jour: $e',
+                                  ),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (ctx.mounted) Navigator.of(ctx).pop();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Marquer comme vendu',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Espace pour éviter le clavier
+                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom),
+              ],
+            ),
+          ),
+        );
       },
-      onTapCancel: () {
-        Navigator.of(context).pop();
-      },
-      panaraDialogType: PanaraDialogType.custom,
-      color: AppColors.success,
-      barrierDismissible: false,
-      imagePath: 'assets/images/icons/tick-circle.png',
     );
   }
 

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:kassoua/themes/customs/text_theme.dart';
-import 'package:kassoua/themes/widget/product_card.dart';
+import 'package:kassoua/views/widgets/product_card.dart';
 
-class PopularProductScreen extends StatefulWidget {
-  PopularProductScreen({Key? key}) : super(key: key);
+class AllProdctScreen extends StatefulWidget {
+  AllProdctScreen({Key? key}) : super(key: key);
 
   @override
-  State<PopularProductScreen> createState() => _PopularProductScreenState();
+  State<AllProdctScreen> createState() => _AllProdctScreenState();
 }
 
-class _PopularProductScreenState extends State<PopularProductScreen> {
+class _AllProdctScreenState extends State<AllProdctScreen> {
   // Liste des produits avec des données plus réalistes
   final List<Map<String, dynamic>> _allProducts = [
     {

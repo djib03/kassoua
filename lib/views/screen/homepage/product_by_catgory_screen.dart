@@ -172,16 +172,6 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
                     borderRadius: BorderRadius.circular(12),
                     color: Colors.grey[100],
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child:
-                        product.imageUrl != null
-                            ? Image.network(
-                              product.imageUrl!,
-                              fit: BoxFit.cover,
-                            )
-                            : _buildPlaceholderImage(),
-                  ),
                 ),
 
                 const SizedBox(width: 12),

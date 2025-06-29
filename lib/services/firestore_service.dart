@@ -307,17 +307,42 @@ class FirestoreService {
     await _firestore.collection('favoris').doc(favori.id).set(favori.toMap());
   }
 
+  String generateNewFavoriId() {
+    return _firestore.collection('favoris').doc().id;
+  }
+
+  // ✅ Méthode pour supprimer un favori par ID
+  Future<void> removeFavori(String userId, String produitId) async {
+    final favorisRef = FirebaseFirestore.instance
+        .collection('favoris')
+        .where('userId', isEqualTo: userId)
+        .where('produitId', isEqualTo: produitId);
+
+    final snapshot = await favorisRef.get();
+    for (final doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
+
+  // ✅ Méthode pour ajouter un favori
+
+  // ✅ Méthode pour obtenir les favoris d'un utilisateur
   Stream<List<Favori>> getFavoris(String userId) {
     return _firestore
         .collection('favoris')
         .where('userId', isEqualTo: userId)
         .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs
-                  .map((doc) => Favori.fromMap(doc.data(), doc.id))
-                  .toList(),
-        );
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Favori(
+              id: doc.id,
+              userId: data['userId'],
+              produitId: data['produitId'],
+              dateAjout: (data['dateAjout'] as Timestamp).toDate(),
+            );
+          }).toList();
+        });
   }
 
   // --- Notifications ---
@@ -533,6 +558,8 @@ class FirestoreService {
         .doc(image.id)
         .set(image.toMap());
   }
+
+  //methode pour recuperer une seul image
 
   Stream<List<ImageProduit>> getImagesProduit(String produitId) {
     return _firestore

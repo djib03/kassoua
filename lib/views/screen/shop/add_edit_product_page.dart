@@ -52,50 +52,54 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   String? _selectedProductState; // New: To hold selected product state
 
   List<DropdownMenuItem<String>> _buildCategoryItems() {
+    final seen = <String>{};
     List<DropdownMenuItem<String>> items = [];
 
     for (CategoryHierarchy hierarchy in _categoryHierarchy) {
-      // Ajouter la catégorie parent avec icône
-      items.add(
-        DropdownMenuItem<String>(
-          value: hierarchy.parent.id,
-          child: Row(
-            children: [
-              IconUtils.buildCustomIcon(
-                hierarchy.parent.icone,
-                size: 20,
-                color: AppColors.primary,
-              ),
-              SizedBox(width: DMSizes.sm),
-              Text(
-                hierarchy.parent.nom,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      // Ajouter les sous-catégories avec indentation
-      for (Categorie subCategory in hierarchy.subCategories) {
+      if (seen.add(hierarchy.parent.id)) {
         items.add(
           DropdownMenuItem<String>(
-            value: subCategory.id,
-            child: Padding(
-              padding: EdgeInsets.only(left: DMSizes.lg),
-              child: Text(
-                '• ${subCategory.nom}',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-              ),
+            value: hierarchy.parent.id,
+            child: Row(
+              children: [
+                IconUtils.buildCustomIcon(
+                  hierarchy.parent.icone,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+                SizedBox(width: DMSizes.sm),
+                Text(
+                  hierarchy.parent.nom,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
             ),
           ),
         );
       }
+      for (Categorie subCategory in hierarchy.subCategories) {
+        if (seen.add(subCategory.id)) {
+          items.add(
+            DropdownMenuItem<String>(
+              value: subCategory.id,
+              child: Padding(
+                padding: EdgeInsets.only(left: DMSizes.lg),
+                child: Text(
+                  '• ${subCategory.nom}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      }
     }
-
     return items;
   }
 
@@ -698,6 +702,13 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     if (_categoriesLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final items = _buildCategoryItems();
+    // Vérifie que la valeur sélectionnée existe dans la liste
+    final selectedValueExists = items.any(
+      (item) => item.value == _selectedCategory,
+    );
+
     return Container(
       decoration: BoxDecoration(
         color:
@@ -714,7 +725,10 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: _selectedCategory,
+        value:
+            selectedValueExists
+                ? _selectedCategory
+                : null, // <-- Correction ici
         decoration: InputDecoration(
           labelText: 'Catégorie',
           prefixIcon: const Icon(Iconsax.category, color: AppColors.primary),
@@ -726,7 +740,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
           fillColor: Colors.transparent,
           contentPadding: EdgeInsets.all(DMSizes.md),
         ),
-        items: _buildCategoryItems(),
+        items: items,
         onChanged: (String? newValue) {
           setState(() {
             _selectedCategory = newValue;

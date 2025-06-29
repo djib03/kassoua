@@ -5,8 +5,8 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:kassoua/constants/size.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:iconsax/iconsax.dart';
+import 'add_edit_product_page.dart';
 import 'package:kassoua/models/adresse.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -182,6 +182,15 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
                     // Navigation vers la page d'édition
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => AddEditProductPage(
+                              productId: widget.produit.id,
+                            ),
+                      ),
+                    );
                   },
                   child: Icon(Iconsax.edit, color: AppColors.primary, size: 24),
                 ),
@@ -203,7 +212,7 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
                                   AppColors.primary,
                                   AppColors.primary.withOpacity(0.8),
                                 ]
-                                : [Colors.green, Colors.green.withOpacity(0.8)],
+                                : [AppColors.primary, AppColors.primary],
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -602,61 +611,45 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
     return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
   }
 
-  void _toggleProductStatus() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      if (widget.produit.statut == 'disponible') {
-        await _firestoreService.markProductAsSold(widget.produit.id);
-        _showSuccessSnackBar('Produit marqué comme vendu', Icons.check_circle);
-      } else {
-        await _firestoreService.reactivateProduct(widget.produit.id);
-        _showSuccessSnackBar('Produit remis en vente', Icons.refresh);
-      }
-
-      Navigator.of(context).pop();
-    } catch (e) {
-      _showErrorSnackBar('Erreur lors de la mise à jour du statut');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
   void _showDeleteConfirmation() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          margin: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.dark
+                    : Colors.white,
             borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: Offset(0, -5),
+              ),
+            ],
           ),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: Container(
+          child: Padding(
             padding: EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color:
-                  Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.dark
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icône avec animation
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Icône
                 Container(
                   width: 80,
                   height: 80,
@@ -702,72 +695,63 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
                 // Boutons
                 Row(
                   children: [
-                    // Bouton Annuler
                     Expanded(
-                      child: Container(
-                        height: 50,
-                        child: TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: TextButton.styleFrom(
-                            backgroundColor: Colors.grey[100],
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[100],
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            'Annuler',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
-                            ),
+                        ),
+                        child: Text(
+                          'Annuler',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
                           ),
                         ),
                       ),
                     ),
-
                     SizedBox(width: 16),
-
-                    // Bouton Supprimer
                     Expanded(
-                      child: Container(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _deleteProduct();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _deleteProduct();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.delete_outline, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Supprimer',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.delete_outline,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Supprimer',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
                     ),
                   ],
                 ),
+
+                // Espace pour éviter le clavier
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),
           ),
@@ -948,13 +932,13 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
   }
 
   void _showMarkAsSoldConfirmationDialog(Produit product) {
-    SmartDialog.show(
-      alignment: Alignment.bottomCenter,
-      animationType: SmartAnimationType.scale,
-      animationTime: const Duration(milliseconds: 300),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
-          width: double.infinity,
           margin: EdgeInsets.all(DMSizes.lg),
           decoration: BoxDecoration(
             color:
@@ -1040,7 +1024,7 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {
-                              SmartDialog.dismiss();
+                              Navigator.of(context).pop();
                             },
                             style: OutlinedButton.styleFrom(
                               padding: EdgeInsets.symmetric(
@@ -1065,75 +1049,9 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
                         SizedBox(width: DMSizes.md),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () async {
-                              SmartDialog.showLoading(
-                                msg: 'Marquage en cours...',
-                                maskColor: Colors.black.withOpacity(0.3),
-                              );
-
-                              try {
-                                await _firestoreService.markProductAsSold(
-                                  product.id,
-                                );
-
-                                if (mounted) {
-                                  SmartDialog.dismiss(); // Ferme le loading
-                                  SmartDialog.dismiss(); // Ferme le dialog
-
-                                  // Affiche la confirmation
-                                  Future.delayed(
-                                    const Duration(milliseconds: 300),
-                                    () {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Row(
-                                              children: [
-                                                Icon(
-                                                  Iconsax.tick_circle,
-                                                  color: Colors.white,
-                                                  size: 20,
-                                                ),
-                                                SizedBox(width: DMSizes.sm),
-                                                Expanded(
-                                                  child: Text(
-                                                    'Annonce "${product.nom}" marquée comme vendue.',
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            backgroundColor: AppColors.success,
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    DMSizes.borderRadiusMd,
-                                                  ),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  );
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  SmartDialog.dismiss();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Erreur lors de la mise à jour: $e',
-                                      ),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
+                            onPressed: () => _confirmMarkAsSold(product),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.success,
+                              backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               padding: EdgeInsets.symmetric(
                                 vertical: DMSizes.md,
@@ -1148,11 +1066,15 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
                             child: Text(
                               'Marquer comme vendu',
                               style: TextStyle(fontWeight: FontWeight.w600),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    // Espace pour éviter le clavier
+                    SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
                   ],
                 ),
               ),
@@ -1160,8 +1082,87 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
           ),
         );
       },
-      clickMaskDismiss: true,
-      backDismiss: true,
     );
+  }
+
+  // Méthode pour confirmer et marquer comme vendu
+  Future<void> _confirmMarkAsSold(Produit product) async {
+    // Ferme le bottom sheet
+    Navigator.of(context).pop();
+
+    // Met à jour l'état local
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await _firestoreService.markProductAsSold(product.id);
+
+      if (mounted) {
+        // Ferme le loading dialog
+        Navigator.of(context).pop();
+
+        // Affiche la confirmation de succès
+        _showSuccessSnackBar(
+          'Annonce "${product.nom}" marquée comme vendue',
+          Iconsax.tick_circle,
+        );
+
+        // Retourne à la page précédente après un délai
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        // Ferme le loading dialog
+        Navigator.of(context).pop();
+        _showErrorSnackBar('Erreur lors de la mise à jour: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Version simplifiée et unifiée de _toggleProductStatus
+  void _toggleProductStatus() async {
+    if (widget.produit.statut == 'disponible') {
+      // Pour les produits disponibles, affiche le dialog de confirmation
+      _showMarkAsSoldConfirmationDialog(widget.produit);
+    } else {
+      // Pour les produits vendus, reactive directement
+      await _reactivateProduct();
+    }
+  }
+
+  // Méthode pour réactiver un produit
+  Future<void> _reactivateProduct() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await _firestoreService.reactivateProduct(widget.produit.id);
+      _showSuccessSnackBar('Produit remis en vente', Icons.refresh);
+
+      // Retourne à la page précédente
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      });
+    } catch (e) {
+      _showErrorSnackBar('Erreur lors de la réactivation');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 }

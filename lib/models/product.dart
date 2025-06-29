@@ -12,8 +12,9 @@ class Produit {
   final String vendeurId;
   final String categorieId;
   final String adresseId;
-  final String? imageUrl; // Image principale (optionnelle pour compatibilité)
+
   final int vues;
+  final bool estnegociable; // Indique si le produit est négociable
 
   Produit({
     required this.id,
@@ -27,8 +28,10 @@ class Produit {
     required this.vendeurId,
     required this.categorieId,
     required this.adresseId,
-    this.imageUrl,
+
     this.vues = 0,
+    this.estnegociable =
+        false, // Indique si le produit est négociable, par défaut false
   });
 
   factory Produit.fromMap(Map<String, dynamic> map, String id) {
@@ -47,8 +50,11 @@ class Produit {
       vendeurId: map['vendeurId'] ?? '',
       categorieId: map['categorieId'] ?? '',
       adresseId: map['adresseId'] ?? '',
-      imageUrl: map['imageUrl'], // Peut être null
+
       vues: map['vues'] ?? 0, // Nombre de vues, par défaut 0
+      estnegociable:
+          map['estnegociable'] ??
+          false, // Indique si le produit est négociable, par défaut false
     );
   }
 
@@ -64,8 +70,9 @@ class Produit {
       'vendeurId': vendeurId,
       'categorieId': categorieId,
       'adresseId': adresseId,
-      'imageUrl': imageUrl,
+
       'vues': vues, // Nombre de vues
+      'estnegociable': estnegociable, // Indique si le produit est négociable
     };
   }
 
@@ -105,6 +112,7 @@ class Produit {
     String? adresseId,
     String? imageUrl,
     int? vues,
+    bool? estnegociable,
   }) {
     return Produit(
       id: id ?? this.id,
@@ -118,8 +126,9 @@ class Produit {
       vendeurId: vendeurId ?? this.vendeurId,
       categorieId: categorieId ?? this.categorieId,
       adresseId: adresseId ?? this.adresseId,
-      imageUrl: imageUrl ?? this.imageUrl,
+
       vues: vues ?? this.vues,
+      estnegociable: estnegociable ?? this.estnegociable,
     );
   }
 }

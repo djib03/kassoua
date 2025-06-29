@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/themes/widget/product_card.dart'; // Import du ProductCard
+import 'package:kassoua/views/widgets/product_card.dart'; // Import du ProductCard
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
