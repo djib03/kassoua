@@ -30,8 +30,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   String? _selectedAdresseId;
-  // Removed _quantityController as it's not needed for marketplace announcement
-  // final _quantityController = TextEditingController(text: '1');
+  bool _isNegotiable = false; // Pour savoir si le produit est négociable
+  bool _isDeliverable = false; // Pour savoir si le produit est livrable
 
   final ImagePicker _picker = ImagePicker();
   List<File> _selectedImages = [];
@@ -115,6 +115,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
         _selectedCategory = produit.categorieId;
         _selectedProductState = produit.etat;
         _selectedAdresseId = produit.adresseId;
+        _isNegotiable = produit.estnegociable; // Nouvelle ligne
+        _isDeliverable = produit.isLivrable; // Nouvelle ligne
         // Tu peux aussi charger les images si tu veux les afficher
       });
     }
@@ -304,6 +306,118 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     );
   }
 
+  Widget _buildNegotiableSwitch() {
+    return Container(
+      padding: EdgeInsets.all(DMSizes.md),
+      decoration: BoxDecoration(
+        color:
+            Brightness.dark == Theme.of(context).brightness
+                ? const Color.fromARGB(255, 36, 36, 36)
+                : AppColors.light,
+        borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Iconsax.receipt_edit,
+            color: AppColors.primary,
+            size: DMSizes.iconMd,
+          ),
+          SizedBox(width: DMSizes.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Prix négociable',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Les acheteurs pourront proposer un prix',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isNegotiable,
+            activeColor: AppColors.primary,
+            onChanged: (bool value) {
+              setState(() {
+                _isNegotiable = value;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeliverableSwitch() {
+    return Container(
+      padding: EdgeInsets.all(DMSizes.md),
+      decoration: BoxDecoration(
+        color:
+            Brightness.dark == Theme.of(context).brightness
+                ? const Color.fromARGB(255, 36, 36, 36)
+                : AppColors.light,
+        borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Iconsax.truck, color: AppColors.primary, size: DMSizes.iconMd),
+          SizedBox(width: DMSizes.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Livraison disponible',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Vous proposez la livraison pour ce produit',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isDeliverable,
+            activeColor: AppColors.primary,
+            onChanged: (bool value) {
+              setState(() {
+                _isDeliverable = value;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveForm() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedImages.isEmpty && widget.productId == null) {
@@ -342,6 +456,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
           vendeurId: user.uid,
           categorieId: _selectedCategory ?? '',
           adresseId: _selectedAdresseId ?? '',
+          isLivrable: _isDeliverable, // Nouvelle ligne
+          estnegociable: _isNegotiable, // Nouvelle ligne
         );
 
         // Save to Firestore
@@ -566,6 +682,11 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                         ),
                       ],
                     ),
+                    SizedBox(height: DMSizes.spaceBtwSections),
+                    SizedBox(height: DMSizes.md),
+                    _buildNegotiableSwitch(),
+                    SizedBox(height: DMSizes.md),
+                    _buildDeliverableSwitch(),
                     SizedBox(height: DMSizes.spaceBtwSections),
                   ],
                 ),

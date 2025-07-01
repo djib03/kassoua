@@ -16,13 +16,27 @@ class Favori {
   factory Favori.fromMap(Map<String, dynamic> map, String id) {
     return Favori(
       id: id,
-      userId: map['userId'],
-      produitId: map['produitId'],
-      dateAjout: (map['dateAjout'] as Timestamp).toDate(),
+      userId: map['userId'] ?? '',
+      produitId: map['produitId'] ?? '',
+      dateAjout:
+          map['dateAjout'] is Timestamp
+              ? (map['dateAjout'] as Timestamp).toDate()
+              : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'userId': userId, 'produitId': produitId, 'dateAjout': dateAjout};
+    return {
+      'userId': userId,
+      'produitId': produitId,
+      'dateAjout': Timestamp.fromDate(
+        dateAjout,
+      ), // Utiliser Timestamp pour Firestore
+    };
+  }
+
+  @override
+  String toString() {
+    return 'Favori(id: $id, userId: $userId, produitId: $produitId, dateAjout: $dateAjout)';
   }
 }

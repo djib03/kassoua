@@ -12,7 +12,7 @@ class Produit {
   final String vendeurId;
   final String categorieId;
   final String adresseId;
-
+  final bool isLivrable;
   final int vues;
   final bool estnegociable; // Indique si le produit est négociable
 
@@ -21,13 +21,14 @@ class Produit {
     required this.nom,
     required this.description,
     required this.prix,
+
     required this.etat,
     required this.statut,
-    // required this.quantite, // Removed from constructor
     required this.dateAjout,
     required this.vendeurId,
     required this.categorieId,
     required this.adresseId,
+    this.isLivrable = false, // Ajoute une valeur par défaut
 
     this.vues = 0,
     this.estnegociable =
@@ -50,6 +51,7 @@ class Produit {
       vendeurId: map['vendeurId'] ?? '',
       categorieId: map['categorieId'] ?? '',
       adresseId: map['adresseId'] ?? '',
+      isLivrable: map['isLivrable'] ?? false, // Ajoute cette ligne
 
       vues: map['vues'] ?? 0, // Nombre de vues, par défaut 0
       estnegociable:
@@ -70,7 +72,7 @@ class Produit {
       'vendeurId': vendeurId,
       'categorieId': categorieId,
       'adresseId': adresseId,
-
+      'isLivrable': isLivrable, // Ajoute cette ligne
       'vues': vues, // Nombre de vues
       'estnegociable': estnegociable, // Indique si le produit est négociable
     };
