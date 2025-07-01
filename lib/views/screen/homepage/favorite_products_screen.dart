@@ -1,273 +1,194 @@
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart'; // Pour les icônes
-import 'package:kassoua/data/home_data.dart';
-import 'package:kassoua/constants/colors.dart'; // Pour les couleurs
+import 'package:iconsax/iconsax.dart';
+import 'package:kassoua/models/favori.dart';
+import 'package:kassoua/views/widgets/product_card.dart'; // Ajuste le chemin si nécessaire
 
-// Le modèle Product n'est plus strictement nécessaire ici si HomeData.products est bien structuré,
-// mais je le laisse au cas où tu en aurais besoin ailleurs pour la clarté des données.
-class Product {
-  final String id;
-  final String name;
-  final String imageUrl;
-  final double price;
-  bool isFavorite;
+// =======================================================
+// Firestore services
+// =======================================================
 
-  Product({
-    required this.id,
-    required this.name,
-    required this.imageUrl,
-    required this.price,
-    this.isFavorite = false,
-  });
+class FavoriRepository {
+  FavoriRepository._();
+  static final FavoriRepository _instance = FavoriRepository._();
+  factory FavoriRepository() => _instance;
 
-  Product copyWith({
-    String? id,
-    String? name,
-    String? imageUrl,
-    double? price,
-    bool? isFavorite,
-  }) {
-    return Product(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      imageUrl: imageUrl ?? this.imageUrl,
-      price: price ?? this.price,
-      isFavorite: isFavorite ?? this.isFavorite,
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// Renvoie la liste des favoris (objets Favori) pour un utilisateur.
+  Stream<List<Favori>> getFavoris(String userId) {
+    return _firestore
+        .collection('favoris')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Favori(
+              id: doc.id,
+              userId: data['userId'],
+              produitId: data['produitId'],
+              dateAjout: (data['dateAjout'] as Timestamp).toDate(),
+            );
+          }).toList();
+        });
+  }
+
+  /// Ajoute ou retire un favori (toggle).
+  Future<void> toggleFavori(String userId, String produitId) async {
+    final query =
+        await _firestore
+            .collection('favoris')
+            .where('userId', isEqualTo: userId)
+            .where('produitId', isEqualTo: produitId)
+            .get();
+
+    if (query.docs.isNotEmpty) {
+      // Déjà dans les favoris → on supprime
+      for (final doc in query.docs) {
+        await doc.reference.delete();
+      }
+    } else {
+      // Pas encore en favori → on ajoute
+      await _firestore.collection('favoris').add({
+        'userId': userId,
+        'produitId': produitId,
+        'dateAjout': Timestamp.now(),
+      });
+    }
+  }
+}
+
+class ProductService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// Récupère une liste de produits par leurs IDs (avec gestion du whereIn ≤ 10)
+  Future<List<Map<String, dynamic>>> fetchProductsByIds(
+    List<String> ids,
+  ) async {
+    if (ids.isEmpty) return [];
+
+    const chunkSize = 10; // Limite Firestore
+    final List<Map<String, dynamic>> results = [];
+
+    for (var i = 0; i < ids.length; i += chunkSize) {
+      final chunk = ids.sublist(i, min(i + chunkSize, ids.length));
+      final querySnap =
+          await _firestore
+              .collection('produits')
+              .where(FieldPath.documentId, whereIn: chunk)
+              .get();
+
+      results.addAll(querySnap.docs.map((d) => {...d.data(), 'id': d.id}));
+    }
+    return results;
+  }
+}
+
+// =======================================================
+// UI
+// =======================================================
+
+class FavoriteProductsScreen extends StatelessWidget {
+  const FavoriteProductsScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('Utilisateur non connecté')),
+      );
+    }
+
+    final productService = ProductService();
+    final favorisStream = FavoriRepository().getFavoris(user.uid);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mes favoris')),
+      body: StreamBuilder<List<Favori>>(
+        stream: favorisStream,
+        builder: (context, favSnap) {
+          if (favSnap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final favoris = favSnap.data ?? [];
+
+          if (favoris.isEmpty) {
+            return const _EmptyFavoriteView();
+          }
+
+          final ids = favoris.map((f) => f.produitId).toList();
+
+          return FutureBuilder<List<Map<String, dynamic>>>(
+            future: productService.fetchProductsByIds(ids),
+            builder: (context, prodSnap) {
+              if (!prodSnap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final products = prodSnap.data!;
+
+              return GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount:
+                      MediaQuery.of(context).size.width > 600 ? 4 : 2,
+                  childAspectRatio: 0.66,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  return ProductCard(
+                    product: product,
+                    isDark: Theme.of(context).brightness == Brightness.dark,
+                    isFavorite: true,
+                    isProcessing: false,
+                    onToggleFavorite:
+                        () => FavoriRepository().toggleFavori(
+                          user.uid,
+                          product['id'],
+                        ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
 
-class FavoriteProductsScreen extends StatefulWidget {
-  // Nous passons maintenant le Set des IDs des favoris
-  final Set<String> favoriteProductIds;
-  // Et la fonction pour gérer l'ajout/retrait
-  final void Function(String productId) onToggleFavorite;
-
-  const FavoriteProductsScreen({
-    Key? key,
-    required this.favoriteProductIds,
-    required this.onToggleFavorite,
-  }) : super(key: key);
-
-  @override
-  State<FavoriteProductsScreen> createState() => _FavoriteProductsScreenState();
-}
-
-class _FavoriteProductsScreenState extends State<FavoriteProductsScreen> {
-  // Nous n'avons plus besoin de _favoriteProducts ici car nous recevons les IDs
-  // List<Product> _favoriteProducts = [...]; // Ancien
-
-  // Cette liste sera construite dynamiquement à partir de favoriteProductIds
-  List<Map<String, dynamic>> _currentFavoriteProducts = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCurrentFavorites();
-  }
-
-  // Si les favoris peuvent changer en arrière-plan, utiliser didUpdateWidget
-  @override
-  void didUpdateWidget(covariant FavoriteProductsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.favoriteProductIds != oldWidget.favoriteProductIds) {
-      _loadCurrentFavorites();
-    }
-  }
-
-  void _loadCurrentFavorites() {
-    // Filtrer HomeData.products pour obtenir les produits qui sont dans favoriteProductIds
-    _currentFavoriteProducts =
-        HomeData.products
-            .where(
-              (product) => widget.favoriteProductIds.contains(product['id']),
-            )
-            .toList();
-    // Sortir de setState si _currentFavoriteProducts est déjà à jour
-    // (pourrait être optimisé si nécessaire, mais suffisant pour l'instant)
-    setState(() {});
-  }
-
-  // La fonction de retrait appellera la fonction passée en paramètre
-  void _removeFavorite(String productId) {
-    widget.onToggleFavorite(productId); // Appelle la fonction de la HomePage
-    // Recharger la liste locale après la modification
-    _loadCurrentFavorites();
-  }
+class _EmptyFavoriteView extends StatelessWidget {
+  const _EmptyFavoriteView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final Brightness brightness = Theme.of(context).brightness;
-    final Color backgroundColor =
-        brightness == Brightness.dark
-            ? Theme.of(context).colorScheme.surface
-            : Colors.white;
-    final Color textColor =
-        brightness == Brightness.dark ? Colors.white : Colors.black;
-    final Color secondaryTextColor =
-        brightness == Brightness.dark ? Colors.white70 : Colors.grey[600]!;
-    final Color cardColor =
-        brightness == Brightness.dark ? Colors.grey[900]! : Colors.white;
-    final Color shadowColor =
-        brightness == Brightness.dark
-            ? Colors.transparent
-            : Colors.grey.withOpacity(0.2);
-
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text('Mes Favoris', style: TextStyle(color: textColor)),
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        iconTheme: IconThemeData(color: textColor),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Iconsax.heart,
+            size: 72,
+            color: isDark ? Colors.white70 : Colors.grey[400],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Tu n\'as encore ajouté aucun produit en favori.',
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
-      body:
-          _currentFavoriteProducts
-                  .isEmpty // Utilise la liste filtrée
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Iconsax.heart_slash, // Icône pour les favoris vides
-                      size: 80,
-                      color: secondaryTextColor,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Aucun produit favori pour le moment.',
-                      style: TextStyle(fontSize: 18, color: secondaryTextColor),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // Optionnel: Naviguer vers la page d'accueil ou de recherche
-                        Navigator.pop(
-                          context,
-                        ); // Revenir à la page précédente (HomePage)
-                      },
-                      icon: const Icon(Iconsax.shop, color: Colors.white),
-                      label: const Text(
-                        'Découvrir des produits',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-              : GridView.builder(
-                padding: const EdgeInsets.all(16.0),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // 2 colonnes
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
-                  childAspectRatio:
-                      0.7, // Ajuste pour que les cartes aient une bonne proportion
-                ),
-                itemCount: _currentFavoriteProducts.length,
-                itemBuilder: (context, index) {
-                  final product = _currentFavoriteProducts[index];
-                  return Card(
-                    color: cardColor,
-                    elevation: 5,
-                    shadowColor: shadowColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(16),
-                            ),
-                            // Assurez-vous que l'URL d'image du produit est valide ou utilisez un placeholder
-                            child:
-                                product['imageUrl'] != null &&
-                                        product['imageUrl'].isNotEmpty
-                                    ? Image.asset(
-                                      product['imageUrl'],
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      errorBuilder: (
-                                        context,
-                                        error,
-                                        stackTrace,
-                                      ) {
-                                        return Center(
-                                          child: Icon(
-                                            Iconsax.image,
-                                            color: secondaryTextColor,
-                                            size: 40,
-                                          ),
-                                        );
-                                      },
-                                    )
-                                    : Center(
-                                      // Placeholder si pas d'image
-                                      child: Icon(
-                                        Iconsax.image,
-                                        color: secondaryTextColor,
-                                        size: 40,
-                                      ),
-                                    ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product['name'],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: textColor,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${product['price'].toStringAsFixed(2)} FCFA', // Formatage du prix
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: AppColors.primary, // Couleur du prix
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: IconButton(
-                            icon: Icon(
-                              Iconsax.heart_slash,
-                              color: Colors.red,
-                            ), // Icône pour retirer des favoris
-                            onPressed: () => _removeFavorite(product['id']),
-                            tooltip: 'Retirer des favoris',
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
     );
   }
 }
