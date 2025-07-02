@@ -34,15 +34,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final Set<String> _processingFavorites = <String>{};
   // Variables pour les favoris et utilisateur
   final FirestoreService _firestoreService = FirestoreService();
-  final Set<String> _favoriteProductIds = <String>{};
+  late final ValueNotifier<Set<String>> _favoriteProductIdsNotifier;
   String? _currentUserId;
   bool _isInitialized = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Variables pour la section produits (intégrées)
   int _displayLimit = 6;
-  static const int _loadMoreIncrement = 6;
-  bool _isLoadingMore = false;
+
+  final bool _isLoadingMore = false;
   bool _hasMoreProducts = true;
 
   bool _isDarkMode(BuildContext context) =>
@@ -52,6 +52,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _favoriteProductIdsNotifier = ValueNotifier<Set<String>>(<String>{});
     _scrollController = ScrollController();
     _initializeAnimations();
     _initializeUser();
@@ -75,6 +76,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _productDataCache.clear();
     _productLocationCache.clear();
     _productImageCache.clear();
+    _favoriteProductIdsNotifier.dispose();
     _processingFavorites.clear();
     super.dispose();
   }
@@ -106,10 +108,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           .listen(
             (favoris) {
               if (mounted) {
-                setState(() {
-                  _favoriteProductIds.clear();
-                  _favoriteProductIds.addAll(favoris.map((f) => f.produitId));
-                });
+                // Mettre à jour le ValueNotifier au lieu de setState
+                _favoriteProductIdsNotifier.value =
+                    favoris.map((f) => f.produitId).toSet();
               }
             },
             onError: (error) {
@@ -118,6 +119,59 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           );
     } catch (e) {
       print('Erreur lors de l\'écoute des favoris: $e');
+    }
+  }
+
+  bool _isFavorite(String productId) {
+    return _favoriteProductIdsNotifier.value.contains(productId);
+  }
+
+  Future<void> _onToggleFavorite(String productId) async {
+    if (_currentUserId == null) {
+      _showSnackBar('Veuillez vous connecter pour gérer les favoris');
+      return;
+    }
+
+    // Récupérer l'état actuel des favoris
+    final currentFavorites = Set<String>.from(
+      _favoriteProductIdsNotifier.value,
+    );
+    final wasAlreadyFavorite = currentFavorites.contains(productId);
+
+    // 🎯 MISE À JOUR OPTIMISTE : Mettre à jour le ValueNotifier (pas de setState!)
+    final newFavorites = Set<String>.from(currentFavorites);
+    if (wasAlreadyFavorite) {
+      newFavorites.remove(productId);
+    } else {
+      newFavorites.add(productId);
+    }
+    _favoriteProductIdsNotifier.value = newFavorites;
+
+    try {
+      if (wasAlreadyFavorite) {
+        await _firestoreService.removeFavori(_currentUserId!, productId);
+        if (mounted) {
+          _showSnackBar('Produit retiré des favoris');
+        }
+      } else {
+        final newFavori = Favori(
+          id: _firestoreService.generateNewFavoriId(),
+          userId: _currentUserId!,
+          produitId: productId,
+          dateAjout: DateTime.now(),
+        );
+        await _firestoreService.addFavori(newFavori);
+        if (mounted) {
+          _showSnackBar('Produit ajouté aux favoris');
+        }
+      }
+    } catch (e) {
+      // 🔄 ROLLBACK : En cas d'erreur, remettre l'état précédent
+      if (mounted) {
+        _favoriteProductIdsNotifier.value = currentFavorites;
+        print('Erreur favoris: $e');
+        _showSnackBar('Erreur lors de la modification des favoris');
+      }
     }
   }
 
@@ -232,61 +286,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     };
   }
 
-  bool _isFavorite(String productId) {
-    return _favoriteProductIds.contains(productId);
-  }
-
-  // ===== FIXED TOGGLE FAVORITE METHOD =====
-  Future<void> _onToggleFavorite(String productId) async {
-    if (_currentUserId == null) {
-      _showSnackBar('Veuillez vous connecter pour gérer les favoris');
-      return;
-    }
-
-    final wasAlreadyFavorite = _isFavorite(productId);
-
-    // 🎯 MISE À JOUR OPTIMISTE : Mettre à jour l'UI immédiatement
-    setState(() {
-      if (wasAlreadyFavorite) {
-        _favoriteProductIds.remove(productId);
-      } else {
-        _favoriteProductIds.add(productId);
-      }
-    });
-
-    try {
-      if (wasAlreadyFavorite) {
-        // Supprimer le favori
-        await _firestoreService.removeFavori(_currentUserId!, productId);
-        _showSnackBar('Produit retiré des favoris');
-      } else {
-        // Ajouter le favori
-        final newFavori = Favori(
-          id: _firestoreService.generateNewFavoriId(),
-          userId: _currentUserId!,
-          produitId: productId,
-          dateAjout: DateTime.now(),
-        );
-        await _firestoreService.addFavori(newFavori);
-        _showSnackBar('Produit ajouté aux favoris');
-      }
-    } catch (e) {
-      // 🔄 ROLLBACK : En cas d'erreur, remettre l'état précédent
-      setState(() {
-        if (wasAlreadyFavorite) {
-          _favoriteProductIds.add(productId);
-        } else {
-          _favoriteProductIds.remove(productId);
-        }
-      });
-
-      print('Erreur favoris: $e');
-      _showSnackBar('Erreur lors de la modification des favoris');
-    }
-  }
-
-  // ===== UNIFIED TOGGLE FAVORITE METHOD =====
-
   void _showSnackBar(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -300,45 +299,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       );
     }
-  }
-
-  Widget _buildOptimizedProductCard(Produit product, bool isDark) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _getCachedProductData(product),
-      builder: (context, snapshot) {
-        // Pendant le chargement, afficher une version basique
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return ProductCard(
-            product: _convertProductToMap(product),
-            isDark: isDark,
-            isFavorite: _isFavorite(product.id),
-            isProcessing: _isFavoriteProcessing(product.id),
-            onToggleFavorite: () => _onToggleFavorite(product.id),
-          );
-        }
-
-        // En cas d'erreur, utiliser les données de base
-        if (snapshot.hasError) {
-          print('Erreur chargement produit ${product.id}: ${snapshot.error}');
-          return ProductCard(
-            product: _convertProductToMap(product),
-            isDark: isDark,
-            isFavorite: _isFavorite(product.id),
-            isProcessing: _isFavoriteProcessing(product.id),
-            onToggleFavorite: () => _onToggleFavorite(product.id),
-          );
-        }
-
-        // Données complètes disponibles
-        return ProductCard(
-          product: snapshot.data ?? _convertProductToMap(product),
-          isDark: isDark,
-          isFavorite: _isFavorite(product.id),
-          isProcessing: _isFavoriteProcessing(product.id),
-          onToggleFavorite: () => _onToggleFavorite(product.id),
-        );
-      },
-    );
   }
 
   // =============================================
@@ -519,70 +479,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
         return Column(
           children: [
-            // En-tête
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Text(
-                'Annonces',
-                style: TextStyle(
-                  color: isDark ? AppColors.textWhite : AppColors.black,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            // 🔧 CHANGEMENT 8: Passer le ValueNotifier au lieu du Set
+            ProductListSection(
+              products: displayProducts,
+              isDark: isDark,
+              favoriteProductIds:
+                  _favoriteProductIdsNotifier.value, // Correction ici
+              onToggleFavorite: _onToggleFavorite,
+              scrollController: _scrollController,
             ),
-
-            // GridView optimisé
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: displayProducts.length,
-                itemBuilder: (context, index) {
-                  final product = displayProducts[index];
-                  return _buildOptimizedProductCard(product, isDark);
-                },
-              ),
-            ),
-
-            const SizedBox(height: 16),
 
             // Indicateurs de chargement et fin
             if (_isLoadingMore) _buildLoadingIndicator(),
             if (!hasMoreProducts && displayProducts.length > 6)
               _buildEndOfContentIndicator(isDark),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
           ],
         );
       },
     );
-  }
-
-  void _loadMoreProductsAutomatically() {
-    bool hasMoreProducts = true;
-    if (!_isLoadingMore && hasMoreProducts) {
-      setState(() {
-        _isLoadingMore = true;
-        _displayLimit += _loadMoreIncrement;
-      });
-
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          setState(() {
-            _isLoadingMore = false;
-          });
-        }
-      });
-    }
   }
 
   @override
@@ -651,6 +567,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   bool _isFavoriteProcessing(String productId) {
     return _processingFavorites.contains(productId);
+  }
+
+  void _loadMoreProductsAutomatically() {
+    if (_hasMoreProducts) {
+      setState(() {
+        _displayLimit += 6;
+      });
+    }
   }
 
   Widget _buildSliverAppBar(bool isDark) {

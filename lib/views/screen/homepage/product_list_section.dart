@@ -18,9 +18,10 @@ class ProductListSection extends StatefulWidget {
     required this.isDark,
     required this.favoriteProductIds,
     required this.onToggleFavorite,
+    // required this.favoriteProductIdsNotifier, // Supprimé car non utilisé
     required this.scrollController,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ProductListSection> createState() => _ProductListSectionState();
@@ -90,6 +91,7 @@ class _ProductListSectionState extends State<ProductListSection> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _getCachedProductData(product),
       builder: (context, snapshot) {
+        // Utiliser directement favoriteProductIds sans ValueListenableBuilder
         // Pendant le chargement, afficher une version basique
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ProductCard(
