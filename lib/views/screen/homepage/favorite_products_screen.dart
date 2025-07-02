@@ -1,194 +1,314 @@
-import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kassoua/models/favori.dart';
-import 'package:kassoua/views/widgets/product_card.dart'; // Ajuste le chemin si nécessaire
+import 'package:kassoua/models/product.dart';
+import 'package:kassoua/services/favori_service.dart';
 
-// =======================================================
-// Firestore services
-// =======================================================
+class FavoriteProductsScreen extends StatefulWidget {
+  final String userId;
 
-class FavoriRepository {
-  FavoriRepository._();
-  static final FavoriRepository _instance = FavoriRepository._();
-  factory FavoriRepository() => _instance;
+  const FavoriteProductsScreen({Key? key, required this.userId})
+    : super(key: key);
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  @override
+  State<FavoriteProductsScreen> createState() => _FavoriteProductsScreenState();
+}
 
-  /// Renvoie la liste des favoris (objets Favori) pour un utilisateur.
-  Stream<List<Favori>> getFavoris(String userId) {
-    return _firestore
-        .collection('favoris')
-        .where('userId', isEqualTo: userId)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            return Favori(
-              id: doc.id,
-              userId: data['userId'],
-              produitId: data['produitId'],
-              dateAjout: (data['dateAjout'] as Timestamp).toDate(),
-            );
-          }).toList();
+class _FavoriteProductsScreenState extends State<FavoriteProductsScreen> {
+  final favoriService _favoriService = favoriService();
+  List<Produit> _favoriteProducts = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoriteProducts();
+  }
+
+  void _loadFavoriteProducts() {
+    _favoriService.getFavoris(widget.userId).listen((favoris) async {
+      if (favoris.isNotEmpty) {
+        final productIds = favoris.map((f) => f.produitId).toList();
+        final products = await _favoriService.fetchProductsByIds(productIds);
+
+        setState(() {
+          _favoriteProducts =
+              products
+                  .map(
+                    (productData) =>
+                        Produit.fromMap(productData, productData['id']),
+                  )
+                  .toList();
+          _isLoading = false;
         });
-  }
-
-  /// Ajoute ou retire un favori (toggle).
-  Future<void> toggleFavori(String userId, String produitId) async {
-    final query =
-        await _firestore
-            .collection('favoris')
-            .where('userId', isEqualTo: userId)
-            .where('produitId', isEqualTo: produitId)
-            .get();
-
-    if (query.docs.isNotEmpty) {
-      // Déjà dans les favoris → on supprime
-      for (final doc in query.docs) {
-        await doc.reference.delete();
+      } else {
+        setState(() {
+          _favoriteProducts = [];
+          _isLoading = false;
+        });
       }
-    } else {
-      // Pas encore en favori → on ajoute
-      await _firestore.collection('favoris').add({
-        'userId': userId,
-        'produitId': produitId,
-        'dateAjout': Timestamp.now(),
-      });
+    });
+  }
+
+  Future<void> _removeFavorite(String productId) async {
+    try {
+      await _favoriService.removeFavori(widget.userId, productId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Produit retiré des favoris'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
     }
   }
-}
-
-class ProductService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  /// Récupère une liste de produits par leurs IDs (avec gestion du whereIn ≤ 10)
-  Future<List<Map<String, dynamic>>> fetchProductsByIds(
-    List<String> ids,
-  ) async {
-    if (ids.isEmpty) return [];
-
-    const chunkSize = 10; // Limite Firestore
-    final List<Map<String, dynamic>> results = [];
-
-    for (var i = 0; i < ids.length; i += chunkSize) {
-      final chunk = ids.sublist(i, min(i + chunkSize, ids.length));
-      final querySnap =
-          await _firestore
-              .collection('produits')
-              .where(FieldPath.documentId, whereIn: chunk)
-              .get();
-
-      results.addAll(querySnap.docs.map((d) => {...d.data(), 'id': d.id}));
-    }
-    return results;
-  }
-}
-
-// =======================================================
-// UI
-// =======================================================
-
-class FavoriteProductsScreen extends StatelessWidget {
-  const FavoriteProductsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Utilisateur non connecté')),
-      );
-    }
-
-    final productService = ProductService();
-    final favorisStream = FavoriRepository().getFavoris(user.uid);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes favoris')),
-      body: StreamBuilder<List<Favori>>(
-        stream: favorisStream,
-        builder: (context, favSnap) {
-          if (favSnap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      appBar: AppBar(
+        title: const Text(
+          'Mes Favoris',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: Colors.blue.shade600,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _favoriteProducts.isEmpty
+              ? _buildEmptyState()
+              : _buildFavoritesList(),
+    );
+  }
 
-          final favoris = favSnap.data ?? [];
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.favorite_border, size: 80, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'Aucun produit favori',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ajoutez des produits à vos favoris\npour les retrouver ici',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    );
+  }
 
-          if (favoris.isEmpty) {
-            return const _EmptyFavoriteView();
-          }
-
-          final ids = favoris.map((f) => f.produitId).toList();
-
-          return FutureBuilder<List<Map<String, dynamic>>>(
-            future: productService.fetchProductsByIds(ids),
-            builder: (context, prodSnap) {
-              if (!prodSnap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final products = prodSnap.data!;
-
-              return GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount:
-                      MediaQuery.of(context).size.width > 600 ? 4 : 2,
-                  childAspectRatio: 0.66,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  return ProductCard(
-                    product: product,
-                    isDark: Theme.of(context).brightness == Brightness.dark,
-                    isFavorite: true,
-                    isProcessing: false,
-                    onToggleFavorite:
-                        () => FavoriRepository().toggleFavori(
-                          user.uid,
-                          product['id'],
-                        ),
-                  );
-                },
-              );
-            },
-          );
+  Widget _buildFavoritesList() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(() {
+          _isLoading = true;
+        });
+        _loadFavoriteProducts();
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _favoriteProducts.length,
+        itemBuilder: (context, index) {
+          final product = _favoriteProducts[index];
+          return _buildProductCard(product);
         },
       ),
     );
   }
-}
 
-class _EmptyFavoriteView extends StatelessWidget {
-  const _EmptyFavoriteView({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Iconsax.heart,
-            size: 72,
-            color: isDark ? Colors.white70 : Colors.grey[400],
+  Widget _buildProductCard(Produit product) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () {
+          // Navigation vers les détails du produit
+          // Navigator.push(context, MaterialPageRoute(
+          //   builder: (context) => ProductDetailScreen(product: product),
+          // ));
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Image du produit (placeholder)
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.image, size: 40, color: Colors.grey.shade400),
+              ),
+              const SizedBox(width: 16),
+              // Informations du produit
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.nom,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      product.description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          '${product.prix.toStringAsFixed(0)} FCFA',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(product.etat),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            product.etatText,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.visibility,
+                          size: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${product.vues} vues',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                        if (product.estnegociable) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.handshake,
+                            size: 14,
+                            color: Colors.orange.shade600,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Négociable',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Bouton supprimer des favoris
+              IconButton(
+                onPressed: () => _showRemoveDialog(product),
+                icon: const Icon(Icons.favorite, color: Colors.red),
+                tooltip: 'Retirer des favoris',
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Tu n\'as encore ajouté aucun produit en favori.',
-            style: Theme.of(context).textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Color _getStatusColor(String etat) {
+    switch (etat.toLowerCase()) {
+      case 'neuf':
+        return Colors.green;
+      case 'tres_bon_etat':
+        return Colors.lightGreen;
+      case 'bon_etat':
+        return Colors.orange;
+      case 'etat_correct':
+        return Colors.deepOrange;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  void _showRemoveDialog(Produit product) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Retirer des favoris'),
+          content: Text(
+            'Voulez-vous vraiment retirer "${product.nom}" de vos favoris ?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _removeFavorite(product.id);
+              },
+              child: const Text('Retirer', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

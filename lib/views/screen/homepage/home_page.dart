@@ -4,16 +4,14 @@ import 'package:kassoua/views/screen/homepage/section/app_bar_action.dart';
 import 'package:kassoua/views/screen/homepage/section/banner_carousel.dart';
 import 'package:kassoua/views/screen/homepage/section/category_section.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/views/search_page.dart';
+import 'package:kassoua/views/screen/search_page.dart';
 import 'package:kassoua/views/screen/homepage/favorite_products_screen.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/favori.dart';
 import 'package:kassoua/models/product.dart';
-import 'package:kassoua/views/widgets/product_card.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kassoua/views/screen/homepage/product_list_section.dart';
-import 'package:kassoua/models/image_produit.dart';
+import 'package:kassoua/views/screen/product_detail.acheteur.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -26,18 +24,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  final Map<String, Future<Map<String, dynamic>>> _productDataCache = {};
-  final Map<String, String> _productLocationCache = {};
-  final Map<String, ImageProduit?> _productImageCache = {};
-
   // 🔧 NOUVEAU: Gestion des états de favoris en cours
   final Set<String> _processingFavorites = <String>{};
   // Variables pour les favoris et utilisateur
   final FirestoreService _firestoreService = FirestoreService();
-  final Set<String> _favoriteProductIds = <String>{};
   String? _currentUserId;
   bool _isInitialized = false;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late final ValueNotifier<Set<String>> _favoriteProductIdsNotifier;
 
   // Variables pour la section produits (intégrées)
   int _displayLimit = 6;
@@ -49,10 +42,68 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       Theme.of(context).brightness == Brightness.dark;
   late final ScrollController _scrollController;
 
+  Future<void> _navigateToVendorDetail(
+    BuildContext context,
+    Produit product,
+  ) async {
+    try {
+      // Récupérer les images du produit
+      final images = await _firestoreService.getImagesProduit(product.id).first;
+      final imageUrls = images.map((img) => img.url).toList();
+
+      // Navigation vers ProductDetailAcheteur
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  ProductDetailAcheteur(produit: product, images: imageUrls),
+        ),
+      );
+    } catch (e) {
+      print('Erreur lors de la navigation vers le détail: $e');
+      _showSnackBar('Erreur lors de l\'ouverture du produit');
+    }
+  }
+
+  Future<void> _navigateToVendorDetailWithAnimation(
+    BuildContext context,
+    Produit product,
+  ) async {
+    final images = await _firestoreService.getImagesProduit(product.id).first;
+    final imageUrls = images.map((img) => img.url).toList();
+
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder:
+            (context, animation, secondaryAnimation) =>
+                ProductDetailAcheteur(produit: product, images: imageUrls),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _favoriteProductIdsNotifier = ValueNotifier<Set<String>>(<String>{});
     _initializeAnimations();
     _initializeUser();
   }
@@ -72,10 +123,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void dispose() {
     _scrollController.dispose();
     _animationController.dispose();
-    _productDataCache.clear();
-    _productLocationCache.clear();
-    _productImageCache.clear();
     _processingFavorites.clear();
+    _favoriteProductIdsNotifier.dispose();
+
     super.dispose();
   }
 
@@ -106,10 +156,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           .listen(
             (favoris) {
               if (mounted) {
-                setState(() {
-                  _favoriteProductIds.clear();
-                  _favoriteProductIds.addAll(favoris.map((f) => f.produitId));
-                });
+                // Mettre à jour le ValueNotifier au lieu de setState
+                _favoriteProductIdsNotifier.value =
+                    favoris.map((f) => f.produitId).toSet();
               }
             },
             onError: (error) {
@@ -121,146 +170,40 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  // ===== MÉTHODES POUR LA SECTION PRODUITS (Intégrées) =====
-
-  Future<ImageProduit?> getImagePrincipale(String produitId) async {
-    // Vérifier le cache
-    if (_productImageCache.containsKey(produitId)) {
-      return _productImageCache[produitId];
-    }
-
-    try {
-      final query =
-          await _firestore
-              .collection('imagesProduits')
-              .where('produitId', isEqualTo: produitId)
-              .limit(1)
-              .get();
-
-      ImageProduit? image;
-      if (query.docs.isNotEmpty) {
-        final doc = query.docs.first;
-        image = ImageProduit.fromMap(doc.data(), doc.id);
-      }
-
-      // Mettre en cache
-      _productImageCache[produitId] = image;
-      return image;
-    } catch (e) {
-      print('Erreur lors du chargement de l\'image: $e');
-      _productImageCache[produitId] = null;
-      return null;
-    }
-  }
-
-  Future<String> _getProductLocation(String? adresseId) async {
-    if (adresseId == null || adresseId.isEmpty) {
-      return 'Localisation non spécifiée';
-    }
-
-    // Vérifier le cache
-    if (_productLocationCache.containsKey(adresseId)) {
-      return _productLocationCache[adresseId]!;
-    }
-
-    try {
-      final adresse = await _firestoreService.getAdresseById(adresseId);
-      String location = 'Localisation non disponible';
-
-      if (adresse != null) {
-        if (adresse.ville != null && adresse.ville!.isNotEmpty) {
-          location = adresse.ville!;
-        } else if (adresse.quartier != null && adresse.quartier!.isNotEmpty) {
-          location = adresse.quartier!;
-        } else {
-          String description = adresse.description;
-          if (description.length > 20) {
-            description = '${description.substring(0, 20)}...';
-          }
-          location = description;
-        }
-      }
-
-      // Mettre en cache
-      _productLocationCache[adresseId] = location;
-      return location;
-    } catch (e) {
-      print('Erreur lors de la récupération de l\'adresse: $e');
-      return 'Localisation non disponible';
-    }
-  }
-
-  Map<String, dynamic> _convertProductToMap(Produit product) {
-    return {
-      'id': product.id,
-      'name': product.nom,
-      'price': product.prix,
-      'location': 'Non spécifié',
-      'description': product.description,
-      'etat': product.etat,
-      'estnegociable': product.estnegociable,
-    };
-  }
-
-  Future<Map<String, dynamic>> _getCachedProductData(Produit product) {
-    if (!_productDataCache.containsKey(product.id)) {
-      _productDataCache[product
-          .id] = _convertProductToMapWithAddressAndImagesCached(product);
-    }
-    return _productDataCache[product.id]!;
-  }
-
-  Future<Map<String, dynamic>> _convertProductToMapWithAddressAndImagesCached(
-    Produit product,
-  ) async {
-    final locationFuture = _getProductLocation(product.adresseId);
-    final imageFuture = getImagePrincipale(product.id);
-
-    final results = await Future.wait([locationFuture, imageFuture]);
-    final location = results[0] as String;
-    final productImages = results[1] as ImageProduit?;
-
-    return {
-      'id': product.id,
-      'name': product.nom,
-      'price': product.prix,
-      'location': location,
-      'images': productImages,
-      'description': product.description,
-      'etat': product.etat,
-      'estnegociable': product.estnegociable,
-    };
-  }
-
+  // 🔧 CHANGEMENT 5: Modifier _isFavorite pour utiliser ValueNotifier
   bool _isFavorite(String productId) {
-    return _favoriteProductIds.contains(productId);
+    return _favoriteProductIdsNotifier.value.contains(productId);
   }
 
-  // ===== FIXED TOGGLE FAVORITE METHOD =====
+  // 🔧 CHANGEMENT 6: Nouvelle méthode _onToggleFavorite optimisée
   Future<void> _onToggleFavorite(String productId) async {
     if (_currentUserId == null) {
       _showSnackBar('Veuillez vous connecter pour gérer les favoris');
       return;
     }
 
-    final wasAlreadyFavorite = _isFavorite(productId);
+    // Récupérer l'état actuel des favoris
+    final currentFavorites = Set<String>.from(
+      _favoriteProductIdsNotifier.value,
+    );
+    final wasAlreadyFavorite = currentFavorites.contains(productId);
 
-    // 🎯 MISE À JOUR OPTIMISTE : Mettre à jour l'UI immédiatement
-    setState(() {
-      if (wasAlreadyFavorite) {
-        _favoriteProductIds.remove(productId);
-      } else {
-        _favoriteProductIds.add(productId);
-      }
-    });
+    // 🎯 MISE À JOUR OPTIMISTE : Mettre à jour le ValueNotifier (pas de setState!)
+    final newFavorites = Set<String>.from(currentFavorites);
+    if (wasAlreadyFavorite) {
+      newFavorites.remove(productId);
+    } else {
+      newFavorites.add(productId);
+    }
+    _favoriteProductIdsNotifier.value = newFavorites;
 
     try {
       if (wasAlreadyFavorite) {
-        // Supprimer le favori
         await _firestoreService.removeFavori(_currentUserId!, productId);
-        _showSnackBar('Produit retiré des favoris');
+        if (mounted) {
+          _showSnackBar('Produit retiré des favoris');
+        }
       } else {
-        // Ajouter le favori
         final newFavori = Favori(
           id: _firestoreService.generateNewFavoriId(),
           userId: _currentUserId!,
@@ -268,20 +211,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           dateAjout: DateTime.now(),
         );
         await _firestoreService.addFavori(newFavori);
-        _showSnackBar('Produit ajouté aux favoris');
+        if (mounted) {
+          _showSnackBar('Produit ajouté aux favoris');
+        }
       }
     } catch (e) {
       // 🔄 ROLLBACK : En cas d'erreur, remettre l'état précédent
-      setState(() {
-        if (wasAlreadyFavorite) {
-          _favoriteProductIds.add(productId);
-        } else {
-          _favoriteProductIds.remove(productId);
-        }
-      });
-
-      print('Erreur favoris: $e');
-      _showSnackBar('Erreur lors de la modification des favoris');
+      if (mounted) {
+        _favoriteProductIdsNotifier.value = currentFavorites;
+        print('Erreur favoris: $e');
+        _showSnackBar('Erreur lors de la modification des favoris');
+      }
     }
   }
 
@@ -300,45 +240,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       );
     }
-  }
-
-  Widget _buildOptimizedProductCard(Produit product, bool isDark) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _getCachedProductData(product),
-      builder: (context, snapshot) {
-        // Pendant le chargement, afficher une version basique
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return ProductCard(
-            product: _convertProductToMap(product),
-            isDark: isDark,
-            isFavorite: _isFavorite(product.id),
-            isProcessing: _isFavoriteProcessing(product.id),
-            onToggleFavorite: () => _onToggleFavorite(product.id),
-          );
-        }
-
-        // En cas d'erreur, utiliser les données de base
-        if (snapshot.hasError) {
-          print('Erreur chargement produit ${product.id}: ${snapshot.error}');
-          return ProductCard(
-            product: _convertProductToMap(product),
-            isDark: isDark,
-            isFavorite: _isFavorite(product.id),
-            isProcessing: _isFavoriteProcessing(product.id),
-            onToggleFavorite: () => _onToggleFavorite(product.id),
-          );
-        }
-
-        // Données complètes disponibles
-        return ProductCard(
-          product: snapshot.data ?? _convertProductToMap(product),
-          isDark: isDark,
-          isFavorite: _isFavorite(product.id),
-          isProcessing: _isFavoriteProcessing(product.id),
-          onToggleFavorite: () => _onToggleFavorite(product.id),
-        );
-      },
-    );
   }
 
   // =============================================
@@ -519,48 +420,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
         return Column(
           children: [
-            // En-tête
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Text(
-                'Annonces',
-                style: TextStyle(
-                  color: isDark ? AppColors.textWhite : AppColors.black,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            // 🔧 MODIFICATION: Ajouter le callback de navigation
+            ProductListSection(
+              products: displayProducts,
+              isDark: isDark,
+              favoriteProductIdsNotifier: _favoriteProductIdsNotifier,
+              onToggleFavorite: _onToggleFavorite,
+              scrollController: _scrollController,
+              // 🔧 NOUVEAU: Ajouter le callback de navigation
+              onProductTap:
+                  (product) => _navigateToVendorDetail(context, product),
+              // Ou avec animation: (product) => _navigateToVendorDetailWithAnimation(context, product),
             ),
-
-            // GridView optimisé
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: displayProducts.length,
-                itemBuilder: (context, index) {
-                  final product = displayProducts[index];
-                  return _buildOptimizedProductCard(product, isDark);
-                },
-              ),
-            ),
-
-            const SizedBox(height: 16),
 
             // Indicateurs de chargement et fin
             if (_isLoadingMore) _buildLoadingIndicator(),
             if (!hasMoreProducts && displayProducts.length > 6)
               _buildEndOfContentIndicator(isDark),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
           ],
         );
       },
@@ -649,10 +527,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  bool _isFavoriteProcessing(String productId) {
-    return _processingFavorites.contains(productId);
-  }
-
   Widget _buildSliverAppBar(bool isDark) {
     return SliverAppBar(
       expandedHeight: 0,
@@ -701,7 +575,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FavoriteProductsScreen(),
+                  builder:
+                      (context) =>
+                          FavoriteProductsScreen(userId: _currentUserId!),
                 ),
               ).then((_) {
                 _loadFavorites();

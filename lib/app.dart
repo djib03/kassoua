@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'views/splash_screen.dart';
+import 'views/screen/splash_screen.dart';
 import 'themes/theme.dart';
 
 class KassouaApp extends StatelessWidget {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/services/categorie_service.dart';
 import 'package:kassoua/models/categorie.dart';
-import 'package:kassoua/views/category_screen.dart';
+import 'package:kassoua/views/screen/category_screen.dart';
 import 'package:kassoua/views/screen/homepage/product_by_catgory_screen.dart';
 
 class CategorySection extends StatelessWidget {

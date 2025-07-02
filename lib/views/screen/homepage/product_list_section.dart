@@ -5,22 +5,25 @@ import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/views/widgets/product_card.dart';
 import 'package:kassoua/models/image_produit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kassoua/views/screen/product_detail.acheteur.dart';
 
 class ProductListSection extends StatefulWidget {
   final List<Produit> products;
   final bool isDark;
-  final Set<String> favoriteProductIds;
+  // final Set<String> favoriteProductIds;
   final Function(String) onToggleFavorite;
   final ScrollController scrollController;
-
+  final Function(Produit)? onProductTap;
+  final ValueNotifier<Set<String>> favoriteProductIdsNotifier;
   const ProductListSection({
     required this.products,
     required this.isDark,
-    required this.favoriteProductIds,
+    required this.favoriteProductIdsNotifier, // Changé
+    this.onProductTap, // ✅ NOUVEAU paramètre
     required this.onToggleFavorite,
     required this.scrollController,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ProductListSection> createState() => _ProductListSectionState();
@@ -76,7 +79,27 @@ class _ProductListSectionState extends State<ProductListSection> {
             itemCount: widget.products.length,
             itemBuilder: (context, index) {
               final product = widget.products[index];
-              return _buildOptimizedProductCard(product, widget.isDark);
+              final productMap = {
+                'id': product.id,
+                'name': product.nom,
+                'price': product.prix,
+                'images': ImageProduit,
+                // ✅ Ajouter d'autres champs nécessaires
+              };
+
+              return ProductCard(
+                product: productMap,
+                isDark: widget.isDark,
+                isFavorite: widget.favoriteProductIdsNotifier.value.contains(
+                  product.id,
+                ),
+                onToggleFavorite: () => widget.onToggleFavorite(product.id),
+                // ✅ AJOUTER : Callback de navigation
+                onProductTap:
+                    widget.onProductTap != null
+                        ? (_) => widget.onProductTap!(product)
+                        : null,
+              );
             },
           ),
         ),
@@ -90,36 +113,40 @@ class _ProductListSectionState extends State<ProductListSection> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _getCachedProductData(product),
       builder: (context, snapshot) {
-        // Pendant le chargement, afficher une version basique
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return ProductCard(
-            product: _convertProductToMap(product),
-            isDark: isDark,
-            isFavorite: widget.favoriteProductIds.contains(product.id),
-            isProcessing: false,
-            onToggleFavorite: () => widget.onToggleFavorite(product.id),
-          );
-        }
+        return ValueListenableBuilder<Set<String>>(
+          valueListenable: widget.favoriteProductIdsNotifier,
+          builder: (context, favoriteIds, child) {
+            // Pendant le chargement, afficher une version basique
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return ProductCard(
+                product: _convertProductToMap(product),
+                isDark: isDark,
+                isFavorite: favoriteIds.contains(product.id),
+                isProcessing: false,
+                onToggleFavorite: () => widget.onToggleFavorite(product.id),
+              );
+            }
 
-        // En cas d'erreur, utiliser les données de base
-        if (snapshot.hasError) {
-          print('Erreur chargement produit ${product.id}: ${snapshot.error}');
-          return ProductCard(
-            product: _convertProductToMap(product),
-            isDark: isDark,
-            isFavorite: widget.favoriteProductIds.contains(product.id),
-            isProcessing: false,
-            onToggleFavorite: () => widget.onToggleFavorite(product.id),
-          );
-        }
+            // En cas d'erreur, utiliser les données de base
+            if (snapshot.hasError) {
+              return ProductCard(
+                product: _convertProductToMap(product),
+                isDark: isDark,
+                isFavorite: favoriteIds.contains(product.id),
+                isProcessing: false,
+                onToggleFavorite: () => widget.onToggleFavorite(product.id),
+              );
+            }
 
-        // Données complètes disponibles
-        return ProductCard(
-          product: snapshot.data ?? _convertProductToMap(product),
-          isDark: isDark,
-          isFavorite: widget.favoriteProductIds.contains(product.id),
-          isProcessing: false,
-          onToggleFavorite: () => widget.onToggleFavorite(product.id),
+            // Données complètes disponibles
+            return ProductCard(
+              product: snapshot.data ?? _convertProductToMap(product),
+              isDark: isDark,
+              isFavorite: favoriteIds.contains(product.id),
+              isProcessing: false,
+              onToggleFavorite: () => widget.onToggleFavorite(product.id),
+            );
+          },
         );
       },
     );

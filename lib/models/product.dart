@@ -14,7 +14,9 @@ class Produit {
   final String adresseId;
   final bool isLivrable;
   final int vues;
-  final bool estnegociable; // Indique si le produit est négociable
+  final bool estnegociable;
+
+  static var length; // Indique si le produit est négociable
 
   Produit({
     required this.id,
