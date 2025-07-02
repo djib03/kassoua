@@ -26,6 +26,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  final GlobalKey<ProductListSectionState> _productListKey = GlobalKey();
+
   final Map<String, Future<Map<String, dynamic>>> _productDataCache = {};
   final Map<String, String> _productLocationCache = {};
   final Map<String, ImageProduit?> _productImageCache = {};
@@ -42,7 +44,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Variables pour la section produits (intégrées)
   int _displayLimit = 6;
 
-  final bool _isLoadingMore = false;
+  bool _isLoadingMore = false;
   bool _hasMoreProducts = true;
 
   bool _isDarkMode(BuildContext context) =>
@@ -122,9 +124,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  bool _isFavorite(String productId) {
-    return _favoriteProductIdsNotifier.value.contains(productId);
-  }
+  // bool _isFavorite(String productId) {
+  //   return _favoriteProductIdsNotifier.value.contains(productId);
+  // }
 
   Future<void> _onToggleFavorite(String productId) async {
     if (_currentUserId == null) {
@@ -481,10 +483,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           children: [
             // 🔧 CHANGEMENT 8: Passer le ValueNotifier au lieu du Set
             ProductListSection(
+              key: _productListKey,
               products: displayProducts,
               isDark: isDark,
-              favoriteProductIds:
-                  _favoriteProductIdsNotifier.value, // Correction ici
+              favoriteProductIdsNotifier: _favoriteProductIdsNotifier,
               onToggleFavorite: _onToggleFavorite,
               scrollController: _scrollController,
             ),
@@ -518,55 +520,85 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       backgroundColor: isDark ? AppColors.black : Colors.grey[50],
       body: FadeTransition(
         opacity: _fadeAnimation,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (ScrollNotification scrollInfo) {
-            if (_hasMoreProducts &&
-                !_isLoadingMore &&
-                scrollInfo.metrics.pixels >=
-                    scrollInfo.metrics.maxScrollExtent * 0.8) {
-              _loadMoreProductsAutomatically();
-            }
-            return false;
-          },
-          child: CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              _buildSliverAppBar(isDark),
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    if (_isInitialized) ...[
-                      BannerCarousel(isDark: isDark),
-                      const SizedBox(height: 19),
-                      CategorySection(isDark: isDark),
+        child: RefreshIndicator(
+          // ✅ NOUVEAU: Ajout du RefreshIndicator
+          onRefresh: _onRefresh,
+          color: AppColors.primary,
+          backgroundColor: isDark ? AppColors.black : Colors.white,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (ScrollNotification scrollInfo) {
+              if (_hasMoreProducts &&
+                  !_isLoadingMore &&
+                  scrollInfo.metrics.pixels >=
+                      scrollInfo.metrics.maxScrollExtent * 0.8) {
+                _loadMoreProductsAutomatically();
+              }
+              return false;
+            },
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                _buildSliverAppBar(isDark),
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       const SizedBox(height: 20),
-                      // 🔧 REMPLACER: Utiliser la version optimisée
-                      _buildProductsSection(isDark),
-                      const SizedBox(height: 24),
-                    ] else ...[
-                      const SizedBox(
-                        height: 200,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
+                      if (_isInitialized) ...[
+                        BannerCarousel(isDark: isDark),
+                        const SizedBox(height: 19),
+                        CategorySection(isDark: isDark),
+                        const SizedBox(height: 20),
+                        _buildProductsSection(isDark),
+                        const SizedBox(height: 24),
+                      ] else ...[
+                        const SizedBox(
+                          height: 200,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  bool _isFavoriteProcessing(String productId) {
-    return _processingFavorites.contains(productId);
+  // ✅ NOUVEAU: Méthode pour gérer le pull-to-refresh
+  Future<void> _onRefresh() async {
+    try {
+      setState(() {
+        _displayLimit = 6;
+        _isLoadingMore = false;
+        _hasMoreProducts = true;
+      });
+
+      // ✅ NOUVEAU: Forcer le rechargement des images dans ProductListSection
+      _productListKey.currentState?.refreshProductData();
+
+      if (_currentUserId != null) {
+        _loadFavorites();
+      }
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (mounted) {
+        _showSnackBar('Page actualisée');
+      }
+    } catch (e) {
+      print('Erreur lors du rafraîchissement: $e');
+      if (mounted) {
+        _showSnackBar('Erreur lors de l\'actualisation');
+      }
+    }
   }
 
   void _loadMoreProductsAutomatically() {
@@ -625,7 +657,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FavoriteProductsScreen(),
+                  builder:
+                      (context) =>
+                          FavoriteProductsScreen(userId: _currentUserId!),
                 ),
               ).then((_) {
                 _loadFavorites();

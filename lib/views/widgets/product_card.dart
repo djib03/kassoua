@@ -275,10 +275,12 @@ class _ProductCardState extends State<ProductCard>
           width: 32,
           height: 32,
           decoration: BoxDecoration(
+            // ignore: deprecated_member_use
             color: Colors.white.withOpacity(0.9),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
+                // ignore: deprecated_member_use
                 color: Colors.black.withOpacity(0.1),
                 spreadRadius: 0,
                 blurRadius: 4,
