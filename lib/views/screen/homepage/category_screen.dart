@@ -3,6 +3,7 @@ import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/services/categorie_service.dart';
 import 'package:kassoua/models/categorie.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:kassoua/views/screen/homepage/product_by_catgory_screen.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
@@ -22,26 +23,22 @@ class _CategoryListScreenState extends State<CategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor:
-          Theme.of(context).brightness == Brightness.dark
-              ? AppColors.black
-              : AppColors.white,
+      backgroundColor: isDark ? AppColors.black : AppColors.white,
       appBar: AppBar(
         title: Text(
-          'Catégories',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          'Categories',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : Colors.black,
+          ),
         ),
         elevation: 0,
         scrolledUnderElevation: 0,
-        iconTheme: IconThemeData(
-          color:
-              Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white
-                  : Colors.black,
-        ),
+        backgroundColor: isDark ? AppColors.black : AppColors.white,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       ),
       body: StreamBuilder<List<Categorie>>(
         stream: _categoryService.getParentCategoriesStream(),
@@ -55,10 +52,6 @@ class _CategoryListScreenState extends State<CategoryScreen> {
                   const SizedBox(height: 16),
                   Text('Erreur: ${snapshot.error}'),
                   const SizedBox(height: 16),
-                  // ElevatedButton(
-                  //   onPressed: _initializeCategories,
-                  //   child: const Text('Réessayer'),
-                  // ),
                 ],
               ),
             );
@@ -87,18 +80,11 @@ class _CategoryListScreenState extends State<CategoryScreen> {
                 Expanded(
                   child: Skeletonizer(
                     enabled: _isInitializing,
-                    child: GridView.builder(
+                    child: ListView.builder(
                       physics: const BouncingScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 1.1,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
                       itemCount: categories.length,
                       itemBuilder: (context, index) {
-                        return _buildCategoryCard(categories[index]);
+                        return _buildCategoryListItem(categories[index]);
                       },
                     ),
                   ),
@@ -111,9 +97,13 @@ class _CategoryListScreenState extends State<CategoryScreen> {
     );
   }
 
-  Widget _buildCategoryCard(Categorie category) {
+  Widget _buildCategoryListItem(Categorie category) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
+        color: isDark ? AppColors.dark : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -129,29 +119,36 @@ class _CategoryListScreenState extends State<CategoryScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => _onCategoryTap(category),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
+                // Icône de la catégorie
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   child: IconUtils.buildCustomIcon(category.icone),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  category.nom,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 10, // plus petit
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 16),
+                // Nom de la catégorie
+                Expanded(
+                  child: Text(
+                    category.nom,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                ),
+                // Flèche de navigation
+                Icon(
+                  Icons.chevron_right,
+                  color: isDark ? Colors.white54 : Colors.grey[400],
+                  size: 24,
                 ),
               ],
             ),
@@ -162,12 +159,10 @@ class _CategoryListScreenState extends State<CategoryScreen> {
   }
 
   void _onCategoryTap(Categorie category) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Catégorie sélectionnée: ${category.nom}'),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductsByCategoryScreen(category: category),
       ),
     );
   }

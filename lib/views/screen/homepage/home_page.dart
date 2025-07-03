@@ -4,7 +4,7 @@ import 'package:kassoua/views/screen/homepage/section/app_bar_action.dart';
 import 'package:kassoua/views/screen/homepage/section/banner_carousel.dart';
 import 'package:kassoua/views/screen/homepage/section/category_section.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/views/search_page.dart';
+import 'package:kassoua/views/screen/homepage/search_page.dart';
 import 'package:kassoua/views/screen/homepage/favorite_products_screen.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,6 +14,7 @@ import 'package:kassoua/views/widgets/product_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kassoua/views/screen/homepage/product_list_section.dart';
 import 'package:kassoua/models/image_produit.dart';
+import 'package:kassoua/views/screen/homepage/product_detail_acheteur.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -207,85 +208,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _productImageCache[produitId] = null;
       return null;
     }
-  }
-
-  Future<String> _getProductLocation(String? adresseId) async {
-    if (adresseId == null || adresseId.isEmpty) {
-      return 'Localisation non spécifiée';
-    }
-
-    // Vérifier le cache
-    if (_productLocationCache.containsKey(adresseId)) {
-      return _productLocationCache[adresseId]!;
-    }
-
-    try {
-      final adresse = await _firestoreService.getAdresseById(adresseId);
-      String location = 'Localisation non disponible';
-
-      if (adresse != null) {
-        if (adresse.ville != null && adresse.ville!.isNotEmpty) {
-          location = adresse.ville!;
-        } else if (adresse.quartier != null && adresse.quartier!.isNotEmpty) {
-          location = adresse.quartier!;
-        } else {
-          String description = adresse.description;
-          if (description.length > 20) {
-            description = '${description.substring(0, 20)}...';
-          }
-          location = description;
-        }
-      }
-
-      // Mettre en cache
-      _productLocationCache[adresseId] = location;
-      return location;
-    } catch (e) {
-      print('Erreur lors de la récupération de l\'adresse: $e');
-      return 'Localisation non disponible';
-    }
-  }
-
-  Map<String, dynamic> _convertProductToMap(Produit product) {
-    return {
-      'id': product.id,
-      'name': product.nom,
-      'price': product.prix,
-      'location': 'Non spécifié',
-      'description': product.description,
-      'etat': product.etat,
-      'estnegociable': product.estnegociable,
-    };
-  }
-
-  Future<Map<String, dynamic>> _getCachedProductData(Produit product) {
-    if (!_productDataCache.containsKey(product.id)) {
-      _productDataCache[product
-          .id] = _convertProductToMapWithAddressAndImagesCached(product);
-    }
-    return _productDataCache[product.id]!;
-  }
-
-  Future<Map<String, dynamic>> _convertProductToMapWithAddressAndImagesCached(
-    Produit product,
-  ) async {
-    final locationFuture = _getProductLocation(product.adresseId);
-    final imageFuture = getImagePrincipale(product.id);
-
-    final results = await Future.wait([locationFuture, imageFuture]);
-    final location = results[0] as String;
-    final productImages = results[1] as ImageProduit?;
-
-    return {
-      'id': product.id,
-      'name': product.nom,
-      'price': product.prix,
-      'location': location,
-      'images': productImages,
-      'description': product.description,
-      'etat': product.etat,
-      'estnegociable': product.estnegociable,
-    };
   }
 
   void _showSnackBar(String message) {
@@ -489,6 +411,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               favoriteProductIdsNotifier: _favoriteProductIdsNotifier,
               onToggleFavorite: _onToggleFavorite,
               scrollController: _scrollController,
+              onProductTap: (Produit produit) async {
+                final images =
+                    await _firestoreService.getImagesProduit(produit.id).first;
+                final imageUrls = images.map((img) => img.url).toList();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => ProductDetailAcheteur(
+                          produit: produit,
+                          images: imageUrls,
+                        ),
+                  ),
+                );
+              },
             ),
 
             // Indicateurs de chargement et fin

@@ -58,18 +58,6 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
     _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
     );
-
-    _progressController.addListener(() {
-      if (_progressController.value < 0.3) {
-        _updateLoadingText("Chargement des ressources...");
-      } else if (_progressController.value < 0.6) {
-        _updateLoadingText("Préparation de l'interface...");
-      } else if (_progressController.value < 0.9) {
-        _updateLoadingText("Finalisation...");
-      } else {
-        _updateLoadingText("Prêt !");
-      }
-    });
   }
 
   void _updateLoadingText(String text) {
@@ -288,7 +276,7 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
             semanticsLabel: _loadingText,
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
         _buildProgressIndicator(),
       ],
     );
@@ -316,16 +304,6 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
                 value: _progressAnimation.value,
                 backgroundColor: Colors.white.withOpacity(0.3),
                 valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          AnimatedBuilder(
-            animation: _progressAnimation,
-            builder: (context, child) {
-              return Text(
-                "${(_progressAnimation.value * 100).toInt()}%",
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
               );
             },
           ),

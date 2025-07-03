@@ -185,7 +185,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      subtitle, // Correction: utiliser subtitle au lieu de title
+                      subtitle,
                       style: TextStyle(
                         fontSize: 13,
                         color:
@@ -209,27 +209,30 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Helper method for anonymous profile
+  // Helper method for anonymous profile - Layout horizontal
   Widget _buildAnonymousProfile(BuildContext context, bool isDark) {
     return Container(
       margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(24),
-      width: 300,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.dark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black26.withOpacity(0.1) : Colors.white,
+            color:
+                isDark
+                    ? Colors.black26.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.08),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
+          // Image de profil à gauche
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.primaryDark, AppColors.accent],
@@ -245,35 +248,40 @@ class ProfileScreen extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(50),
+                borderRadius: BorderRadius.circular(35),
                 child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: Image.asset(
-                    'assets/images/user.png', // Default image for anonymous
-                    fit: BoxFit.cover,
-                  ),
+                  width: 70,
+                  height: 70,
+                  child: Icon(Icons.account_circle_outlined, size: 23),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 15),
-          Text(
-            'Anonyme', // Display "Anonymous User"
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: isDark ? AppColors.textWhite : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            'Connectez-vous pour voir vos informations', // Indication pour se connecter
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 16,
+          const SizedBox(width: 20),
+          // Informations à droite
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Anonyme',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: isDark ? AppColors.textWhite : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Connectez-vous pour voir vos informations',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -281,7 +289,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Helper method for logged-in user profile
+  // Helper method for logged-in user profile - Layout horizontal
   Widget _buildUserProfile(
     BuildContext context,
     bool isDark,
@@ -289,8 +297,7 @@ class ProfileScreen extends StatelessWidget {
   ) {
     return Container(
       margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(24),
-      width: 300,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.dark : Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -305,10 +312,11 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
+          // Image de profil à gauche
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.primaryDark, AppColors.accent],
@@ -323,12 +331,11 @@ class ProfileScreen extends StatelessWidget {
                 color: isDark ? Colors.grey[900] : Colors.white,
                 shape: BoxShape.circle,
               ),
-
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(50),
+                borderRadius: BorderRadius.circular(35),
                 child: SizedBox(
-                  width: 100,
-                  height: 100,
+                  width: 70,
+                  height: 70,
                   child:
                       (user.photoProfil == null || user.photoProfil!.isEmpty)
                           ? Image.asset(
@@ -342,36 +349,46 @@ class ProfileScreen extends StatelessWidget {
                                 (context, url) => Center(
                                   child: CircularProgressIndicator(
                                     color: AppColors.primary,
+                                    strokeWidth: 2,
                                   ),
                                 ),
                             errorWidget:
-                                (context, url, error) => Image.asset(
-                                  'assets/images/user.png',
-                                  fit: BoxFit.cover,
+                                (context, url, error) => Icon(
+                                  Iconsax.profile,
+                                  color: AppColors.error,
+                                  size: 30,
                                 ),
                           ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 15),
-          Text(
-            user.nom.isEmpty && user.prenom.isEmpty
-                ? 'Utilisateur'
-                : '${user.nom} ${user.prenom}'.trim(),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: isDark ? AppColors.textWhite : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            user.email.isNotEmpty ? user.email : user.telephone,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 16,
+          const SizedBox(width: 20),
+          // Informations à droite
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  user.nom.isEmpty && user.prenom.isEmpty
+                      ? 'Utilisateur'
+                      : '${user.nom} ${user.prenom}'.trim(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: isDark ? AppColors.textWhite : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  user.email.isNotEmpty ? user.email : user.telephone,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -387,11 +404,9 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor:
-              Colors.transparent, // Transparente pour un meilleur rendu
+          statusBarColor: Colors.transparent,
           statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-          statusBarBrightness:
-              isDark ? Brightness.dark : Brightness.light, // Pour iOS
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
         ),
         elevation: 0,
         title: Text(
@@ -416,7 +431,7 @@ class ProfileScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Section profil utilisateur
+            // Section profil utilisateur - Layout horizontal
             FutureBuilder<Utilisateur?>(
               future:
                   Provider.of<AuthController>(
@@ -426,37 +441,11 @@ class ProfileScreen extends StatelessWidget {
               builder: (context, snapshot) {
                 Utilisateur? user = snapshot.data;
                 if (user == null) {
-                  // Affiche le profil anonyme si pas de données utilisateur
                   return _buildAnonymousProfile(context, isDark);
                 }
-                // Affiche le profil utilisateur réel
                 return _buildUserProfile(context, isDark, user);
               },
             ),
-
-            // Cartes statistiques
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  _buildActionCard(
-                    icon: Iconsax.shopping_bag,
-                    title: 'Mes achats',
-                    value: '3',
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 16),
-                  _buildActionCard(
-                    icon: Iconsax.heart,
-                    title: 'Mes favoris', // Correction: "favories" -> "favoris"
-                    value: '6',
-                    color: AppColors.secondary,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
 
             // Section paramètres
             Padding(
@@ -465,7 +454,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   _buildSection(
                     context,
-                    title: 'Paramètres',
+                    title: '',
                     items: [
                       _buildMenuItem(
                         icon: Iconsax.setting,
@@ -485,25 +474,7 @@ class ProfileScreen extends StatelessWidget {
                         },
                         color: AppColors.primary,
                       ),
-                      _buildMenuItem(
-                        icon: Iconsax.lock,
-                        title: 'Changer le mot de passe',
-                        subtitle: 'Mettre à jour votre mot de passe',
-                        onTap: () {
-                          if (!isLoggedIn) {
-                            _showLoginRequiredSnackBar(context);
-                            return;
-                          }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => const ChangePasswordScreen(),
-                            ),
-                          );
-                        },
-                        color: AppColors.primary,
-                      ),
+
                       _buildMenuItem(
                         icon: Iconsax.notification,
                         title: 'Notifications',
@@ -525,8 +496,7 @@ class ProfileScreen extends StatelessWidget {
                       _buildMenuItem(
                         icon: Iconsax.location,
                         title: 'Mes adresses',
-                        subtitle:
-                            'Ajouter et gérer vos adresses', // Amélioration du texte
+                        subtitle: 'Ajouter et gérer vos adresses',
                         onTap: () {
                           if (!isLoggedIn) {
                             _showLoginRequiredSnackBar(context);
@@ -542,16 +512,6 @@ class ProfileScreen extends StatelessWidget {
                         },
                         color: AppColors.primary,
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Section actions dangereuses
-                  _buildSection(
-                    context,
-                    title: 'Actions',
-                    items: [
                       _buildMenuItem(
                         icon: Iconsax.login,
                         title: 'Se connecter',
@@ -600,7 +560,7 @@ class ProfileScreen extends StatelessWidget {
                                 context,
                                 listen: false,
                               ).signOut();
-                              Navigator.of(context).pop(); // Ferme le dialog
+                              Navigator.of(context).pop();
                               Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(
@@ -631,7 +591,6 @@ class ProfileScreen extends StatelessWidget {
                             confirmButtonText: 'Oui',
                             cancelButtonText: 'Non',
                             onTapConfirm: () async {
-                              // Call delete account logic here
                               await Provider.of<AuthController>(
                                 context,
                                 listen: false,

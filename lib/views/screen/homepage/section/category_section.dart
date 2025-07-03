@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/services/categorie_service.dart';
 import 'package:kassoua/models/categorie.dart';
-import 'package:kassoua/views/category_screen.dart';
+import 'package:kassoua/views/screen/homepage/category_screen.dart';
 import 'package:kassoua/views/screen/homepage/product_by_catgory_screen.dart';
 
 class CategorySection extends StatelessWidget {
@@ -28,8 +28,8 @@ class CategorySection extends StatelessWidget {
                 return const Center(child: Text('Aucune catégorie'));
               }
               final categories = snapshot.data!;
-              final showSeeAll = categories.length > 8;
-              final displayCount = showSeeAll ? 8 : categories.length;
+              final showSeeAll = categories.length > 5;
+              final displayCount = showSeeAll ? 5 : categories.length;
 
               return ListView.builder(
                 scrollDirection: Axis.horizontal,
