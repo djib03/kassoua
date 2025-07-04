@@ -5,6 +5,16 @@ import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Gère la notification en arrière-plan
+}
 
 void enableOfflinePersistence() {
   FirebaseFirestore.instance.settings = const Settings(
@@ -17,10 +27,21 @@ void main() async {
 
   await Firebase.initializeApp();
   enableOfflinePersistence();
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Initialisation des notifications locales
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthController(),
-      child: const KassouaApp(),
+      child: const KassouaAppWithConnectivity(), // <-- c'est bien ce widget ici
     ),
   );
 }
@@ -60,10 +81,52 @@ class _KassouaAppWithConnectivityState
         }
       }
     });
+
+    // Ajoute ceci pour afficher les notifications en premier plan
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      RemoteNotification? notification = message.notification;
+      if (notification != null) {
+        // Affiche la notif locale
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'chat_channel',
+              'Chat',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+          ),
+        );
+
+        // Sauvegarde la notif dans Firestore
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'title': notification.title ?? '',
+          'message': notification.body ?? '',
+          'dateEnvoi': FieldValue.serverTimestamp(),
+          'isRead': false,
+          'type': message.data['type'] ?? 'info', // optionnel
+          'userId':
+              FirebaseAuth.instance.currentUser?.uid, // pour filtrer par user
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return const KassouaAppWithConnectivity();
+    return const KassouaApp(); // <-- et pas KassouaAppWithConnectivity !
   }
+}
+
+FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+void askNotificationPermission() async {
+  NotificationSettings settings = await messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
 }

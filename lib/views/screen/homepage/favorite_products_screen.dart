@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kassoua/services/favori_service.dart';
 import 'package:kassoua/models/image_produit.dart';
 import 'package:kassoua/models/product.dart';
+import 'package:kassoua/constants/colors.dart';
 
 class FavoriteProductsScreen extends StatefulWidget {
   final String userId;
@@ -74,7 +75,7 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen> {
           'Mes Favoris',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.blue.shade600,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),

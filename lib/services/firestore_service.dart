@@ -41,7 +41,7 @@ class FirestoreService {
         .snapshots()
         .map((snapshot) {
           return snapshot.docs.map((doc) {
-            return Produit.fromMap(doc.data(), doc.id);
+            return Produit.fromMap(doc.data() as Map<String, dynamic>, doc.id);
           }).toList();
         });
   }
@@ -67,6 +67,22 @@ class FirestoreService {
         .orderBy('dateAjout', descending: true)
         .snapshots()
         .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return Produit.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
+  }
+
+  Stream<List<Produit>> getAllProductsStream1() {
+    return _firestore
+        .collection(_collection)
+        .where('statut', isEqualTo: 'disponible')
+        .orderBy('dateAjout', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          print(
+            'Nombre de produits récupérés: ${snapshot.docs.length}',
+          ); // Debug
           return snapshot.docs.map((doc) {
             return Produit.fromMap(doc.data(), doc.id);
           }).toList();

@@ -3,8 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kassoua/constants/colors.dart';
-
+import 'package:kassoua/services/messagerie_service.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kassoua/models/message.dart';
+import 'package:kassoua/models/discussion.dart';
 
 class DetailedChatPage extends StatefulWidget {
   final String conversationId;
@@ -13,6 +16,7 @@ class DetailedChatPage extends StatefulWidget {
   final String productName;
   final String? productImageUrl;
   final double? productPrice;
+  final String? prefilledMessage;
 
   const DetailedChatPage({
     Key? key,
@@ -22,6 +26,7 @@ class DetailedChatPage extends StatefulWidget {
     required this.productName,
     this.productImageUrl,
     this.productPrice,
+    this.prefilledMessage,
   }) : super(key: key);
 
   @override
@@ -45,72 +50,7 @@ class _DetailedChatPageState extends State<DetailedChatPage>
   bool _isOnline = true;
   String _lastSeen = "En ligne maintenant";
 
-  // Messages factices enrichis pour la démonstration
-  final List<Map<String, dynamic>> _mockMessages = [
-    {
-      'messageId': 'msg_1',
-      'senderId': 'other_participant_id',
-      'senderName': 'Vendeur Mariam',
-      'message': 'Bonjour ! 👋 Merci de votre intérêt pour mon produit.',
-      'timestamp': '10:00',
-      'messageType': 'text',
-      'isRead': true,
-      'reactions': [],
-    },
-    {
-      'messageId': 'msg_2',
-      'senderId': 'user_current',
-      'senderName': 'Moi',
-      'message': 'Salut ! Est-ce que ce produit est encore disponible ?',
-      'timestamp': '10:02',
-      'messageType': 'text',
-      'isRead': true,
-      'reactions': [],
-    },
-    {
-      'messageId': 'msg_3',
-      'senderId': 'other_participant_id',
-      'senderName': 'Vendeur Mariam',
-      'message':
-          'Oui, il est toujours disponible ! Il est en excellent état, quasi neuf. 😊',
-      'timestamp': '10:05',
-      'messageType': 'text',
-      'isRead': true,
-      'reactions': [],
-    },
-    {
-      'messageId': 'msg_4',
-      'senderId': 'user_current',
-      'senderName': 'Moi',
-      'message': 'Parfait ! Quel est votre meilleur prix ?',
-      'timestamp': '10:07',
-      'messageType': 'text',
-      'isRead': true,
-      'reactions': [],
-    },
-    {
-      'messageId': 'msg_5',
-      'senderId': 'other_participant_id',
-      'senderName': 'Vendeur Mariam',
-      'message':
-          'Je peux vous faire 15% de réduction si vous l\'achetez aujourd\'hui. Ça vous intéresse ? 🤔',
-      'timestamp': '10:10',
-      'messageType': 'text',
-      'isRead': true,
-      'reactions': ['👍'],
-    },
-    {
-      'messageId': 'msg_6',
-      'senderId': 'user_current',
-      'senderName': 'Moi',
-      'message':
-          'Très intéressant ! Où peut-on se rencontrer pour finaliser la transaction ?',
-      'timestamp': '10:15',
-      'messageType': 'text',
-      'isRead': false,
-      'reactions': [],
-    },
-  ];
+  final MessagerieService _messagerieService = MessagerieService();
 
   @override
   void initState() {
@@ -118,6 +58,15 @@ class _DetailedChatPageState extends State<DetailedChatPage>
     _setupAnimations();
     _setupScrollListener();
     _messageController.addListener(_onMessageChanged);
+
+    // Préremplir le champ de message si un message est fourni
+    if (widget.prefilledMessage != null) {
+      _messageController.text = widget.prefilledMessage!;
+      setState(() {
+        _isTyping = true;
+      });
+      _sendButtonController.forward();
+    }
 
     // Simuler l'activité en ligne
     _simulateOnlineActivity();
@@ -196,67 +145,23 @@ class _DetailedChatPageState extends State<DetailedChatPage>
     super.dispose();
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
-    // Vibration légère lors de l'envoi
-    HapticFeedback.lightImpact();
+    final content = _messageController.text.trim();
+    _messageController.clear();
+    setState(() => _isTyping = false);
 
-    final newMessage = {
-      'messageId': 'msg_${_mockMessages.length + 1}',
-      'senderId': 'user_current',
-      'senderName': 'Moi',
-      'message': _messageController.text.trim(),
-      'timestamp':
-          '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-      'messageType': 'text',
-      'isRead': false,
-      'reactions': [],
-    };
-
-    setState(() {
-      _mockMessages.add(newMessage);
-      _messageController.clear();
-      _isTyping = false;
-    });
-
-    // Animation du bouton d'envoi
-    _sendButtonController.forward().then((_) {
-      _sendButtonController.reverse();
-    });
+    await _messagerieService.sendMessage(
+      discussionId: widget.conversationId,
+      senderId: FirebaseAuth.instance.currentUser!.uid,
+      receiverId: widget.otherParticipantId,
+      content: content,
+      type: MessageType.text,
+    );
 
     // Défilement automatique vers le bas
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollToBottom();
-    });
-
-    // Simuler une réponse automatique
-    _simulateAutoReply();
-  }
-
-  void _simulateAutoReply() {
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        final autoReply = {
-          'messageId': 'msg_${_mockMessages.length + 1}',
-          'senderId': 'other_participant_id',
-          'senderName': widget.otherParticipantName,
-          'message':
-              'Merci pour votre message ! Je vais vous répondre rapidement. 😊',
-          'timestamp':
-              '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-          'messageType': 'text',
-          'isRead': true,
-          'reactions': [],
-        };
-
-        setState(() {
-          _mockMessages.add(autoReply);
-        });
-
-        _scrollToBottom();
-      }
-    });
+    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
   void _scrollToBottom() {
@@ -478,48 +383,39 @@ class _DetailedChatPageState extends State<DetailedChatPage>
   }
 
   Widget _buildMessagesList(String currentUserId, bool isDark) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 8),
-        itemCount: _mockMessages.length,
-        itemBuilder: (context, index) {
-          final message = _mockMessages[index];
-          final bool isUserMessage = message['senderId'] == currentUserId;
-          final bool showAvatar =
-              !isUserMessage &&
-              (index == 0 ||
-                  _mockMessages[index - 1]['senderId'] != message['senderId']);
-
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: Offset(isUserMessage ? 1.0 : -1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: _animationController,
-                curve: Interval(
-                  (index * 0.1).clamp(0.0, 1.0),
-                  ((index * 0.1) + 0.3).clamp(0.0, 1.0),
-                  curve: Curves.easeOut,
-                ),
-              ),
-            ),
-            child: _buildMessageBubble(
+    return StreamBuilder<List<Message>>(
+      stream: _messagerieService.getMessages(widget.conversationId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final messages = snapshot.data ?? [];
+        return ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 8),
+          itemCount: messages.length,
+          reverse: true, // Pour afficher les derniers messages en bas
+          itemBuilder: (context, index) {
+            final message = messages[index];
+            final isUserMessage = message.senderId == currentUserId;
+            final showAvatar =
+                !isUserMessage &&
+                (index == messages.length - 1 ||
+                    messages[index + 1].senderId != message.senderId);
+            return _buildMessageBubble(
               message,
               isUserMessage,
               showAvatar,
               isDark,
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
   Widget _buildMessageBubble(
-    Map<String, dynamic> message,
+    Message message,
     bool isUserMessage,
     bool showAvatar,
     bool isDark,
@@ -576,7 +472,7 @@ class _DetailedChatPageState extends State<DetailedChatPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    message['message'],
+                    message.content,
                     style: TextStyle(
                       color:
                           isUserMessage
@@ -593,7 +489,7 @@ class _DetailedChatPageState extends State<DetailedChatPage>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        message['timestamp'],
+                        "${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}",
                         style: TextStyle(
                           color:
                               isUserMessage
@@ -605,31 +501,16 @@ class _DetailedChatPageState extends State<DetailedChatPage>
                       if (isUserMessage) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          message['isRead'] ? Icons.done_all : Icons.done,
+                          message.read ? Icons.done_all : Icons.done,
                           size: 16,
                           color:
-                              message['isRead']
+                              message.read
                                   ? Colors.blue
                                   : Colors.white.withOpacity(0.8),
                         ),
                       ],
                     ],
                   ),
-                  if (message['reactions'].isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Wrap(
-                        children:
-                            (message['reactions'] as List)
-                                .map(
-                                  (reaction) => Text(
-                                    reaction,
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                )
-                                .toList(),
-                      ),
-                    ),
                 ],
               ),
             ),

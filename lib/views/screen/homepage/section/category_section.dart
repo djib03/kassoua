@@ -7,57 +7,106 @@ import 'package:kassoua/views/screen/homepage/product_by_catgory_screen.dart';
 
 class CategorySection extends StatelessWidget {
   final bool isDark;
-  const CategorySection({Key? key, required this.isDark}) : super(key: key);
+  final bool showSkeletonLoader; // ← Nouveau paramètre
+
+  const CategorySection({
+    Key? key,
+    required this.isDark,
+    this.showSkeletonLoader = false, // ← Paramètre par défaut
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Initialisation des catégories par défaut
-
     return Column(
       children: [
         Padding(padding: const EdgeInsets.symmetric(horizontal: 17)),
         SizedBox(
-          height: 120, // Augmenté pour accommoder les nouvelles cartes
-          child: StreamBuilder<List<Categorie>>(
-            stream: CategoryService().getParentCategoriesStream(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('Aucune catégorie'));
-              }
-              final categories = snapshot.data!;
-              final showSeeAll = categories.length > 5;
-              final displayCount = showSeeAll ? 5 : categories.length;
+          height: 120,
+          child:
+              showSkeletonLoader
+                  ? _buildSkeletonCategories()
+                  : StreamBuilder<List<Categorie>>(
+                    stream: CategoryService().getParentCategoriesStream(),
+                    builder: (context, snapshot) {
+                      // ✅ REMPLACER CircularProgressIndicator par skeleton
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return _buildSkeletonCategories();
+                      }
 
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount:
-                    displayCount +
-                    (showSeeAll ? 1 : 0), // +1 pour le bouton "voir tout"
-                itemBuilder: (context, index) {
-                  if (showSeeAll && index == displayCount) {
-                    // Bouton "Voir tout" avec le nouveau style
-                    return _buildSeeAllCard(context);
-                  }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('Aucune catégorie'));
+                      }
 
-                  // Catégorie avec le nouveau style
-                  final category = categories[index];
-                  return _buildCategoryCard(context, category);
-                },
-              );
-            },
-          ),
+                      final categories = snapshot.data!;
+                      final showSeeAll = categories.length > 5;
+                      final displayCount = showSeeAll ? 5 : categories.length;
+
+                      return ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: displayCount + (showSeeAll ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (showSeeAll && index == displayCount) {
+                            return _buildSeeAllCard(context);
+                          }
+
+                          final category = categories[index];
+                          return _buildCategoryCard(context, category);
+                        },
+                      );
+                    },
+                  ),
         ),
       ],
     );
   }
 
+  // ✅ NOUVEAU: Widget skeleton pour les catégories
+  Widget _buildSkeletonCategories() {
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: 6, // Nombre fixe pour le skeleton
+      itemBuilder: (context, index) {
+        return Container(
+          width: 90,
+          margin: const EdgeInsets.only(right: 16),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[800] : Colors.grey[300],
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icône skeleton
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[700] : Colors.grey[400],
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Nom skeleton
+              Container(
+                height: 12,
+                width: 60,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[700] : Colors.grey[400],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCategoryCard(BuildContext context, Categorie category) {
     return Container(
-      width: 90, // Largeur adaptée pour les cartes rectangulaires
+      width: 90,
       margin: const EdgeInsets.only(right: 16),
       child: Container(
         decoration: BoxDecoration(

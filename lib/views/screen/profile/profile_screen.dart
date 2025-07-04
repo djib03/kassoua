@@ -3,12 +3,10 @@ import 'package:kassoua/views/screen/profile/user_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/views/screen/profile/change_password_screen.dart';
 import 'package:kassoua/views/screen/profile/notification_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
-import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -81,20 +79,21 @@ class ProfileScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 12),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color:
-                  Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.textWhite
-                      : AppColors.textPrimary,
+        if (title.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 12),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color:
+                    Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.textWhite
+                        : AppColors.textPrimary,
+              ),
             ),
           ),
-        ),
         Container(
           decoration: BoxDecoration(
             color:
@@ -209,14 +208,14 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Helper method for anonymous profile - Layout horizontal
+  // Helper method for anonymous profile with login button
   Widget _buildAnonymousProfile(BuildContext context, bool isDark) {
     return Container(
       margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: isDark ? AppColors.dark : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color:
@@ -228,60 +227,127 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Image de profil à gauche
+          // Profile info section
+          Row(
+            children: [
+              // Image de profil à gauche
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primaryDark, AppColors.accent],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[900] : Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(35),
+                    child: SizedBox(
+                      width: 70,
+                      height: 70,
+                      child: Container(
+                        color: AppColors.primary.withOpacity(0.1),
+                        child: Icon(
+                          Icons.account_circle_outlined,
+                          size: 35,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              // Informations à droite
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Invité',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        color:
+                            isDark
+                                ? AppColors.textWhite
+                                : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Connectez-vous pour accéder à toutes les fonctionnalités',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Login button
           Container(
-            padding: const EdgeInsets.all(3),
+            width: double.infinity,
+            height: 52,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primaryDark, AppColors.accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.primaryDark],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
-              shape: BoxShape.circle,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey[900] : Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(35),
-                child: SizedBox(
-                  width: 70,
-                  height: 70,
-                  child: Icon(Icons.account_circle_outlined, size: 23),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          // Informations à droite
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Anonyme',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: isDark ? AppColors.textWhite : AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Connectez-vous pour voir vos informations',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                    height: 1.3,
-                  ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AuthSelectionScreen(),
+                    ),
+                  );
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Iconsax.login, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Se connecter',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -289,7 +355,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Helper method for logged-in user profile - Layout horizontal
+  // Helper method for logged-in user profile
   Widget _buildUserProfile(
     BuildContext context,
     bool isDark,
@@ -297,10 +363,10 @@ class ProfileScreen extends StatelessWidget {
   ) {
     return Container(
       margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: isDark ? AppColors.dark : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color:
@@ -376,7 +442,7 @@ class ProfileScreen extends StatelessWidget {
                       : '${user.nom} ${user.prenom}'.trim(),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 20,
+                    fontSize: 22,
                     color: isDark ? AppColors.textWhite : AppColors.textPrimary,
                   ),
                 ),
@@ -386,6 +452,32 @@ class ProfileScreen extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified, color: AppColors.primary, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Connecté',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -399,8 +491,8 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final isLoggedIn = Provider.of<AuthController>(context).user != null;
+
     return Scaffold(
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle(
@@ -409,14 +501,16 @@ class ProfileScreen extends StatelessWidget {
           statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
         ),
         elevation: 0,
+        backgroundColor: Colors.transparent,
         title: Text(
-          'Profile',
+          'Profil',
           style: TextStyle(
             color: isDark ? AppColors.textWhite : Colors.black,
             fontWeight: FontWeight.bold,
-            fontSize: 22,
+            fontSize: 24,
           ),
         ),
+        centerTitle: false,
         actions: [
           IconButton(
             onPressed: () {},
@@ -431,7 +525,7 @@ class ProfileScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Section profil utilisateur - Layout horizontal
+            // Section profil utilisateur avec bouton de connexion intégré
             FutureBuilder<Utilisateur?>(
               future:
                   Provider.of<AuthController>(
@@ -452,6 +546,7 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
+                  // Section Compte
                   _buildSection(
                     context,
                     title: '',
@@ -459,7 +554,7 @@ class ProfileScreen extends StatelessWidget {
                       _buildMenuItem(
                         icon: Iconsax.setting,
                         title: 'Détails du compte',
-                        subtitle: 'Voir les paramètres du compte',
+                        subtitle: 'Modifier vos informations personnelles',
                         onTap: () {
                           if (!isLoggedIn) {
                             _showLoginRequiredSnackBar(context);
@@ -474,29 +569,10 @@ class ProfileScreen extends StatelessWidget {
                         },
                         color: AppColors.primary,
                       ),
-
-                      _buildMenuItem(
-                        icon: Iconsax.notification,
-                        title: 'Notifications',
-                        subtitle: 'Gérer les notifications',
-                        onTap: () {
-                          if (!isLoggedIn) {
-                            _showLoginRequiredSnackBar(context);
-                            return;
-                          }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NotificationScreen(),
-                            ),
-                          );
-                        },
-                        color: AppColors.primary,
-                      ),
                       _buildMenuItem(
                         icon: Iconsax.location,
                         title: 'Mes adresses',
-                        subtitle: 'Ajouter et gérer vos adresses',
+                        subtitle: 'Gérer vos adresses de livraison',
                         onTap: () {
                           if (!isLoggedIn) {
                             _showLoginRequiredSnackBar(context);
@@ -513,95 +589,39 @@ class ProfileScreen extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                       _buildMenuItem(
-                        icon: Iconsax.login,
-                        title: 'Se connecter',
-                        subtitle: 'Connecter vous à votre compte compte',
+                        icon: Iconsax.notification,
+                        title: 'Notifications',
+                        subtitle: 'Gérer vos préférences de notification',
                         onTap: () {
-                          if (isLoggedIn) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Vous êtes déjà connecté',
-                                  style: TextStyle(
-                                    color:
-                                        isDark
-                                            ? AppColors.textWhite
-                                            : Colors.black,
-                                  ),
-                                ),
-                                backgroundColor: AppColors.primary,
-                              ),
-                            );
+                          if (!isLoggedIn) {
+                            _showLoginRequiredSnackBar(context);
                             return;
                           }
-                          Navigator.pushReplacement(
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => AuthSelectionScreen(),
+                              builder: (context) => const NotificationScreen(),
                             ),
                           );
                         },
                         color: AppColors.primary,
                       ),
+
                       _buildMenuItem(
                         icon: Iconsax.logout,
                         title: 'Déconnexion',
-                        subtitle:
-                            'Se déconnecter de votre compte en toute sécurité',
+                        subtitle: 'Se déconnecter de votre compte',
                         onTap: () {
-                          PanaraConfirmDialog.show(
-                            context,
-                            message:
-                                'Êtes vous sur de vouloir vous deconnecter',
-                            confirmButtonText: 'Oui ',
-                            cancelButtonText: 'Non',
-                            onTapConfirm: () async {
-                              await Provider.of<AuthController>(
-                                context,
-                                listen: false,
-                              ).signOut();
-                              Navigator.of(context).pop();
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AuthSelectionScreen(),
-                                ),
-                                (route) => false,
-                              );
-                            },
-                            onTapCancel: () {
-                              Navigator.of(context).pop();
-                            },
-                            panaraDialogType: PanaraDialogType.custom,
-                            color: AppColors.error,
-                          );
+                          _showLogoutConfirmationDialog(context);
                         },
                         color: AppColors.secondary,
                       ),
                       _buildMenuItem(
                         icon: Iconsax.trash,
                         title: 'Supprimer le compte',
-                        subtitle:
-                            'Supprimez définitivement votre compte et vos données',
+                        subtitle: 'Supprimer définitivement votre compte',
                         onTap: () {
-                          PanaraConfirmDialog.show(
-                            context,
-                            message:
-                                'Êtes vous sur de vouloir supprimer votre compte',
-                            confirmButtonText: 'Oui',
-                            cancelButtonText: 'Non',
-                            onTapConfirm: () async {
-                              await Provider.of<AuthController>(
-                                context,
-                                listen: false,
-                              ).deleteAccount();
-                            },
-                            onTapCancel: () {
-                              Navigator.of(context).pop();
-                            },
-                            panaraDialogType: PanaraDialogType.custom,
-                            color: AppColors.error,
-                          );
+                          _showDeleteAccountConfirmationDialog(context);
                         },
                         color: AppColors.error,
                         isDestructive: true,
@@ -619,77 +639,478 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showLoginRequiredSnackBar(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withOpacity(0.3),
-                      Colors.white.withOpacity(0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.account_circle_outlined,
-                  color: Colors.white,
-                  size: 22,
-                ),
+  // Dialog pour la déconnexion
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(ctx).brightness == Brightness.dark
+                    ? AppColors.dark
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
               ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Icône de déconnexion
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Iconsax.logout,
+                    color: AppColors.secondary,
+                    size: 40,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Titre
+                const Text(
+                  'Déconnexion',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'poppins',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Êtes-vous sûr de vouloir vous déconnecter ?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Boutons
+                Row(
                   children: [
-                    Text(
-                      'Connexion requise',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[100],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Annuler',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Connectez-vous pour continuer',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await Provider.of<AuthController>(
+                            context,
+                            listen: false,
+                          ).signOut();
+                          Navigator.of(ctx).pop();
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AuthSelectionScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Iconsax.logout, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Se déconnecter',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
+
+                // Espace pour éviter le clavier
+                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Dialog pour la suppression du compte
+  void _showDeleteAccountConfirmationDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(ctx).brightness == Brightness.dark
+                    ? AppColors.dark
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
               ),
             ],
           ),
-        ),
-        action: SnackBarAction(
-          label: 'Se connecter',
-          textColor: Colors.white,
-          backgroundColor: Colors.white.withOpacity(0.25),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => AuthSelectionScreen()),
-            );
-          },
-        ),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        margin: const EdgeInsets.all(16),
-        elevation: 4,
-        dismissDirection: DismissDirection.horizontal,
-      ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Icône d'avertissement
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Iconsax.trash, color: AppColors.error, size: 40),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Titre
+                const Text(
+                  'Supprimer le compte',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'poppins',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action est irréversible.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Boutons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[100],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Annuler',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await Provider.of<AuthController>(
+                            context,
+                            listen: false,
+                          ).deleteAccount();
+                          Navigator.of(ctx).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Iconsax.trash, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Supprimer',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Espace pour éviter le clavier
+                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
+
+  void _showLoginRequiredSnackBar(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(ctx).brightness == Brightness.dark
+                    ? AppColors.dark
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Icône d'information
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.account_circle_outlined,
+                    color: AppColors.primary,
+                    size: 40,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Titre
+                const Text(
+                  'Connexion requise',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'poppins',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Vous devez être connecté pour accéder à cette fonctionnalité.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Boutons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[100],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Annuler',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AuthSelectionScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Iconsax.login, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Se connecter',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Espace pour éviter le clavier
+                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Remplacer l'appel _showLoginRequiredSnackBar(context) par :
+  // _showLoginRequiredDialog(context)}
 }

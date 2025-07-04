@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/data/home_data.dart';
 
 class BannerCarousel extends StatefulWidget {
   final bool isDark;
+  static final List<Map<String, String>> banners = [
+    {
+      'text': 'Offre spéciale\n-20% sur l\'électronique !',
+      'subtitle': 'Smartphones, laptops et plus encore',
+      'color': '0xFF6366F1',
+    },
+    {
+      'text': 'Nouveautés mode\nautomne 2025 !',
+      'subtitle': 'Découvrez les dernières tendances',
+      'color': '0xFFEC4899',
+    },
+    {
+      'text': 'Décorez votre maison\navec style !',
+      'subtitle': 'Mobilier et décoration moderne',
+      'color': '0xFF10B981',
+    },
+  ];
   const BannerCarousel({Key? key, required this.isDark}) : super(key: key);
 
   @override
@@ -32,7 +48,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
             },
           ),
           items:
-              HomeData.banners.asMap().entries.map((entry) {
+              BannerCarousel.banners.asMap().entries.map((entry) {
                 final banner = entry.value;
                 return Container(
                   width: double.infinity,
@@ -118,7 +134,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children:
-              HomeData.banners.asMap().entries.map((entry) {
+              BannerCarousel.banners.asMap().entries.map((entry) {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   width: _currentBannerIndex == entry.key ? 24 : 8,

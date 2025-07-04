@@ -371,11 +371,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return StreamBuilder<List<Produit>>(
       stream: _firestoreService.getAllProductsStream(),
       builder: (context, snapshot) {
+        // ✅ MONTRER le skeleton loader pendant le chargement
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return ProductListSection(
+            key: _productListKey,
+            products: [], // Liste vide
+            isDark: isDark,
+            favoriteProductIdsNotifier: _favoriteProductIdsNotifier,
+            onToggleFavorite: _onToggleFavorite,
+            scrollController: _scrollController,
+            onProductTap: null,
+            showSkeletonLoader: true, // ← Activer le skeleton
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorState(isDark);
+        }
+
+        if (snapshot.data?.isEmpty ?? true) {
+          return _buildEmptyState(isDark);
+        }
+
         final products = snapshot.data ?? [];
         final displayProducts = products.take(_displayLimit).toList();
         final hasMoreProducts = products.length > _displayLimit;
 
-        // Mise à jour de l'état hasMoreProducts
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _hasMoreProducts != hasMoreProducts) {
             setState(() {
@@ -384,26 +405,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           }
         });
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 200,
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return _buildErrorState(isDark);
-        }
-
-        if (products.isEmpty) {
-          return _buildEmptyState(isDark);
-        }
-
         return Column(
           children: [
-            // 🔧 CHANGEMENT 8: Passer le ValueNotifier au lieu du Set
             ProductListSection(
               key: _productListKey,
               products: displayProducts,
@@ -411,6 +414,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               favoriteProductIdsNotifier: _favoriteProductIdsNotifier,
               onToggleFavorite: _onToggleFavorite,
               scrollController: _scrollController,
+              showSkeletonLoader: false, // ← Désactiver le skeleton
               onProductTap: (Produit produit) async {
                 final images =
                     await _firestoreService.getImagesProduit(produit.id).first;
@@ -428,7 +432,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               },
             ),
 
-            // Indicateurs de chargement et fin
             if (_isLoadingMore) _buildLoadingIndicator(),
             if (!hasMoreProducts && displayProducts.length > 6)
               _buildEndOfContentIndicator(isDark),
@@ -484,7 +487,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       if (_isInitialized) ...[
                         BannerCarousel(isDark: isDark),
                         const SizedBox(height: 19),
-                        CategorySection(isDark: isDark),
+                        CategorySection(
+                          isDark: isDark,
+                          showSkeletonLoader:
+                              !_isInitialized, // ← Contrôler le skeleton
+                        ),
                         const SizedBox(height: 20),
                         _buildProductsSection(isDark),
                         const SizedBox(height: 24),

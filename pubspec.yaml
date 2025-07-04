@@ -31,7 +31,6 @@ dependencies:
   firebase_core: ^3.14.0
   firebase_auth: ^5.6.0
   cloud_firestore: ^5.6.9
-  # firebase_messaging: ^15.2.7
   http: ^1.4.0
 
 
@@ -40,7 +39,6 @@ dependencies:
 
   # Local Storage & Database
   shared_preferences: ^2.5.0
-  sqflite: ^2.4.2
   path_provider: ^2.1.5
   path: ^1.9.1
 
@@ -62,6 +60,9 @@ dependencies:
   url_launcher: ^6.3.1
   smooth_page_indicator: ^1.2.1
   flutter_svg: ^2.2.0
+  cloudinary_public: ^0.23.1
+  firebase_messaging: ^15.2.9
+  flutter_local_notifications: ^19.3.0
   
 
 dev_dependencies:

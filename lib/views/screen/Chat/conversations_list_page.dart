@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:kassoua/views/screen/Chat/detailed_chat_page.dart';
+import 'package:kassoua/services/messagerie_service.dart';
+import 'package:kassoua/models/discussion.dart';
+import 'package:kassoua/models/message.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ConversationsListPage extends StatefulWidget {
   const ConversationsListPage({Key? key}) : super(key: key);
@@ -11,67 +16,20 @@ class ConversationsListPage extends StatefulWidget {
 }
 
 class _ConversationsListPageState extends State<ConversationsListPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  // Données factices pour simuler des conversations
-  final List<Map<String, dynamic>> mockConversations = const [
-    {
-      'conversationId': 'conv_1_prod_A',
-      'otherParticipantName': 'Vendeur Mariam',
-      'otherParticipantAvatar': '',
-      'productName': 'Robe Traditionnelle Africaine',
-      'productImageUrl': '',
-      'lastMessage': '',
-      'lastMessageTime': '14:30',
-      'unreadCount': 2,
-      'isOnline': true,
-      'lastSeen': 'En ligne',
-    },
-    {
-      'conversationId': 'conv_2_prod_B',
-      'otherParticipantName': 'Ali Chaussures',
-      'otherParticipantAvatar': '',
-      'productName': 'Paire de Sneakers Blanches',
-      'productImageUrl': '',
-      'lastMessage': 'Oui, il est encore disponible. Taille 42.',
-      'lastMessageTime': 'Hier',
-      'unreadCount': 0,
-      'isOnline': false,
-      'lastSeen': 'Il y a 2h',
-    },
-    {
-      'conversationId': 'conv_3_prod_C',
-      'otherParticipantName': 'Electronique Pro',
-      'otherParticipantAvatar': '',
-      'productName': 'Téléviseur Smart TV 55"',
-      'productImageUrl': '',
-      'lastMessage': 'Je peux vous livrer demain matin.',
-      'lastMessageTime': '23 Mai',
-      'unreadCount': 1,
-      'isOnline': false,
-      'lastSeen': 'Il y a 1 jour',
-    },
-    {
-      'conversationId': 'conv_4_prod_D',
-      'otherParticipantName': 'Fatima Bijoux',
-      'otherParticipantAvatar': '',
-      'productName': 'Bracelet en Argent',
-      'productImageUrl': '',
-      'lastMessage': 'Non, le prix est fixe sur cet article.',
-      'lastMessageTime': '20 Mai',
-      'unreadCount': 0,
-      'isOnline': true,
-      'lastSeen': 'En ligne',
-    },
-  ];
+  final MessagerieService _messagerieService = MessagerieService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -80,33 +38,129 @@ class _ConversationsListPageState extends State<ConversationsListPage>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
+
+    // Marquer l'utilisateur comme en ligne
+    _messagerieService.updateOnlineStatus(true);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     _searchController.dispose();
+    // Marquer l'utilisateur comme hors ligne
+    _messagerieService.updateOnlineStatus(false);
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get filteredConversations {
-    if (_searchQuery.isEmpty) return mockConversations;
-    return mockConversations
-        .where(
-          (conversation) =>
-              conversation['otherParticipantName']!.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ) ||
-              conversation['productName']!.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ),
-        )
-        .toList();
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _messagerieService.handleAppLifecycleState(state);
+  }
+
+  // Fonction pour obtenir les informations de l'autre participant
+  Future<Map<String, dynamic>> _getOtherParticipantInfo(
+    Discussion discussion,
+    String currentUserId,
+  ) async {
+    String otherUserId =
+        discussion.vendeurId == currentUserId
+            ? discussion.acheteurId
+            : discussion.vendeurId;
+
+    try {
+      // Récupérer les informations de l'utilisateur
+      final userDoc =
+          await _firestore.collection('users').doc(otherUserId).get();
+      final userData = userDoc.data() ?? {};
+
+      // Récupérer les informations du produit
+      final productDoc =
+          await _firestore
+              .collection('produits')
+              .doc(discussion.produitId)
+              .get();
+      final productData = productDoc.data() ?? {};
+
+      return {
+        'userId': otherUserId,
+        'name': userData['nom'] ?? userData['name'] ?? 'Utilisateur',
+        'avatar': userData['photoUrl'] ?? userData['avatar'] ?? '',
+        'isOnline': userData['isOnline'] ?? false,
+        'lastSeen': userData['lastSeen'],
+        'productName': productData['nom'] ?? productData['name'] ?? 'Produit',
+        'productImageUrl':
+            productData['imageUrl'] ?? productData['images']?[0] ?? '',
+      };
+    } catch (e) {
+      return {
+        'userId': otherUserId,
+        'name': 'Utilisateur',
+        'avatar': '',
+        'isOnline': false,
+        'lastSeen': null,
+        'productName': 'Produit',
+        'productImageUrl': '',
+      };
+    }
+  }
+
+  // Fonction pour formater la date du dernier message
+  String _formatLastMessageTime(DateTime? timestamp) {
+    if (timestamp == null) return '';
+
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 60) {
+      return difference.inMinutes <= 1
+          ? 'À l\'instant'
+          : '${difference.inMinutes}min';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h';
+    } else if (difference.inDays == 1) {
+      return 'Hier';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}j';
+    } else {
+      return '${timestamp.day}/${timestamp.month}';
+    }
+  }
+
+  // Fonction pour formater le statut "dernière vue"
+  String _formatLastSeen(Timestamp? lastSeen) {
+    if (lastSeen == null) return 'Hors ligne';
+
+    final lastSeenDate = lastSeen.toDate();
+    final now = DateTime.now();
+    final difference = now.difference(lastSeenDate);
+
+    if (difference.inMinutes < 5) {
+      return 'À l\'instant';
+    } else if (difference.inMinutes < 60) {
+      return 'Il y a ${difference.inMinutes}min';
+    } else if (difference.inHours < 24) {
+      return 'Il y a ${difference.inHours}h';
+    } else {
+      return 'Il y a ${difference.inDays}j';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentUserId = _auth.currentUser?.uid;
+
+    if (currentUserId == null) {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            'Veuillez vous connecter pour voir vos conversations',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.black : const Color(0xFFF8F9FA),
@@ -152,8 +206,8 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                     BoxShadow(
                       color:
                           isDark
-                              ? Colors.black.withValues()
-                              : Colors.grey.withValues(),
+                              ? Colors.black.withOpacity(0.3)
+                              : Colors.grey.withOpacity(0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -204,36 +258,145 @@ class _ConversationsListPageState extends State<ConversationsListPage>
             ),
           ),
 
-          // Liste des conversations
-          filteredConversations.isEmpty
-              ? SliverFillRemaining(child: _buildEmptyState(isDark))
-              : SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.3),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: _animationController,
-                          curve: Interval(
-                            (index * 0.1).clamp(0.0, 1.0),
-                            ((index * 0.1) + 0.3).clamp(0.0, 1.0),
-                            curve: Curves.easeOut,
-                          ),
-                        ),
-                      ),
-                      child: _buildConversationCard(
-                        filteredConversations[index],
-                        isDark,
-                        index,
+          // Liste des conversations avec StreamBuilder
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _messagerieService.getDiscussionsWithMetadata(
+              currentUserId,
+            ),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return SliverFillRemaining(
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
                       ),
                     ),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: isDark ? AppColors.grey : AppColors.darkGrey,
+                        ),
+                        SizedBox(height: DMSizes.md),
+                        Text(
+                          'Erreur lors du chargement',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
+                            color: isDark ? AppColors.grey : AppColors.darkGrey,
+                          ),
+                        ),
+                        SizedBox(height: DMSizes.xs),
+                        Text(
+                          'Veuillez réessayer plus tard',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
+                            color:
+                                isDark
+                                    ? AppColors.darkGrey
+                                    : AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final discussions = snapshot.data ?? [];
+
+              if (discussions.isEmpty) {
+                return SliverFillRemaining(child: _buildEmptyState(isDark));
+              }
+
+              return SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final discussionData = discussions[index];
+                  final Discussion discussion = discussionData['discussion'];
+                  final int unreadCount = discussionData['unreadCount'] ?? 0;
+                  final Message? lastMessage = discussionData['lastMessage'];
+
+                  return FutureBuilder<Map<String, dynamic>>(
+                    future: _getOtherParticipantInfo(discussion, currentUserId),
+                    builder: (context, participantSnapshot) {
+                      if (!participantSnapshot.hasData) {
+                        return Container(
+                          margin: EdgeInsets.symmetric(
+                            horizontal: DMSizes.md,
+                            vertical: DMSizes.xs,
+                          ),
+                          height: 80,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final participantInfo = participantSnapshot.data!;
+
+                      // Filtrage par recherche
+                      if (_searchQuery.isNotEmpty) {
+                        final searchLower = _searchQuery.toLowerCase();
+                        final nameMatches = participantInfo['name']
+                            .toString()
+                            .toLowerCase()
+                            .contains(searchLower);
+                        final productMatches = participantInfo['productName']
+                            .toString()
+                            .toLowerCase()
+                            .contains(searchLower);
+
+                        if (!nameMatches && !productMatches) {
+                          return const SizedBox.shrink();
+                        }
+                      }
+
+                      return FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.3),
+                            end: Offset.zero,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: _animationController,
+                              curve: Interval(
+                                (index * 0.1).clamp(0.0, 1.0),
+                                ((index * 0.1) + 0.3).clamp(0.0, 1.0),
+                                curve: Curves.easeOut,
+                              ),
+                            ),
+                          ),
+                          child: _buildConversationCard(
+                            discussion,
+                            participantInfo,
+                            lastMessage,
+                            unreadCount,
+                            isDark,
+                          ),
+                        ),
+                      );
+                    },
                   );
-                }, childCount: filteredConversations.length),
-              ),
+                }, childCount: discussions.length),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -286,12 +449,20 @@ class _ConversationsListPageState extends State<ConversationsListPage>
   }
 
   Widget _buildConversationCard(
-    Map<String, dynamic> conversation,
+    Discussion discussion,
+    Map<String, dynamic> participantInfo,
+    Message? lastMessage,
+    int unreadCount,
     bool isDark,
-    int index,
   ) {
-    final bool hasUnread = conversation['unreadCount']! > 0;
-    final bool isOnline = conversation['isOnline'] ?? false;
+    final bool hasUnread = unreadCount > 0;
+    final bool isOnline = participantInfo['isOnline'] ?? false;
+    final String lastMessageContent = lastMessage?.content ?? '';
+    final String lastMessageTime = _formatLastMessageTime(
+      lastMessage?.timestamp,
+    );
+    final String lastSeen =
+        isOnline ? 'En ligne' : _formatLastSeen(participantInfo['lastSeen']);
 
     return Container(
       margin: EdgeInsets.symmetric(
@@ -328,19 +499,14 @@ class _ConversationsListPageState extends State<ConversationsListPage>
               context,
               PageRouteBuilder(
                 pageBuilder:
-                    (
-                      context,
-                      animation,
-                      secondaryAnimation,
-                    ) => DetailedChatPage(
-                      conversationId: conversation['conversationId']!,
-                      otherParticipantId:
-                          'seller_${conversation['otherParticipantName']!.replaceAll(' ', '_').toLowerCase()}',
-                      otherParticipantName:
-                          conversation['otherParticipantName']!,
-                      productName: conversation['productName']!,
-                      productImageUrl: conversation['productImageUrl'],
-                    ),
+                    (context, animation, secondaryAnimation) =>
+                        DetailedChatPage(
+                          conversationId: discussion.id,
+                          otherParticipantId: participantInfo['userId'],
+                          otherParticipantName: participantInfo['name'],
+                          productName: participantInfo['productName'],
+                          productImageUrl: participantInfo['productImageUrl'],
+                        ),
                 transitionsBuilder: (
                   context,
                   animation,
@@ -382,17 +548,11 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                         radius: DMSizes.iconLg + 2,
                         backgroundColor: AppColors.primary.withOpacity(0.1),
                         backgroundImage:
-                            conversation['otherParticipantAvatar'] != null &&
-                                    conversation['otherParticipantAvatar']!
-                                        .isNotEmpty
-                                ? NetworkImage(
-                                  conversation['otherParticipantAvatar']!,
-                                )
+                            participantInfo['avatar'].isNotEmpty
+                                ? NetworkImage(participantInfo['avatar'])
                                 : null,
                         child:
-                            conversation['otherParticipantAvatar'] == null ||
-                                    conversation['otherParticipantAvatar']!
-                                        .isEmpty
+                            participantInfo['avatar'].isEmpty
                                 ? Icon(
                                   Icons.person,
                                   color: AppColors.primary,
@@ -434,7 +594,7 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                         children: [
                           Expanded(
                             child: Text(
-                              conversation['otherParticipantName']!,
+                              participantInfo['name'],
                               style: Theme.of(
                                 context,
                               ).textTheme.titleMedium?.copyWith(
@@ -448,21 +608,22 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text(
-                            conversation['lastMessageTime']!,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.copyWith(
-                              color:
-                                  hasUnread
-                                      ? AppColors.primary
-                                      : AppColors.darkGrey,
-                              fontWeight:
-                                  hasUnread
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
+                          if (lastMessageTime.isNotEmpty)
+                            Text(
+                              lastMessageTime,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    hasUnread
+                                        ? AppColors.primary
+                                        : AppColors.darkGrey,
+                                fontWeight:
+                                    hasUnread
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                              ),
                             ),
-                          ),
                         ],
                       ),
 
@@ -471,7 +632,7 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                       // Produit avec image
                       Row(
                         children: [
-                          if (conversation['productImageUrl'] != null)
+                          if (participantInfo['productImageUrl'].isNotEmpty)
                             Container(
                               width: 24,
                               height: 24,
@@ -479,7 +640,7 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                                 borderRadius: BorderRadius.circular(4),
                                 image: DecorationImage(
                                   image: NetworkImage(
-                                    conversation['productImageUrl']!,
+                                    participantInfo['productImageUrl'],
                                   ),
                                   fit: BoxFit.cover,
                                 ),
@@ -494,7 +655,7 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                           SizedBox(width: DMSizes.xs),
                           Expanded(
                             child: Text(
-                              conversation['productName']!,
+                              participantInfo['productName'],
                               style: Theme.of(
                                 context,
                               ).textTheme.bodySmall?.copyWith(
@@ -515,7 +676,9 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                         children: [
                           Expanded(
                             child: Text(
-                              conversation['lastMessage']!,
+                              lastMessageContent.isEmpty
+                                  ? 'Aucun message'
+                                  : lastMessageContent,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(
@@ -544,7 +707,7 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${conversation['unreadCount']}',
+                                '$unreadCount',
                                 style: Theme.of(
                                   context,
                                 ).textTheme.labelSmall?.copyWith(
@@ -556,11 +719,11 @@ class _ConversationsListPageState extends State<ConversationsListPage>
                         ],
                       ),
 
-                      if (!isOnline && conversation['lastSeen'] != null)
+                      if (!isOnline)
                         Padding(
                           padding: EdgeInsets.only(top: DMSizes.xs / 2),
                           child: Text(
-                            conversation['lastSeen']!,
+                            lastSeen,
                             style: Theme.of(
                               context,
                             ).textTheme.bodySmall?.copyWith(

@@ -368,7 +368,17 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
           // Badge de statut amélioré
           Row(
             children: [
-              _buildStatusBadge(produit),
+              Text(
+                produit.nom,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  fontFamily: 'poppins',
+                  color: isDark ? Colors.white : AppColors.primary,
+                  height: 1.2,
+                ),
+              ),
+
               Spacer(),
               _buildStatsChip(Icons.visibility, '${produit.vues ?? 0} vues'),
             ],
@@ -377,17 +387,6 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
           SizedBox(height: 20),
 
           // Nom du produit avec animation
-          Text(
-            produit.nom,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              fontFamily: 'poppins',
-              color: isDark ? Colors.white : AppColors.primary,
-              height: 1.2,
-            ),
-          ),
-
           SizedBox(height: 12),
 
           // Prix avec effet visuel
@@ -416,6 +415,91 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
               ),
             ),
           ),
+
+          SizedBox(height: 15),
+          // Badge disponibilité
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatusBadge(produit),
+              SizedBox(width: 3),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color:
+                      produit.statut == 'Négociable'
+                          ? AppColors.primary.withOpacity(0.15)
+                          : Colors.grey.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      produit.estnegociable == true ? Iconsax.tag : Iconsax.tag,
+                      color:
+                          produit.estnegociable == true
+                              ? AppColors.primary
+                              : AppColors.darkGrey,
+                      size: 16,
+                    ),
+                    SizedBox(width: 3),
+                    Text(
+                      produit.estnegociable == true
+                          ? 'Négociable'
+                          : 'Non Négociable',
+                      style: TextStyle(
+                        color:
+                            produit.estnegociable == true
+                                ? AppColors.primary
+                                : AppColors.darkGrey,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 3),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color:
+                      produit.isLivrable == true
+                          ? AppColors.primary.withOpacity(0.15)
+                          : Colors.grey.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Iconsax.truck,
+                      color:
+                          produit.isLivrable == true
+                              ? AppColors.primary
+                              : Colors.grey,
+                      size: 16,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      produit.isLivrable == true
+                          ? 'Livraison'
+                          : 'Pas de livraison',
+                      style: TextStyle(
+                        color:
+                            produit.isLivrable == true
+                                ? AppColors.primary
+                                : Colors.grey,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 24),
 
           SizedBox(height: 24),
           _buildLocationSection(produit),
@@ -502,20 +586,18 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
   Widget _buildStatusBadge(Produit produit) {
     bool isAvailable = produit.statut == 'disponible';
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors:
               isAvailable
-                  ? [Colors.green, Colors.green.withOpacity(0.8)]
-                  : [Colors.orange, Colors.orange.withOpacity(0.8)],
+                  ? [AppColors.primary, AppColors.primary.withOpacity(0.8)]
+                  : [Colors.grey, Colors.grey.withOpacity(0.8)],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: (isAvailable ? Colors.green : Colors.orange).withOpacity(
-              0.3,
-            ),
+            color: (isAvailable ? Colors.green : Colors.red).withOpacity(0.3),
             blurRadius: 8,
             offset: Offset(0, 4),
           ),
@@ -525,7 +607,7 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isAvailable ? Icons.check_circle : Icons.sell,
+            isAvailable ? Icons.check : Icons.close,
             size: 16,
             color: Colors.white,
           ),
@@ -535,7 +617,7 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontSize: 10,
             ),
           ),
         ],

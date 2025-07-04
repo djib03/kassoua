@@ -9,20 +9,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ProductListSection extends StatefulWidget {
   final List<Produit> products;
   final bool isDark;
-  // final Set<String> favoriteProductIds;
   final Function(String) onToggleFavorite;
   final ScrollController scrollController;
-  final ValueNotifier<Set<String>> favoriteProductIdsNotifier; // ← Ajouté
-  final void Function(Produit)? onProductTap; // ← Ajouté
+  final ValueNotifier<Set<String>> favoriteProductIdsNotifier;
+  final void Function(Produit)? onProductTap;
+  final bool showSkeletonLoader; // ← Nouveau paramètre
 
   const ProductListSection({
     required this.products,
     required this.isDark,
-    // required this.favoriteProductIds,
     required this.onToggleFavorite,
-    required this.favoriteProductIdsNotifier, // Supprimé car non utilisé
+    required this.favoriteProductIdsNotifier,
     required this.scrollController,
-    this.onProductTap, // ← Ajouté
+    this.onProductTap,
+    this.showSkeletonLoader = false, // ← Paramètre par défaut
     super.key,
   });
 
@@ -34,17 +34,14 @@ class ProductListSectionState extends State<ProductListSection> {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ✅ NOUVEAU: Cache avec retry pour les images
   final Map<String, int> _imageRetryCount = {};
   final int _maxRetries = 3;
 
-  // ✅ NOUVEAU: Méthode pour nettoyer le cache des images
   void _clearImageCache() {
     _productImageCache.clear();
     _imageRetryCount.clear();
   }
 
-  // Cache pour optimiser les requêtes
   final Map<String, Future<Map<String, dynamic>>> _productDataCache = {};
   final Map<String, String> _productLocationCache = {};
   final Map<String, ImageProduit?> _productImageCache = {};
@@ -57,6 +54,76 @@ class ProductListSectionState extends State<ProductListSection> {
     super.dispose();
   }
 
+  // ✅ NOUVEAU: Widget skeleton pour un produit
+  Widget _buildSkeletonProductCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: widget.isDark ? Colors.grey[800] : Colors.grey[300],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          // Image skeleton
+          Expanded(
+            flex: 3,
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.isDark ? Colors.grey[700] : Colors.grey[400],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          // Contenu skeleton
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nom du produit
+                  Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color:
+                          widget.isDark ? Colors.grey[700] : Colors.grey[400],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Prix
+                  Container(
+                    height: 14,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      color:
+                          widget.isDark ? Colors.grey[700] : Colors.grey[400],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Location
+                  Container(
+                    height: 12,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color:
+                          widget.isDark ? Colors.grey[700] : Colors.grey[400],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -65,41 +132,72 @@ class ProductListSectionState extends State<ProductListSection> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-          child: Text(
-            'Annonces',
-            style: TextStyle(
-              color: widget.isDark ? AppColors.textWhite : AppColors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child:
+              widget.showSkeletonLoader
+                  ? Container(
+                    height: 24,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color:
+                          widget.isDark ? Colors.grey[700] : Colors.grey[400],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  )
+                  : Text(
+                    'Annonces',
+                    style: TextStyle(
+                      color:
+                          widget.isDark ? AppColors.textWhite : AppColors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
         ),
 
-        // GridView optimisé avec ValueListenableBuilder
-        ValueListenableBuilder<Set<String>>(
-          valueListenable: widget.favoriteProductIdsNotifier,
-          builder: (context, favoriteIds, child) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: widget.products.length,
-                itemBuilder: (context, index) {
-                  final product = widget.products[index];
-
-                  // ✅ UTILISER _buildOptimizedProductCard au lieu de ProductCard directement
-                  return _buildOptimizedProductCard(product, widget.isDark);
-                },
-              ),
-            );
-          },
+        // GridView avec skeleton ou contenu réel
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child:
+              widget.showSkeletonLoader
+                  ? GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                    itemCount: 6, // Nombre fixe pour le skeleton
+                    itemBuilder: (context, index) {
+                      return _buildSkeletonProductCard();
+                    },
+                  )
+                  : ValueListenableBuilder<Set<String>>(
+                    valueListenable: widget.favoriteProductIdsNotifier,
+                    builder: (context, favoriteIds, child) {
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.75,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                        itemCount: widget.products.length,
+                        itemBuilder: (context, index) {
+                          final product = widget.products[index];
+                          return _buildOptimizedProductCard(
+                            product,
+                            widget.isDark,
+                          );
+                        },
+                      );
+                    },
+                  ),
         ),
 
         const SizedBox(height: 20),
@@ -114,28 +212,13 @@ class ProductListSectionState extends State<ProductListSection> {
         return ValueListenableBuilder<Set<String>>(
           valueListenable: widget.favoriteProductIdsNotifier,
           builder: (context, favoriteIds, child) {
-            // Pendant le chargement, afficher une version basique
+            // ✅ REMPLACER CircularProgressIndicator par skeleton
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return GestureDetector(
-                // ✅ AJOUTER GestureDetector
-                onTap:
-                    widget.onProductTap != null
-                        ? () => widget.onProductTap!(product)
-                        : null,
-                child: ProductCard(
-                  product: _convertProductToMap(product),
-                  isDark: isDark,
-                  isFavorite: favoriteIds.contains(product.id),
-                  isProcessing: false,
-                  onToggleFavorite: () => widget.onToggleFavorite(product.id),
-                ),
-              );
+              return _buildSkeletonProductCard();
             }
 
-            // En cas d'erreur, utiliser les données de base
             if (snapshot.hasError) {
               return GestureDetector(
-                // ✅ AJOUTER GestureDetector
                 onTap:
                     widget.onProductTap != null
                         ? () => widget.onProductTap!(product)
@@ -150,9 +233,7 @@ class ProductListSectionState extends State<ProductListSection> {
               );
             }
 
-            // Données complètes disponibles
             return GestureDetector(
-              // ✅ AJOUTER GestureDetector
               onTap:
                   widget.onProductTap != null
                       ? () => widget.onProductTap!(product)
@@ -218,7 +299,6 @@ class ProductListSectionState extends State<ProductListSection> {
       return 'Localisation non spécifiée';
     }
 
-    // Vérifier le cache
     if (_productLocationCache.containsKey(adresseId)) {
       return _productLocationCache[adresseId]!;
     }
@@ -241,7 +321,6 @@ class ProductListSectionState extends State<ProductListSection> {
         }
       }
 
-      // Mettre en cache
       _productLocationCache[adresseId] = location;
       return location;
     } catch (e) {
@@ -251,7 +330,6 @@ class ProductListSectionState extends State<ProductListSection> {
   }
 
   Future<ImageProduit?> getImagePrincipale(String produitId) async {
-    // Vérifier le cache seulement si pas d'erreur précédente
     if (_productImageCache.containsKey(produitId) &&
         !_imageRetryCount.containsKey(produitId)) {
       return _productImageCache[produitId];
@@ -271,29 +349,24 @@ class ProductListSectionState extends State<ProductListSection> {
         image = ImageProduit.fromMap(doc.data(), doc.id);
       }
 
-      // ✅ Mettre en cache et réinitialiser le compteur d'erreurs
       _productImageCache[produitId] = image;
       _imageRetryCount.remove(produitId);
       return image;
     } catch (e) {
       print('Erreur lors du chargement de l\'image: $e');
 
-      // ✅ Gestion des retry
       final currentRetries = _imageRetryCount[produitId] ?? 0;
       if (currentRetries < _maxRetries) {
         _imageRetryCount[produitId] = currentRetries + 1;
-        // Retry après un délai
         await Future.delayed(Duration(seconds: currentRetries + 1));
         return getImagePrincipale(produitId);
       } else {
-        // Échec définitif
         _productImageCache[produitId] = null;
         return null;
       }
     }
   }
 
-  // ✅ NOUVEAU: Méthode pour forcer le rechargement des données
   void refreshProductData() {
     setState(() {
       _productDataCache.clear();

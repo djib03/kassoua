@@ -30,7 +30,11 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
   Widget build(BuildContext context) {
     if (currentUserId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Mes Adresses')),
+        appBar: AppBar(
+          title: const Text('Mes Adresses'),
+          backgroundColor: AppColors.primary,
+        ),
+
         body: const Center(
           child: Text('Veuillez vous connecter pour voir vos adresses'),
         ),
@@ -44,19 +48,18 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
               ? AppColors.black
               : AppColors.white,
       appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor:
-              Colors.transparent, // Transparente pour un meilleur rendu
-          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-          statusBarBrightness:
-              isDark ? Brightness.dark : Brightness.light, // Pour iOS
-        ),
+        backgroundColor: AppColors.primary,
+        iconTheme: IconThemeData(color: Colors.white),
+        // systemOverlayStyle: SystemUiOverlayStyle(
+        //   statusBarColor:
+        //       Colors.transparent, // Transparente pour un meilleur rendu
+        //   statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        //   statusBarBrightness:
+        //       isDark ? Brightness.dark : Brightness.light, // Pour iOS
+        // ),
         title: Text(
           'Mes Adresses',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : Colors.black,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -119,6 +122,10 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
   Widget _buildAddressCard(Adresse adresse) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
+      color:
+          Theme.of(context).brightness == Brightness.dark
+              ? AppColors.dark
+              : AppColors.white,
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
@@ -195,7 +202,7 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
                       await _firestoreService.updateAdresse(result);
                       _showSnackBar(
                         'Adresse modifiée avec succès!',
-                        Colors.green,
+                        AppColors.primary,
                       );
                     }
                   },

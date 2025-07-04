@@ -10,6 +10,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:kassoua/views/screen/Chat/detailed_chat_page.dart';
 
 class ProductDetailAcheteur extends StatefulWidget {
   final Produit produit;
@@ -96,7 +97,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
             elevation: 0,
             backgroundColor: isDark ? AppColors.black : Colors.white,
             leading: Container(
-              margin: EdgeInsets.all(8),
+              margin: EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(12),
@@ -357,7 +358,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
 
   Widget _buildProductContent(Produit produit, bool isDark) {
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -367,7 +368,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
               Text(
                 produit.nom,
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                   fontFamily: 'poppins',
                   color: isDark ? Colors.white : AppColors.primary,
@@ -413,7 +414,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildStatusBadge(produit),
-              SizedBox(width: 4),
+              SizedBox(width: 3),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
@@ -433,7 +434,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                               : AppColors.darkGrey,
                       size: 16,
                     ),
-                    SizedBox(width: 4),
+                    SizedBox(width: 3),
                     Text(
                       produit.estnegociable == true
                           ? 'Négociable'
@@ -444,13 +445,13 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                                 ? AppColors.primary
                                 : AppColors.darkGrey,
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(width: 4),
+              SizedBox(width: 3),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
@@ -481,7 +482,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                                 ? AppColors.primary
                                 : Colors.grey,
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                     ),
                   ],
@@ -678,7 +679,9 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: (isAvailable ? Colors.green : Colors.red).withOpacity(0.3),
+            color: (isAvailable ? AppColors.primary : Colors.grey).withOpacity(
+              0.3,
+            ),
             blurRadius: 8,
             offset: Offset(0, 4),
           ),
@@ -698,7 +701,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontSize: 10,
             ),
           ),
         ],
@@ -953,21 +956,6 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
 
                 SizedBox(height: 20),
 
-                Text(
-                  'Pourquoi signalez-vous cette annonce ?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-
-                SizedBox(height: 16),
-
-                ..._buildReportOptions(),
-
-                SizedBox(height: 20),
-
                 Row(
                   children: [
                     Expanded(
@@ -990,24 +978,6 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                       ),
                     ),
                     SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _submitReport(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Signaler',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
 
@@ -1020,294 +990,37 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
     );
   }
 
-  List<Widget> _buildReportOptions() {
-    final options = [
-      {'title': 'Contenu inapproprié', 'icon': Icons.warning_outlined},
-      {'title': 'Arnaque ou fraude', 'icon': Icons.security_outlined},
-      {'title': 'Produit contrefait', 'icon': Icons.verified_outlined},
-      {'title': 'Prix abusif', 'icon': Icons.attach_money_outlined},
-      {'title': 'Informations fausses', 'icon': Icons.info_outlined},
-      {'title': 'Autre raison', 'icon': Icons.more_horiz_outlined},
-    ];
-
-    return options
-        .map(
-          (option) => Container(
-            margin: EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _selectReportReason(option['title'] as String),
-                child: Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        option['icon'] as IconData,
-                        color: Colors.orange,
-                        size: 20,
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        option['title'] as String,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color:
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        )
-        .toList();
-  }
-
-  void _selectReportReason(String reason) {
-    // Logique pour sélectionner la raison du signalement
-    print('Raison sélectionnée: $reason');
-  }
-
-  void _submitReport() {
-    Navigator.pop(context);
-    _showSuccessSnackBar('Signalement envoyé avec succès', Icons.check_circle);
-  }
-
-  void _contactVendeur() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildContactBottomSheet(),
-    );
-  }
-
-  Widget _buildContactBottomSheet() {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.dark : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: EdgeInsets.only(top: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Iconsax.message,
-                        color: AppColors.primary,
-                        size: 24,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Contacter le vendeur',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            'Choisissez votre moyen de contact',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 24),
-
-                // Option WhatsApp
-                if (vendeur?.telephone != null)
-                  _buildContactOption(
-                    'WhatsApp',
-                    'Envoyer un message via WhatsApp',
-                    Iconsax.message,
-                    Colors.green,
-                    () => _contactViaWhatsApp(),
-                  ),
-
-                SizedBox(height: 12),
-
-                // Option Appel
-                if (vendeur?.telephone != null)
-                  _buildContactOption(
-                    'Appeler',
-                    'Appeler directement le vendeur',
-                    Iconsax.call,
-                    Colors.blue,
-                    () => _callVendeur(),
-                  ),
-
-                SizedBox(height: 12),
-
-                // Option Email
-                if (vendeur?.email != null)
-                  _buildContactOption(
-                    'Email',
-                    'Envoyer un email au vendeur',
-                    Iconsax.sms,
-                    Colors.orange,
-                    () => _contactViaEmail(),
-                  ),
-
-                SizedBox(height: 20),
-
-                Container(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.grey),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Annuler',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactOption(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.withOpacity(0.2)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black87,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _contactViaWhatsApp() async {
-    Navigator.pop(context);
-    if (vendeur?.telephone != null) {
-      final message = Uri.encodeComponent(
-        'Bonjour, je suis intéressé(e) par votre produit "${widget.produit.nom}" sur Kassoua.',
-      );
-      final whatsappUrl = 'https://wa.me/${vendeur!.telephone}?text=$message';
-
-      try {
-        if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
-          await launchUrl(
-            Uri.parse(whatsappUrl),
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
-          _showErrorSnackBar('WhatsApp n\'est pas installé');
-        }
-      } catch (e) {
-        _showErrorSnackBar('Erreur lors de l\'ouverture de WhatsApp');
-      }
+  void _contactVendeur() async {
+    // Vérifie que le vendeur existe et que l'utilisateur est connecté
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (vendeur == null || currentUser == null) {
+      _showErrorSnackBar("Impossible de contacter le vendeur.");
+      return;
     }
+
+    // Crée un ID de conversation unique (par exemple, combine les deux IDs)
+    final participants = [currentUser.uid, vendeur!.id]..sort();
+    final conversationId = participants.join('_');
+
+    // Message pré-rempli
+    final prefilledMessage =
+        'Bonjour, je suis intéressé(e) par votre produit "${widget.produit.nom}" sur Kassoua.';
+
+    // Navigue vers la page de chat
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => DetailedChatPage(
+              conversationId: conversationId,
+              otherParticipantId: vendeur!.id,
+              otherParticipantName: "${vendeur!.nom} ${vendeur!.prenom}",
+              productName: widget.produit.nom,
+              prefilledMessage:
+                  prefilledMessage, // Ajoute ce paramètre dans DetailedChatPage
+            ),
+      ),
+    );
   }
 
   void _callVendeur() async {
@@ -1325,32 +1038,6 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
         }
       } catch (e) {
         _showErrorSnackBar('Erreur lors de l\'appel');
-      }
-    }
-  }
-
-  void _contactViaEmail() async {
-    Navigator.pop(context);
-    if (vendeur?.email != null) {
-      final subject = Uri.encodeComponent(
-        'Intérêt pour "${widget.produit.nom}"',
-      );
-      final body = Uri.encodeComponent(
-        'Bonjour,\n\nJe suis intéressé(e) par votre produit "${widget.produit.nom}" publié sur Kassoua.\n\nCordialement.',
-      );
-      final emailUrl = 'mailto:${vendeur!.email}?subject=$subject&body=$body';
-
-      try {
-        if (await canLaunchUrl(Uri.parse(emailUrl))) {
-          await launchUrl(
-            Uri.parse(emailUrl),
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
-          _showErrorSnackBar('Aucune application email trouvée');
-        }
-      } catch (e) {
-        _showErrorSnackBar('Erreur lors de l\'ouverture de l\'email');
       }
     }
   }
