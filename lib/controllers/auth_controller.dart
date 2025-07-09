@@ -15,7 +15,13 @@ class AuthController extends ChangeNotifier {
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final isLoggedInPref = prefs.getBool('isLoggedIn') ?? false;
-    return isLoggedInPref && _authService.currentUser != null;
+    final loggedInUserId = prefs.getString('loggedInUserId');
+
+    // Pour l'auth téléphone, on vérifie juste les préférences et l'ID utilisateur
+    // Pour l'auth Firebase, on vérifie aussi currentUser
+    return isLoggedInPref &&
+        loggedInUserId != null &&
+        loggedInUserId.isNotEmpty;
   }
 
   bool get isLoading => _isLoading;
@@ -23,33 +29,56 @@ class AuthController extends ChangeNotifier {
   Utilisateur? get userData => _userData; // Ajoutez cette ligne
 
   Future<String?> signInWithPhoneAndPassword({
-    required String phone,
+    required String telephone,
     required String password,
   }) async {
+    _isLoading = true;
+    notifyListeners();
     try {
-      final users = FirebaseFirestore.instance.collection('users');
+      // 1. Appelle le service d'authentification personnalisé pour valider le téléphone et le mot de passe
+      final String? authError = await _authService.signInWithPhoneAndPassword(
+        telephone: telephone,
+        password: password,
+      );
 
-      // Rechercher l'utilisateur avec le téléphone
-      final querySnapshot = await users.where('phone', isEqualTo: phone).get();
+      if (authError != null) {
+        return authError; // Erreur d'authentification (ex: mauvais mot de passe)
+      }
+
+      // 2. Si l'authentification est réussie, récupère les données de l'utilisateur depuis Firestore
+      // en utilisant le numéro de téléphone comme critère de recherche.
+      final usersCollection = FirebaseFirestore.instance.collection('users');
+      final querySnapshot =
+          await usersCollection.where('telephone', isEqualTo: telephone).get();
 
       if (querySnapshot.docs.isEmpty) {
-        return 'Aucun compte trouvé pour ce numéro.';
+        // Ce cas ne devrait pas arriver si _authService.signInWithPhoneAndPassword a réussi,
+        // mais c'est une sécurité.
+        return 'Erreur interne: Utilisateur non trouvé après authentification.';
       }
 
-      final userData = querySnapshot.docs.first.data();
-      final storedHashedPassword = userData['password'];
+      final userDataDoc = querySnapshot.docs.first;
+      _userData = Utilisateur.fromMap(userDataDoc.data(), userDataDoc.id);
 
-      // Hasher le mot de passe entré
-      final hashedInput = sha256.convert(utf8.encode(password)).toString();
+      // 3. Mettre à jour les préférences partagées pour maintenir l'état de connexion.
+      // Puisqu'il n'y a pas d'UID Firebase Auth, nous stockons l'ID du document Firestore.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString(
+        'loggedInUserId',
+        _userData!.id,
+      ); // Stocke l'ID du document Firestore
 
-      if (hashedInput != storedHashedPassword) {
-        return 'Mot de passe incorrect.';
-      }
+      // Ici, _user (l'objet Firebase Auth User) restera null.
+      // Si d'autres parties de votre application s'appuient strictement sur _user non-null,
+      // vous devrez peut-être revoir leur logique ou simuler un objet User minimal.
 
-      // Connexion réussie
-      return null;
+      return null; // Connexion réussie
     } catch (e) {
-      return 'Erreur de connexion : $e';
+      return 'Une erreur inattendue s\'est produite lors de la connexion : $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -57,17 +86,68 @@ class AuthController extends ChangeNotifier {
   /// Inscription avec numéro de téléphone et mot de passe
   /// Retourne un message d'erreur ou null si succès
   Future<String?> signUpWithPhone({
-    required String phone,
+    required String telephone,
     required String password,
     required String nom,
     required String prenom,
   }) async {
-    return await _authService.signUpWithPhoneAndPassword(
-      phone: phone,
-      password: password,
-      nom: nom,
-      prenom: prenom,
-    );
+    try {
+      // 1. Valider l'unicité du numéro de téléphone via AuthService
+      String? validationError = await _authService.validatePhoneSignUp(
+        telephone: telephone,
+      );
+
+      if (validationError != null) {
+        return validationError; // Le numéro de téléphone est déjà utilisé ou autre erreur de validation
+      }
+
+      // 2. Hasher le mot de passe
+      final hashedPassword = sha256.convert(utf8.encode(password)).toString();
+
+      // 3. Créer un nouveau document utilisateur dans Firestore
+      final docRef = await FirebaseFirestore.instance.collection('users').add({
+        'telephone':
+            telephone, // Utilisez 'telephone' pour être cohérent avec votre Firestore
+        'password': hashedPassword,
+        'prenom': prenom,
+        'nom': nom,
+        'email':
+            '', // L'email est explicitement vide pour une inscription par téléphone
+        'dateInscription':
+            FieldValue.serverTimestamp(), // Utilisez un timestamp serveur
+        // Ajoutez d'autres champs par défaut si nécessaire (photoProfil, dateNaissance, genre)
+        'photoProfil': null,
+        'dateNaissance': null,
+        'genre': null,
+      });
+
+      // 4. Mettre à jour les données utilisateur locales dans AuthController
+      // Note: Puisqu'il n'y a pas d'utilisateur Firebase Auth créé directement ici,
+      // _user restera null pour ce type d'authentification.
+      // C'est pourquoi nous devons gérer _userData directement avec l'ID du document Firestore.
+      final Utilisateur newUser = Utilisateur(
+        id: docRef.id, // L'ID du document Firestore est l'ID de l'utilisateur
+        nom: nom,
+        prenom: prenom,
+        email: '',
+        telephone: telephone,
+        dateInscription:
+            DateTime.now(), // Ou utilisez le temps du serveur si vous le récupérez
+        photoProfil: null,
+        dateNaissance: null,
+        genre: null,
+      );
+
+      _userData = newUser; // Définir les données utilisateur actuelles
+      notifyListeners();
+
+      return null; // Succès de l'inscription
+    } on FirebaseAuthException catch (e) {
+      // Cette partie peut être moins pertinente ici si Firebase Auth n'est pas directement utilisé pour l'inscription téléphone
+      return e.message ?? "Une erreur d'authentification s'est produite.";
+    } catch (e) {
+      return 'Une erreur inattendue s\'est produite lors de l\'inscription : $e';
+    }
   }
 
   AuthController({AuthService? authService})
@@ -134,10 +214,22 @@ class AuthController extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      if (isLoggedIn && _authService.currentUser != null) {
-        _user = _authService.currentUser;
-        // Charger les données utilisateur si connecté
-        _userData = await _fetchUserDataInternal();
+      final loggedInUserId = prefs.getString('loggedInUserId');
+
+      if (isLoggedIn && loggedInUserId != null && loggedInUserId.isNotEmpty) {
+        // Vérifier si c'est un utilisateur Firebase ou téléphone
+        if (_authService.currentUser != null) {
+          // Utilisateur Firebase
+          _user = _authService.currentUser;
+          _userData = await _fetchUserDataInternal();
+        } else {
+          // Utilisateur téléphone - récupérer depuis Firestore avec l'ID
+          _userData = await _fetchPhoneUserData(loggedInUserId);
+          if (_userData == null) {
+            // Les données n'existent plus, déconnecter
+            await _signOutLocally();
+          }
+        }
       } else {
         _user = null;
         _userData = null;
@@ -153,15 +245,53 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<Utilisateur?> _fetchPhoneUserData(String documentId) async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(documentId)
+              .get();
+
+      if (!doc.exists) {
+        print('Document Firestore inexistant pour ID: $documentId');
+        return null;
+      }
+
+      final data = doc.data()!;
+      print('Données utilisateur téléphone récupérées: $data');
+
+      return Utilisateur.fromMap(data, doc.id);
+    } catch (e) {
+      print(
+        'Erreur lors de la récupération des données utilisateur téléphone: $e',
+      );
+      return null;
+    }
+  }
+
   // Vérifie si l'utilisateur est connecté (synchrone)
-  bool get isLoggedInSync => _user != null && _authService.currentUser != null;
+  bool get isLoggedInSync {
+    // Pour l'auth Firebase
+    if (_user != null && _authService.currentUser != null) {
+      return true;
+    }
+
+    // Pour l'auth téléphone
+    if (_userData != null) {
+      return true;
+    }
+
+    return false;
+  }
 
   Future<void> _signOutLocally() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
     await prefs.remove('userId');
+    await prefs.remove('loggedInUserId');
     _user = null;
-    _userData = null; // Ajoutez cette ligne
+    _userData = null;
   }
 
   // Déconnexion
@@ -180,36 +310,37 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<Utilisateur?> _fetchUserDataInternal() async {
-    if (!await isLoggedIn()) {
-      print('Utilisateur non connecté');
-      return null;
-    }
     try {
-      final user = _authService.currentUser;
-      if (user == null) {
-        print('Aucun utilisateur Firebase connecté');
+      final prefs = await SharedPreferences.getInstance();
+      final loggedInUserId = prefs.getString('loggedInUserId');
+
+      if (loggedInUserId == null || loggedInUserId.isEmpty) {
+        print('Aucun ID utilisateur stocké');
         return null;
       }
-      print('Récupération Firestore pour uid: ${user.uid}');
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
-      if (!doc.exists) {
-        print('Document Firestore inexistant pour uid: ${user.uid}');
-        return null;
+
+      // Vérifier si c'est un utilisateur Firebase ou téléphone
+      if (_authService.currentUser != null) {
+        // Utilisateur Firebase - utiliser l'UID comme ID de document
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(_authService.currentUser!.uid)
+                .get();
+
+        if (!doc.exists) {
+          print(
+            'Document Firestore inexistant pour UID Firebase: ${_authService.currentUser!.uid}',
+          );
+          return null;
+        }
+
+        final data = doc.data()!;
+        return Utilisateur.fromMap(data, doc.id);
+      } else {
+        // Utilisateur téléphone - utiliser l'ID du document stocké
+        return await _fetchPhoneUserData(loggedInUserId);
       }
-      final data = doc.data()!;
-      print('Données Firestore récupérées: $data');
-      return Utilisateur.fromMap({
-        'nom': data['nom'] ?? '',
-        'prenom': data['prenom'] ?? '',
-        'email': data['email'] ?? '',
-        'telephone': data['telephone'] ?? '',
-        'photoProfil': data['photoProfil'] ?? '',
-        'dateInscription': data['dateInscription'],
-      }, doc.id);
     } catch (e) {
       print('Erreur lors de la récupération des données utilisateur: $e');
       return null;

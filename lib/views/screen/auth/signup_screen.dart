@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
-import 'package:kassoua/themes/customs/elevated_button_theme.dart';
 import 'package:kassoua/themes/customs/text_theme.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
@@ -12,8 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:kassoua/services/auth_service.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
-import 'package:kassoua/views/screen/auth/email_login_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:kassoua/views/screen/auth/login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -94,7 +93,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Widget pour le champ téléphone avec style similaire
   // Widget pour le champ téléphone avec style similaire
   Widget _buildPhoneField() {
     final isDark = _isDarkMode(context);
@@ -452,7 +450,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   String? errorMessage = await authController
                                       .signUpWithPhone(
-                                        phone: telephone,
+                                        telephone: telephone,
                                         password: password,
                                         nom: nom,
                                         prenom: prenom,
@@ -479,13 +477,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     );
 
                                     if (mounted) {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) => const LoginScreen(),
-                                        ),
-                                      );
+                                      if (_isPhone) {
+                                        // Rediriger vers l'écran de connexion téléphone
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) =>
+                                                    const LoginScreen(),
+                                          ),
+                                        );
+                                      } else {
+                                        // Rediriger vers l'écran de connexion email
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) =>
+                                                    const LoginScreen(),
+                                          ),
+                                        );
+                                      }
                                     }
                                   }
                                 }
@@ -524,22 +536,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   child:
                       _isLoading
-                          ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
+                          ? Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
                               ),
-                              const SizedBox(width: 10),
-                              const Text("Inscription en cours..."),
-                            ],
+                            ),
                           )
                           : Text(
                             DMTexts.createAccount,

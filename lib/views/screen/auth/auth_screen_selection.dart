@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
-import 'package:kassoua/views/screen/auth/email_login_screen.dart';
-import 'package:kassoua/views/screen/auth/phone_login_screen.dart';
 import 'package:kassoua/views/screen/auth/signup_screen.dart';
 import 'package:kassoua/views/screen/homepage/menu_navigation.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:kassoua/views/screen/auth/login_screen.dart';
 
 class AuthSelectionScreen extends StatelessWidget {
   const AuthSelectionScreen({Key? key}) : super(key: key);
@@ -14,183 +13,6 @@ class AuthSelectionScreen extends StatelessWidget {
       Theme.of(context).brightness == Brightness.dark;
 
   // Fonction pour afficher le modal bottom sheet
-  void _showLoginOptionsModal(BuildContext context) {
-    final isDark = _isDarkMode(context);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? AppColors.black : AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Poignée du modal
-
-              // Titre
-              Text(
-                "Choisissez votre méthode de connexion",
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Text(
-                "Sélectionnez comment vous souhaitez vous connecter",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color:
-                      isDark
-                          ? AppColors.textWhite.withOpacity(0.8)
-                          : AppColors.black.withOpacity(0.7),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Option Email
-              InkWell(
-                onTap: () {
-                  Navigator.pop(context); // Fermer le modal
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Iconsax.message,
-                          color: AppColors.primary,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Continuer avec Email",
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Utilisez votre email et mot de passe",
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color:
-                                    isDark
-                                        ? AppColors.textWhite.withOpacity(0.7)
-                                        : AppColors.black.withOpacity(0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Iconsax.arrow_right_3, color: Colors.grey.shade400),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Option Téléphone
-              InkWell(
-                onTap: () {
-                  Navigator.pop(context); // Fermer le modal
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PhoneLoginScreen(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Iconsax.call,
-                          color: AppColors.primary,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Continuer avec Téléphone",
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Utilisez votre numéro de téléphone et mot de passe",
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color:
-                                    isDark
-                                        ? AppColors.textWhite.withOpacity(0.7)
-                                        : AppColors.black.withOpacity(0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Iconsax.arrow_right_3, color: Colors.grey.shade400),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +122,12 @@ class AuthSelectionScreen extends StatelessWidget {
               height: 60,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  _showLoginOptionsModal(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                  );
                 },
                 icon: const Icon(Iconsax.login, size: 24),
                 label: const Text(

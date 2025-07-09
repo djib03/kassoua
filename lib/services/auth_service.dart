@@ -1,3 +1,5 @@
+// Fichier: auth_service.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
@@ -18,14 +20,16 @@ class AuthService {
   }
 
   Future<String?> signInWithPhoneAndPassword({
-    required String phone,
+    required String telephone,
     required String password,
   }) async {
     try {
       final users = FirebaseFirestore.instance.collection('users');
 
-      // Rechercher l'utilisateur avec le téléphone
-      final querySnapshot = await users.where('phone', isEqualTo: phone).get();
+      // Rechercher l'utilisateur avec le téléphone (assurez-vous que le champ est 'phone' ou 'telephone' dans Firestore)
+      // Ici, j'utilise 'phone' pour rester cohérent avec votre utilisation précédente dans signUpWithPhoneAndPassword.
+      final querySnapshot =
+          await users.where('phone', isEqualTo: telephone).get();
 
       if (querySnapshot.docs.isEmpty) {
         return 'Aucun compte trouvé pour ce numéro.';
@@ -41,44 +45,29 @@ class AuthService {
         return 'Mot de passe incorrect.';
       }
 
-      // Connexion réussie
+      // Connexion réussie (pas de connexion Firebase Auth ici, juste validation)
       return null;
     } catch (e) {
       return 'Erreur de connexion : $e';
     }
   }
 
-  //methode pour creer un compte avec numero
-  Future<String?> signUpWithPhoneAndPassword({
-    required String phone,
-    required String password,
-    required String prenom,
-    required String nom,
-  }) async {
+  // Ancienne méthode signUpWithPhoneAndPassword renommée et modifiée
+  // Elle ne fait plus que valider l'unicité du téléphone.
+  Future<String?> validatePhoneSignUp({required String telephone}) async {
     try {
       final users = FirebaseFirestore.instance.collection('users');
 
       // Vérifie si le téléphone est déjà utilisé
-      final existingUser = await users.where('phone', isEqualTo: phone).get();
+      final existingUser =
+          await users.where('phone', isEqualTo: telephone).get();
       if (existingUser.docs.isNotEmpty) {
         return 'Numéro déjà utilisé.';
       }
 
-      // Hashage du mot de passe
-      final hashedPassword = sha256.convert(utf8.encode(password)).toString();
-
-      // Création du compte dans Firestore
-      await users.add({
-        'phone': phone,
-        'password': hashedPassword,
-        'prenom': prenom,
-        'nom': nom,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      return null; // success
+      return null; // Succès: le numéro est unique
     } catch (e) {
-      return 'Erreur lors de l\'inscription : $e';
+      return 'Erreur lors de la validation du numéro : $e';
     }
   }
 
@@ -94,14 +83,13 @@ class AuthService {
   Future<UserCredential> signUpWithEmail(
     String email,
     String password, {
-    required String displayName, // Ajout du nom complet
+    required String displayName,
   }) async {
     final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
 
-    // Mettre à jour le nom d'affichage
     await userCredential.user?.updateDisplayName(displayName);
 
     return userCredential;
@@ -112,7 +100,7 @@ class AuthService {
     return _firebaseAuth.signOut();
   }
 
-  // Phone Number Authentication
+  // Phone Number Authentication (méthodes liées à l'OTP, inchangées)
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
     required Function(PhoneAuthCredential) onVerificationCompleted,
@@ -141,7 +129,6 @@ class AuthService {
     return _firebaseAuth.signInWithCredential(credential);
   }
 
-  // Démarre le processus d’authentification avec le numéro
   Future<void> loginWithPhoneNumber({
     required String phoneNumber,
     required Function(String verificationId) onCodeSent,
@@ -167,33 +154,6 @@ class AuthService {
           onTimeout();
         },
       );
-    } catch (e) {
-      onError(e.toString());
-    }
-  }
-
-  // Vérifie le code OTP manuellement
-  Future<void> verifyOtpCode({
-    required String verificationId,
-    required String smsCode,
-    required Function(User user) onSuccess,
-    required Function(String error) onError,
-  }) async {
-    try {
-      final credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-      final userCredential = await _firebaseAuth.signInWithCredential(
-        credential,
-      );
-
-      final user = userCredential.user;
-      if (user != null) {
-        onSuccess(user);
-      } else {
-        onError("Utilisateur non trouvé");
-      }
     } catch (e) {
       onError(e.toString());
     }

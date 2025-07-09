@@ -357,12 +357,62 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  String _getDisplayIdentifier(Utilisateur userData) {
+    // Si l'utilisateur a un téléphone mais pas d'email, c'est une connexion par téléphone
+    if (userData.telephone.isNotEmpty && userData.email.isEmpty) {
+      return userData.telephone;
+    }
+    // Si l'utilisateur a un email mais pas de téléphone, c'est une connexion par email
+    else if (userData.email.isNotEmpty && userData.telephone.isEmpty) {
+      return userData.email;
+    }
+    // Si les deux existent, vous pouvez choisir votre préférence
+    else if (userData.telephone.isNotEmpty && userData.email.isNotEmpty) {
+      // Ici vous pouvez choisir : prioriser le téléphone ou l'email
+      return userData.telephone; // ou userData.email selon votre préférence
+    } else {
+      return 'Contact non disponible';
+    }
+  }
+
   // Helper method for logged-in user profile
   Widget _buildUserProfile(
     BuildContext context,
+    Utilisateur? userData,
+    bool isLoggedIn,
     bool isDark,
-    Utilisateur user,
   ) {
+    // Si l'utilisateur n'est PAS connecté ou userData est null, affichez le message simple
+    if (!isLoggedIn || userData == null) {
+      return Row(
+        children: [
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: AppColors.primary.withOpacity(0.2),
+            child: const Icon(Iconsax.user, size: 40, color: AppColors.primary),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Non connecté',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              Text(
+                'Veuillez vous connecter',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Si l'utilisateur est connecté, affichez le design plus riche de _buildUserProfile
+    final String displayName = '${userData.nom} ${userData.prenom}'.trim();
+    final String displayIdentifier = _getDisplayIdentifier(userData);
+
     return Container(
       margin: const EdgeInsets.all(24),
       padding: const EdgeInsets.all(24),
@@ -382,7 +432,7 @@ class ProfileScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Image de profil à gauche
+          // Image de profil avec bordure dégradée
           Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
@@ -405,24 +455,25 @@ class ProfileScreen extends StatelessWidget {
                   width: 70,
                   height: 70,
                   child:
-                      (user.photoProfil == null || user.photoProfil!.isEmpty)
+                      (userData.photoProfil == null ||
+                              userData.photoProfil!.isEmpty)
                           ? Image.asset(
-                            'assets/images/user.png',
+                            'assets/images/user.png', // Assurez-vous d'avoir cet asset
                             fit: BoxFit.cover,
                           )
                           : CachedNetworkImage(
-                            imageUrl: user.photoProfil!,
+                            imageUrl: userData.photoProfil!,
                             fit: BoxFit.cover,
                             placeholder:
-                                (context, url) => Center(
+                                (context, url) => const Center(
                                   child: CircularProgressIndicator(
                                     color: AppColors.primary,
                                     strokeWidth: 2,
                                   ),
                                 ),
                             errorWidget:
-                                (context, url, error) => Icon(
-                                  Iconsax.profile,
+                                (context, url, error) => const Icon(
+                                  Iconsax.profile, // Ou Icons.error_outline
                                   color: AppColors.error,
                                   size: 30,
                                 ),
@@ -432,31 +483,32 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 20),
-          // Informations à droite
+          // Informations utilisateur
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  user.nom.isEmpty && user.prenom.isEmpty
-                      ? 'Utilisateur'
-                      : '${user.nom} ${user.prenom}'.trim(),
+                  displayName.isEmpty ? 'Utilisateur' : displayName,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 22,
                     color: isDark ? AppColors.textWhite : AppColors.textPrimary,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  user.email.isNotEmpty ? user.email : user.telephone,
+                  displayIdentifier,
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
+                // Badge "Connecté"
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -466,11 +518,11 @@ class ProfileScreen extends StatelessWidget {
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.verified, color: AppColors.primary, size: 14),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         'Connecté',
                         style: TextStyle(
@@ -493,7 +545,20 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isLoggedIn = Provider.of<AuthController>(context).user != null;
+
+    // Écoutez l'Auth Controller pour les changements d'état
+    final authController = Provider.of<AuthController>(context);
+
+    // Utilisez isLoading pour afficher un état de chargement
+    if (authController.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Récupérez les données de l'utilisateur
+    final Utilisateur? userData = authController.userData;
+
+    // CORRECTION : Utilisez isLoggedInSync au lieu de isLoggedIn()
+    final bool isLoggedIn = authController.isLoggedInSync;
 
     return Scaffold(
       appBar: AppBar(
@@ -529,101 +594,107 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Consumer<AuthController>(
               builder: (context, authController, child) {
-                if (authController.user == null) {
-                  return _buildAnonymousProfile(context, isDark);
-                }
-
-                if (authController.userData != null) {
-                  return _buildUserProfile(
-                    context,
-                    isDark,
-                    authController.userData!,
-                  );
-                }
-
-                // Loader uniquement si les données ne sont pas encore chargées
-                return Container(
-                  margin: const EdgeInsets.all(24),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.dark : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            isDark
-                                ? Colors.black.withOpacity(0.2)
-                                : Colors.grey.withOpacity(0.08),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Skeletonizer(
-                    enabled: true,
-                    child: Row(
-                      children: [
-                        // Profile picture skeleton
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            shape: BoxShape.circle,
-                          ),
-                          child: Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        // User info skeleton
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Name skeleton
-                              Container(
-                                width: double.infinity,
-                                height: 22,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              // Email skeleton
-                              Container(
-                                width: 150,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Status badge skeleton
-                              Container(
-                                width: 80,
-                                height: 26,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                            ],
-                          ),
+                // Vérifier d'abord si on est en cours de chargement
+                if (authController.isLoading) {
+                  return Container(
+                    margin: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.dark : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              isDark
+                                  ? Colors.black.withOpacity(0.2)
+                                  : Colors.grey.withOpacity(0.08),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
-                  ),
+                    child: Skeletonizer(
+                      enabled: true,
+                      child: Row(
+                        children: [
+                          // Profile picture skeleton
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Container(
+                              width: 70,
+                              height: 70,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          // User info skeleton
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Name skeleton
+                                Container(
+                                  width: double.infinity,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                // Email skeleton
+                                Container(
+                                  width: 150,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                // Status badge skeleton
+                                Container(
+                                  width: 80,
+                                  height: 26,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                // Vérifier si l'utilisateur n'est pas connecté
+                if (!authController.isLoggedInSync &&
+                    authController.userData == null) {
+                  return _buildAnonymousProfile(context, isDark);
+                }
+
+                // Utilisateur connecté - afficher le profil
+                return _buildUserProfile(
+                  context,
+                  authController.userData,
+                  authController
+                      .isLoggedInSync, // CORRECTION : Utiliser isLoggedInSync
+                  isDark,
                 );
               },
             ),
+
             // Section paramètres
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -689,7 +760,6 @@ class ProfileScreen extends StatelessWidget {
                         },
                         color: AppColors.primary,
                       ),
-
                       _buildMenuItem(
                         icon: Iconsax.logout,
                         title: 'Déconnexion',
@@ -714,7 +784,6 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 32),
           ],
         ),

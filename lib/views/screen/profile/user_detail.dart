@@ -265,9 +265,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                                 end: Alignment.bottomRight,
                               ),
                             ),
-                            child: Image.asset(
-                              'assets/images/user.png',
-                              fit: BoxFit.cover,
+                            child: Icon(
+                              Iconsax.user,
+                              size: 60,
+                              color: AppColors.primary.withOpacity(0.7),
                             ),
                           )
                           : (user.photoProfil == null ||

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/views/screen/homepage/home_page.dart'; // Importez votre HomePage
-
+import 'package:kassoua/views/screen/homepage/home_page.dart';
 import 'package:kassoua/views/screen/shop/my_listings_page.dart';
 import 'package:kassoua/views/screen/profile/profile_screen.dart';
 import 'package:flutter/services.dart';
@@ -20,251 +19,70 @@ class MenuNavigation extends StatefulWidget {
 
 class _MenuNavigationState extends State<MenuNavigation> {
   int _selectedIndex = 0;
-  String? _currentUserId;
+  // String? _currentUserId; // Plus besoin de maintenir localement
 
-  // Remove the field initialization and create a getter instead
-  List<Widget> get _screens => [
-    HomePage(),
-    FavoriteProductsScreen(userId: _currentUserId ?? ''),
-    MyListingsPage(),
-    ProfileScreen(),
-  ];
+  // Utiliser un getter pour _screens qui dépend de l'Auth Controller
+  List<Widget> _screens(BuildContext context, AuthController authController) {
+    // Si l'utilisateur est connecté, utilisez son ID. Sinon, utilisez une chaîne vide ou gérez l'état "non connecté".
+    // La FavoriteProductsScreen devrait gérer le cas où l'userId est vide.
+    final String currentUserId =
+        authController.userData?.id ?? ''; // Récupérer l'ID du userData
+
+    return [
+      const HomePage(),
+      FavoriteProductsScreen(
+        userId: currentUserId,
+      ), // Passer l'ID de l'utilisateur
+      const MyListingsPage(),
+      const ProfileScreen(),
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
-    // Initialize _currentUserId here if needed
-    _getCurrentUserId();
+    // Plus besoin de charger _currentUserId ici, il sera géré par le Provider
   }
 
-  void _getCurrentUserId() {
-    // Get the current user ID from AuthController or wherever it's stored
-    final authController = Provider.of<AuthController>(context, listen: false);
-    _currentUserId =
-        authController.user?.uid; // Adjust based on your user model
-  }
-
-  void _onItemTapped(int index) {
-    final isLoggedIn =
-        Provider.of<AuthController>(context, listen: false).user != null;
-    // Indices : 1 = Discussions, 2 = Ma boutique
-    if ((index == 1 || index == 2) && !isLoggedIn) {
-      _showLoginRequiredSnackBar(context);
-      return;
-    }
+  void onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-      HapticFeedback.lightImpact();
     });
   }
 
-  bool _isDarkMode(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isDark = _isDarkMode(context);
+    final authController = Provider.of<AuthController>(context);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: _screens[_selectedIndex], // Affiche l'écran sélectionné.
-      bottomNavigationBar: CustomBottomBar(
-        // Utilise la CustomBottomBar
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        activeColor: AppColors.primary,
-        inactiveColor: isDark ? Colors.white60 : Colors.black54,
-        isDark: isDark,
-      ),
-    );
-  }
-
-  void _showLoginRequiredSnackBar(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (ctx) {
-        return Container(
-          margin: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color:
-                Theme.of(ctx).brightness == Brightness.dark
-                    ? AppColors.dark
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle bar
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-
-                // Icône d'information
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.account_circle_outlined,
-                    color: AppColors.primary,
-                    size: 40,
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Titre
-                const Text(
-                  'Connexion requise',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'poppins',
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 12),
-
-                // Message
-                Text(
-                  'Vous devez être connecté pour accéder à cette fonctionnalité.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 32),
-
-                // Boutons
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.grey[100],
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Annuler',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AuthSelectionScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Iconsax.login, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Se connecter',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Espace pour éviter le clavier
-                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom),
-              ],
+      body:
+          _screens(
+            context,
+            authController,
+          )[_selectedIndex], // Passer le contexte et le contrôleur
+      extendBody:
+          true, // Permet au body de s'étendre derrière la barre de navigation
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color:
+              isDark
+                  ? const Color.fromARGB(255, 32, 32, 32)
+                  : const Color.fromARGB(255, 255, 255, 255),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 10,
             ),
-          ),
-        );
-      },
-    );
-  }
-}
+          ],
+        ),
+        height: 66,
 
-// Barre de navigation personnalisée
-class CustomBottomBar extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onItemTapped;
-  final Color activeColor;
-  final Color inactiveColor;
-  final bool isDark;
-
-  const CustomBottomBar({
-    Key? key,
-    required this.selectedIndex,
-    required this.onItemTapped,
-    required this.activeColor,
-    required this.inactiveColor,
-    required this.isDark,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomAppBar(
-      color:
-          isDark
-              ? const Color.fromARGB(255, 32, 32, 32)
-              : const Color.fromARGB(255, 255, 255, 255),
-      height: 66,
-      shape: const CircularNotchedRectangle(),
-
-      child: SizedBox(
+        // Removed CircularNotchedRectangle as it's typically used with a FloatingActionButton
+        // If you still want the FAB behavior, ensure it's properly implemented with shape.
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -278,15 +96,38 @@ class CustomBottomBar extends StatelessWidget {
     );
   }
 
+  // Dans menu_navigation.dart, modifiez la méthode _buildNavItem comme suit :
+
   Widget _buildNavItem(
     int index,
     IconData outlineIcon,
     IconData filledIcon,
     String label,
   ) {
-    final isSelected = selectedIndex == index;
+    final isSelected = _selectedIndex == index;
+    final activeColor = AppColors.primary; // Votre couleur active
+    final inactiveColor = Colors.grey; // Votre couleur inactive
+
     return GestureDetector(
-      onTap: () => onItemTapped(index),
+      onTap: () {
+        // Pour "Mes favoris", vérifier la connexion avant de naviguer
+        if (index == 1) {
+          // Index de "Mes favoris"
+          final authController = Provider.of<AuthController>(
+            context,
+            listen: false,
+          );
+
+          // CORRECTION : Utiliser isLoggedInSync au lieu de isLoggedIn()
+          if (authController.isLoggedInSync) {
+            onItemTapped(index);
+          } else {
+            _showLoginRequiredDialog(context);
+          }
+        } else {
+          onItemTapped(index);
+        }
+      },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -300,11 +141,80 @@ class CustomBottomBar extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               color: isSelected ? activeColor : inactiveColor,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // J'ai inclus la fonction _showLoginRequiredDialog ici car elle était appelée
+  // depuis MenuNavigation pour "Mes favoris". Vous pouvez la centraliser si vous voulez,
+  // mais pour l'instant, la dupliquer ou la passer en paramètre.
+  // Pour éviter la duplication, je vais la copier directement depuis ProfileScreen.
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Action Requise',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Vous devez être connecté pour accéder à cette fonctionnalité.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop(); // Ferme le dialogue
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AuthSelectionScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Iconsax.login, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Se connecter',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
