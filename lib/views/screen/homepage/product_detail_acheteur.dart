@@ -4,13 +4,14 @@ import 'package:kassoua/models/product.dart';
 import 'package:kassoua/views/screen/shop/image_viewer.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/services/firestore_service.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kassoua/views/screen/Chat/detailed_chat_page.dart';
+import 'package:kassoua/services/firestore_service.dart';
+import 'package:kassoua/services/favori_service.dart';
+import 'package:kassoua/models/image_produit.dart';
 
 class ProductDetailAcheteur extends StatefulWidget {
   final Produit produit;
@@ -30,10 +31,14 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
     with SingleTickerProviderStateMixin {
   PageController productImageSlider = PageController();
   final FirestoreService _firestoreService = FirestoreService();
+  final favoriService _favoriService = favoriService();
   bool isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   Utilisateur? vendeur;
+  Adresse? _adresse;
+  bool _isLoadingLocation = false;
+  bool _locationLoaded = false;
 
   @override
   void initState() {
@@ -48,12 +53,44 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
     _animationController.forward();
     _loadVendeurInfo();
     _incrementProductViews();
+    _loadLocationOnce(); // Charger la localisation une seule fois
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  // Nouvelle méthode pour charger la localisation une seule fois
+  void _loadLocationOnce() async {
+    if (_locationLoaded) return; // Si déjà chargé, ne pas recharger
+
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final adresse = await _firestoreService.getAdresseById(
+        widget.produit.adresseId,
+      );
+      if (mounted) {
+        setState(() {
+          _adresse = adresse;
+          _isLoadingLocation = false;
+          _locationLoaded = true; // Marquer comme chargé
+        });
+      }
+    } catch (e) {
+      print('Erreur lors du chargement de l\'adresse: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+          _locationLoaded =
+              true; // Même en cas d'erreur, éviter les rechargements
+        });
+      }
+    }
   }
 
   void _loadVendeurInfo() async {
@@ -181,7 +218,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
         ],
       ),
 
-      // Bottom Navigation Bar pour acheteur
+      // Bottom Navigation Bar pour contact WhatsApp/SMS
       bottomNavigationBar: Container(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 15),
         decoration: BoxDecoration(
@@ -197,12 +234,12 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
         ),
         child: Row(
           children: [
-            // Bouton Appeler (si numéro disponible)
+            // Bouton Appeler
             if (vendeur?.telephone != null)
               Container(
                 width: 60,
                 height: 60,
-                margin: EdgeInsets.only(right: 16),
+                margin: EdgeInsets.only(right: 12),
                 child: Material(
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
@@ -214,7 +251,24 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                 ),
               ),
 
-            // Bouton principal - Contacter le vendeur
+            // Bouton SMS
+            if (vendeur?.telephone != null)
+              Container(
+                width: 60,
+                height: 60,
+                margin: EdgeInsets.only(right: 12),
+                child: Material(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _sendSMS(),
+                    child: Icon(Iconsax.message, color: Colors.blue, size: 24),
+                  ),
+                ),
+              ),
+
+            // Bouton principal - WhatsApp
             Expanded(
               child: SizedBox(
                 height: 60,
@@ -226,8 +280,8 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                         colors:
                             produit.statut == 'disponible'
                                 ? [
-                                  AppColors.primary,
-                                  AppColors.primary.withOpacity(0.8),
+                                  Color(0xFF25D366), // Couleur WhatsApp
+                                  Color(0xFF25D366).withOpacity(0.8),
                                 ]
                                 : [Colors.grey, Colors.grey.withOpacity(0.8)],
                       ),
@@ -237,21 +291,17 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                       borderRadius: BorderRadius.circular(16),
                       onTap:
                           produit.statut == 'disponible'
-                              ? () => _contactVendeur()
+                              ? () => _contactViaWhatsApp()
                               : null,
                       child: Center(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Iconsax.message,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                            Icon(Icons.message, color: Colors.white, size: 20),
                             SizedBox(width: 8),
                             Text(
                               produit.statut == 'disponible'
-                                  ? 'Contacter le vendeur'
+                                  ? 'Contacter via WhatsApp'
                                   : 'Produit vendu',
                               style: TextStyle(
                                 fontFamily: 'poppins',
@@ -653,11 +703,28 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                   ],
                 ),
               ),
-              if (vendeur?.telephone != null)
-                IconButton(
-                  onPressed: _callVendeur,
-                  icon: Icon(Iconsax.call, color: Colors.green),
-                ),
+              // Boutons de contact rapide
+              Row(
+                children: [
+                  if (vendeur?.telephone != null) ...[
+                    IconButton(
+                      onPressed: _callVendeur,
+                      icon: Icon(Iconsax.call, color: Colors.green),
+                      tooltip: 'Appeler',
+                    ),
+                    IconButton(
+                      onPressed: _sendSMS,
+                      icon: Icon(Iconsax.message, color: Colors.blue),
+                      tooltip: 'SMS',
+                    ),
+                    IconButton(
+                      onPressed: _contactViaWhatsApp,
+                      icon: Icon(Icons.message, color: Color(0xFF25D366)),
+                      tooltip: 'WhatsApp',
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ],
@@ -778,65 +845,81 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
   }
 
   Widget _buildLocationSection(Produit product) {
-    return FutureBuilder<Adresse?>(
-      future: _firestoreService.getAdresseById(product.adresseId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Padding(
-            padding: EdgeInsets.all(DMSizes.md),
-            child: LinearProgressIndicator(),
-          );
-        }
-        final adresse = snapshot.data;
-        return Container(
-          padding: EdgeInsets.all(DMSizes.md),
-          decoration: BoxDecoration(
-            color:
-                Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.dark.withOpacity(0.3)
-                    : AppColors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: EdgeInsets.all(DMSizes.md),
+      decoration: BoxDecoration(
+        color:
+            Theme.of(context).brightness == Brightness.dark
+                ? AppColors.dark.withOpacity(0.3)
+                : AppColors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
+              Icon(
+                Iconsax.location,
+                color: AppColors.primary,
+                size: DMSizes.iconMd,
+              ),
+              SizedBox(width: DMSizes.sm),
+              Text(
+                textAlign: TextAlign.center,
+                'Localisation',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: DMSizes.sm),
+
+          // Affichage conditionnel basé sur l'état de chargement
+          if (_isLoadingLocation)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: DMSizes.sm),
+              child: Row(
                 children: [
-                  Icon(
-                    Iconsax.location,
-                    color: AppColors.primary,
-                    size: DMSizes.iconMd,
-                  ),
-                  SizedBox(width: DMSizes.sm),
-                  Text(
-                    textAlign: TextAlign.center,
-                    'Localisation',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
                     ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Chargement de la localisation...',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ),
-              SizedBox(height: DMSizes.sm),
-
-              if (adresse != null &&
-                  (adresse.quartier != null || adresse.ville != null))
-                Text(
-                  '${adresse.quartier ?? ''} - ${adresse.ville} '.trim(),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+            )
+          else if (_adresse != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_adresse!.quartier != null || _adresse!.ville != null)
+                  Text(
+                    '${_adresse!.quartier ?? ''} - ${_adresse!.ville} '.trim(),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-
-              if (adresse != null)
+                SizedBox(height: DMSizes.sm),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => _openInMaps(adresse),
+                    onPressed: () => _openInMaps(_adresse!),
                     icon: Icon(Iconsax.map, size: 16),
                     label: Text('Voir sur la carte'),
                     style: OutlinedButton.styleFrom(
@@ -846,11 +929,34 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                     ),
                   ),
                 ),
-            ],
-          ),
-        );
-      },
+              ],
+            )
+          else
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: DMSizes.sm),
+              child: Row(
+                children: [
+                  Icon(Icons.location_off, color: Colors.grey[400], size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    'Localisation non disponible',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
+  }
+
+  // Méthode pour forcer le rechargement si nécessaire
+  void _refreshLocation() {
+    setState(() {
+      _locationLoaded = false;
+      _adresse = null;
+    });
+    _loadLocationOnce();
   }
 
   void _openInMaps(Adresse adresse) async {
@@ -920,68 +1026,63 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
           Padding(
             padding: EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.flag_outlined,
-                        color: Colors.orange,
-                        size: 24,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        'Signaler cette annonce',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Signaler ce produit',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
-
+                SizedBox(height: 8),
+                Text(
+                  'Aidez-nous à maintenir la qualité de notre plateforme',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
                 SizedBox(height: 20),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Annuler',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                _buildReportOption(
+                  icon: Icons.description_outlined,
+                  title: 'Description inappropriée',
+                  subtitle: 'Contenu offensant ou trompeur',
+                  onTap: () => _submitReport('description'),
+                ),
+                _buildReportOption(
+                  icon: Icons.image_not_supported_outlined,
+                  title: 'Images inappropriées',
+                  subtitle: 'Photos non conformes ou trompeuses',
+                  onTap: () => _submitReport('images'),
+                ),
+                _buildReportOption(
+                  icon: Icons.attach_money_outlined,
+                  title: 'Prix suspect',
+                  subtitle: 'Prix anormalement bas ou élevé',
+                  onTap: () => _submitReport('prix'),
+                ),
+                _buildReportOption(
+                  icon: Icons.report_outlined,
+                  title: 'Contenu frauduleux',
+                  subtitle: 'Produit contrefait ou arnaque',
+                  onTap: () => _submitReport('fraude'),
+                ),
+                SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Annuler',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(width: 12),
-                  ],
+                  ),
                 ),
-
-                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),
           ),
@@ -990,51 +1091,65 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
     );
   }
 
-  void _contactVendeur() async {
-    // Vérifie que le vendeur existe et que l'utilisateur est connecté
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (vendeur == null || currentUser == null) {
-      _showErrorSnackBar("Impossible de contacter le vendeur.");
-      return;
-    }
+  Widget _buildReportOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Crée un ID de conversation unique (par exemple, combine les deux IDs)
-    final participants = [currentUser.uid, vendeur!.id]..sort();
-    final conversationId = participants.join('_');
-
-    // Message pré-rempli
-    final prefilledMessage =
-        'Bonjour, je suis intéressé(e) par votre produit "${widget.produit.nom}" sur Kassoua.';
-
-    // Navigue vers la page de chat
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => DetailedChatPage(
-              conversationId: conversationId,
-              otherParticipantId: vendeur!.id,
-              otherParticipantName: "${vendeur!.nom} ${vendeur!.prenom}",
-              productName: widget.produit.nom,
-              prefilledMessage:
-                  prefilledMessage, // Ajoute ce paramètre dans DetailedChatPage
-            ),
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.black : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: Colors.orange),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
+        onTap: onTap,
       ),
     );
   }
 
-  void _callVendeur() async {
+  void _submitReport(String reason) {
     Navigator.pop(context);
+    _showSuccessSnackBar(
+      'Signalement envoyé. Merci de nous aider à améliorer la plateforme.',
+      Icons.check_circle,
+    );
+  }
+
+  void _callVendeur() async {
     if (vendeur?.telephone != null) {
-      final phoneUrl = 'tel:${vendeur!.telephone}';
+      final phoneNumber = vendeur!.telephone!;
+      final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+
       try {
-        if (await canLaunchUrl(Uri.parse(phoneUrl))) {
-          await launchUrl(
-            Uri.parse(phoneUrl),
-            mode: LaunchMode.externalApplication,
-          );
+        if (await canLaunchUrl(phoneUri)) {
+          await launchUrl(phoneUri);
         } else {
-          _showErrorSnackBar('Impossible d\'effectuer l\'appel');
+          _showErrorSnackBar('Impossible d\'ouvrir l\'application téléphone');
         }
       } catch (e) {
         _showErrorSnackBar('Erreur lors de l\'appel');
@@ -1042,39 +1157,111 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
     }
   }
 
+  void _sendSMS() async {
+    if (vendeur?.telephone != null) {
+      final phoneNumber = vendeur!.telephone!;
+      final message =
+          'Bonjour, je suis intéressé par votre produit "${widget.produit.nom}" sur Kassoua.';
+      final Uri smsUri = Uri(
+        scheme: 'sms',
+        path: phoneNumber,
+        queryParameters: {'body': message},
+      );
+
+      try {
+        if (await canLaunchUrl(smsUri)) {
+          await launchUrl(smsUri);
+        } else {
+          _showErrorSnackBar('Impossible d\'ouvrir l\'application SMS');
+        }
+      } catch (e) {
+        _showErrorSnackBar('Erreur lors de l\'envoi du SMS');
+      }
+    }
+  }
+
+  void _contactViaWhatsApp() async {
+    if (vendeur?.telephone != null) {
+      final phoneNumber = vendeur!.telephone!.replaceAll(RegExp(r'[^\d+]'), '');
+      final message =
+          'Bonjour, je suis intéressé par votre produit "${widget.produit.nom}" sur Kassoua. Prix: ${widget.produit.prix.toStringAsFixed(0)} FCFA';
+      final encodedMessage = Uri.encodeComponent(message);
+      final whatsappUrl = 'https://wa.me/$phoneNumber?text=$encodedMessage';
+
+      try {
+        if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
+          await launchUrl(
+            Uri.parse(whatsappUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          _showErrorSnackBar('WhatsApp n\'est pas installé sur votre appareil');
+        }
+      } catch (e) {
+        _showErrorSnackBar('Erreur lors de l\'ouverture de WhatsApp');
+      }
+    }
+  }
+
   void _showSuccessSnackBar(String message, IconData icon) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.all(16),
         ),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: EdgeInsets.all(16),
-      ),
-    );
+      );
+    }
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.all(16),
         ),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: EdgeInsets.all(16),
-      ),
-    );
+      );
+    }
   }
 }

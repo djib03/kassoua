@@ -75,7 +75,7 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen> {
           'Mes Favoris',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: AppColors.primary,
+
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),

@@ -1,19 +1,196 @@
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
-import 'package:kassoua/themes/customs/form_divider.dart';
-import 'package:kassoua/views/screen/auth/login_screen.dart';
+import 'package:kassoua/views/screen/auth/email_login_screen.dart';
 import 'package:kassoua/views/screen/auth/phone_login_screen.dart';
 import 'package:kassoua/views/screen/auth/signup_screen.dart';
 import 'package:kassoua/views/screen/homepage/menu_navigation.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:flutter/services.dart';
 
 class AuthSelectionScreen extends StatelessWidget {
   const AuthSelectionScreen({Key? key}) : super(key: key);
 
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
+
+  // Fonction pour afficher le modal bottom sheet
+  void _showLoginOptionsModal(BuildContext context) {
+    final isDark = _isDarkMode(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.black : AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Poignée du modal
+
+              // Titre
+              Text(
+                "Choisissez votre méthode de connexion",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                "Sélectionnez comment vous souhaitez vous connecter",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color:
+                      isDark
+                          ? AppColors.textWhite.withOpacity(0.8)
+                          : AppColors.black.withOpacity(0.7),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Option Email
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context); // Fermer le modal
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Iconsax.message,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Continuer avec Email",
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Utilisez votre email et mot de passe",
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    isDark
+                                        ? AppColors.textWhite.withOpacity(0.7)
+                                        : AppColors.black.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Iconsax.arrow_right_3, color: Colors.grey.shade400),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Option Téléphone
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context); // Fermer le modal
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PhoneLoginScreen(),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Iconsax.call,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Continuer avec Téléphone",
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Utilisez votre numéro de téléphone et mot de passe",
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    isDark
+                                        ? AppColors.textWhite.withOpacity(0.7)
+                                        : AppColors.black.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Iconsax.arrow_right_3, color: Colors.grey.shade400),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +203,6 @@ class AuthSelectionScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         centerTitle: true,
         elevation: 0,
-
         actions: [
           TextButton(
             onPressed: () {
@@ -37,7 +213,7 @@ class AuthSelectionScreen extends StatelessWidget {
             },
             child: const Text(
               'Passer',
-              style: TextStyle(color: AppColors.buttonPrimary),
+              style: TextStyle(color: AppColors.primary),
             ),
           ),
         ],
@@ -49,14 +225,14 @@ class AuthSelectionScreen extends StatelessWidget {
           children: [
             // Logo ou icône principale
             Container(
-              padding: const EdgeInsets.all(32),
+              padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Iconsax.security_user,
-                size: 80,
+                size: 100,
                 color: AppColors.primary,
               ),
             ),
@@ -75,7 +251,7 @@ class AuthSelectionScreen extends StatelessWidget {
             const SizedBox(height: DMSizes.sm),
 
             Text(
-              "Choisissez votre méthode de connexion préférée",
+              "Achetez et vendez en toute simplicité",
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color:
                     isDark
@@ -85,9 +261,9 @@ class AuthSelectionScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: DMSizes.spaceBtwSections),
+            const SizedBox(height: DMSizes.spaceBtwSections * 2),
 
-            // Bouton Email
+            // Bouton S'inscrire
             SizedBox(
               width: double.infinity,
               height: 60,
@@ -96,13 +272,13 @@ class AuthSelectionScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
+                      builder: (context) => const SignUpScreen(),
                     ),
                   );
                 },
-                icon: const Icon(Iconsax.message, size: 24),
+                icon: const Icon(Iconsax.user_add, size: 24),
                 label: const Text(
-                  'Continuer avec Email',
+                  'Créer un compte',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -118,22 +294,17 @@ class AuthSelectionScreen extends StatelessWidget {
 
             const SizedBox(height: DMSizes.spaceBtwItems),
 
-            // Bouton Téléphone
+            // Bouton Se connecter
             SizedBox(
               width: double.infinity,
               height: 60,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PhoneLoginScreen(),
-                    ),
-                  );
+                  _showLoginOptionsModal(context);
                 },
-                icon: const Icon(Iconsax.call, size: 24),
+                icon: const Icon(Iconsax.login, size: 24),
                 label: const Text(
-                  'Continuer avec Téléphone',
+                  'Se connecter',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 style: OutlinedButton.styleFrom(
@@ -146,76 +317,7 @@ class AuthSelectionScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: DMSizes.spaceBtwSections),
-
-            // Divider
-            const TFormDivider(dividerText: 'Ou continuer avec'),
-
-            const SizedBox(height: DMSizes.spaceBtwItems),
-
-            // Bouton Google
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: InkWell(
-                onTap: () {
-                  // Logique de connexion Google
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/icons/icons-google.png',
-                        width: 24,
-                        height: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Continuer avec Google',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 4),
-
-            // Lien vers inscription
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Vous n'avez pas de compte ? ",
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SignUpScreen(),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    'Créer un compte',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // Texte informatif
           ],
         ),
       ),

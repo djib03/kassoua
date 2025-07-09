@@ -1,4 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -12,6 +15,71 @@ class AuthService {
       email: email,
       password: password,
     );
+  }
+
+  Future<String?> signInWithPhoneAndPassword({
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      final users = FirebaseFirestore.instance.collection('users');
+
+      // Rechercher l'utilisateur avec le téléphone
+      final querySnapshot = await users.where('phone', isEqualTo: phone).get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return 'Aucun compte trouvé pour ce numéro.';
+      }
+
+      final userData = querySnapshot.docs.first.data();
+      final storedHashedPassword = userData['password'];
+
+      // Hasher le mot de passe entré
+      final hashedInput = sha256.convert(utf8.encode(password)).toString();
+
+      if (hashedInput != storedHashedPassword) {
+        return 'Mot de passe incorrect.';
+      }
+
+      // Connexion réussie
+      return null;
+    } catch (e) {
+      return 'Erreur de connexion : $e';
+    }
+  }
+
+  //methode pour creer un compte avec numero
+  Future<String?> signUpWithPhoneAndPassword({
+    required String phone,
+    required String password,
+    required String prenom,
+    required String nom,
+  }) async {
+    try {
+      final users = FirebaseFirestore.instance.collection('users');
+
+      // Vérifie si le téléphone est déjà utilisé
+      final existingUser = await users.where('phone', isEqualTo: phone).get();
+      if (existingUser.docs.isNotEmpty) {
+        return 'Numéro déjà utilisé.';
+      }
+
+      // Hashage du mot de passe
+      final hashedPassword = sha256.convert(utf8.encode(password)).toString();
+
+      // Création du compte dans Firestore
+      await users.add({
+        'phone': phone,
+        'password': hashedPassword,
+        'prenom': prenom,
+        'nom': nom,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      return null; // success
+    } catch (e) {
+      return 'Erreur lors de l\'inscription : $e';
+    }
   }
 
   // Delete current user account

@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
-import '../models/discussion.dart';
-import '../models/notification.dart';
 import '../models/categorie.dart';
 import '../models/favori.dart';
 import '../models/adresse.dart';
@@ -215,96 +213,6 @@ class FirestoreService {
     );
   }
 
-  // --- Discussions ---
-  // Créer une discussion
-  Future<String> createDiscussion(Discussion discussion) async {
-    final docRef = await _firestore
-        .collection('discussions')
-        .add(discussion.toMap());
-    return docRef.id;
-  }
-
-  // Récupérer les discussions d'un utilisateur (acheteur ou vendeur)
-  Stream<List<Discussion>> getDiscussions(String userId) {
-    return _firestore
-        .collection('discussions')
-        .where('acheteurId', isEqualTo: userId)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs
-                  .map((doc) => Discussion.fromMap(doc.data(), doc.id))
-                  .toList(),
-        )
-        .asyncMap((discussions) async {
-          // Ajouter les discussions où l'utilisateur est vendeur
-          final vendeurDiscussions =
-              await _firestore
-                  .collection('discussions')
-                  .where('vendeurId', isEqualTo: userId)
-                  .get();
-          return discussions..addAll(
-            vendeurDiscussions.docs.map(
-              (doc) => Discussion.fromMap(doc.data(), doc.id),
-            ),
-          );
-        });
-  }
-
-  // --- Messages ---
-  // Envoyer un message
-  Future<void> sendMessage({
-    required String discussionId,
-    required String senderId,
-    required String receiverId,
-    required String content,
-  }) async {
-    final message = {
-      'senderId': senderId,
-      'receiverId': receiverId,
-      'content': content,
-      'timestamp': FieldValue.serverTimestamp(),
-      'read': false,
-    };
-    await _firestore
-        .collection('discussions')
-        .doc(discussionId)
-        .collection('messages')
-        .add(message);
-
-    // Mettre à jour la discussion
-    await _firestore.collection('discussions').doc(discussionId).update({
-      'lastMessage': content,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  }
-
-  // Stream pour les messages d'une discussion
-  Stream<List<Map<String, dynamic>>> getMessages(String discussionId) {
-    return _firestore
-        .collection('discussions')
-        .doc(discussionId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs
-                  .map((doc) => {'id': doc.id, ...doc.data()})
-                  .toList(),
-        );
-  }
-
-  // Marquer un message comme lu
-  Future<void> markMessageAsRead(String discussionId, String messageId) async {
-    await _firestore
-        .collection('discussions')
-        .doc(discussionId)
-        .collection('messages')
-        .doc(messageId)
-        .update({'read': true});
-  }
-
   // --- Catégories ---
   Stream<List<Categorie>> getCategories() {
     return _firestore
@@ -359,21 +267,6 @@ class FirestoreService {
             );
           }).toList();
         });
-  }
-
-  // --- Notifications ---
-  Stream<List<NotificationApp>> getNotifications(String userId) {
-    return _firestore
-        .collection('notifications')
-        .where('userId', isEqualTo: userId)
-        .orderBy('dateEnvoi', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs
-                  .map((doc) => NotificationApp.fromMap(doc.data(), doc.id))
-                  .toList(),
-        );
   }
 
   // --- Adresses ---

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/views/screen/profile/address_management_screen.dart';
 import 'package:kassoua/views/screen/profile/user_detail.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:kassoua/models/user.dart';
 import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -525,22 +527,103 @@ class ProfileScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Section profil utilisateur avec bouton de connexion intégré
-            FutureBuilder<Utilisateur?>(
-              future:
-                  Provider.of<AuthController>(
-                    context,
-                    listen: false,
-                  ).fetchUserData(),
-              builder: (context, snapshot) {
-                Utilisateur? user = snapshot.data;
-                if (user == null) {
+            Consumer<AuthController>(
+              builder: (context, authController, child) {
+                if (authController.user == null) {
                   return _buildAnonymousProfile(context, isDark);
                 }
-                return _buildUserProfile(context, isDark, user);
+
+                if (authController.userData != null) {
+                  return _buildUserProfile(
+                    context,
+                    isDark,
+                    authController.userData!,
+                  );
+                }
+
+                // Loader uniquement si les données ne sont pas encore chargées
+                return Container(
+                  margin: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.dark : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            isDark
+                                ? Colors.black.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.08),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Skeletonizer(
+                    enabled: true,
+                    child: Row(
+                      children: [
+                        // Profile picture skeleton
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        // User info skeleton
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Name skeleton
+                              Container(
+                                width: double.infinity,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              // Email skeleton
+                              Container(
+                                width: 150,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Status badge skeleton
+                              Container(
+                                width: 80,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
               },
             ),
-
             // Section paramètres
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),

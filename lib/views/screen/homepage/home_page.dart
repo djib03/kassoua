@@ -14,6 +14,7 @@ import 'package:kassoua/views/widgets/product_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kassoua/views/screen/homepage/product_list_section.dart';
 import 'package:kassoua/models/image_produit.dart';
+import 'package:kassoua/views/screen/shop/product_detail_vendeur.dart'; // ou le nom de votre écran vendeur
 import 'package:kassoua/views/screen/homepage/product_detail_acheteur.dart';
 
 class HomePage extends StatefulWidget {
@@ -416,19 +417,53 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               scrollController: _scrollController,
               showSkeletonLoader: false, // ← Désactiver le skeleton
               onProductTap: (Produit produit) async {
-                final images =
-                    await _firestoreService.getImagesProduit(produit.id).first;
-                final imageUrls = images.map((img) => img.url).toList();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => ProductDetailAcheteur(
-                          produit: produit,
-                          images: imageUrls,
-                        ),
-                  ),
-                );
+                try {
+                  // Récupérer les images du produit
+                  final images =
+                      await _firestoreService
+                          .getImagesProduit(produit.id)
+                          .first;
+                  final imageUrls = images.map((img) => img.url).toList();
+
+                  // Vérifier si l'utilisateur connecté est le propriétaire du produit
+                  final isOwner =
+                      _currentUserId != null &&
+                      _currentUserId == produit.vendeurId;
+
+                  if (isOwner) {
+                    // L'utilisateur est le vendeur → Vue vendeur
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => ProductDetailVendeur(
+                              // Remplacez par le nom de votre écran vendeur
+                              produit: produit,
+                              images: imageUrls,
+                            ),
+                      ),
+                    );
+                  } else {
+                    // L'utilisateur n'est pas le vendeur → Vue acheteur
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => ProductDetailAcheteur(
+                              produit: produit,
+                              images: imageUrls,
+                            ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  print(
+                    'Erreur lors de la navigation vers les détails du produit: $e',
+                  );
+                  _showSnackBar(
+                    'Erreur lors de l\'ouverture des détails du produit',
+                  );
+                }
               },
             ),
 
@@ -594,26 +629,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
           isDark: isDark,
         ),
-        AppBarAction(
-          icon: Iconsax.heart,
-          onPressed: () {
-            if (_currentUserId != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) =>
-                          FavoriteProductsScreen(userId: _currentUserId!),
-                ),
-              ).then((_) {
-                _loadFavorites();
-              });
-            } else {
-              _showSnackBar('Veuillez vous connecter pour voir vos favoris');
-            }
-          },
-          isDark: isDark,
-        ),
+
         const SizedBox(width: 8),
       ],
     );

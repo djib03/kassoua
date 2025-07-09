@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/views/screen/homepage/home_page.dart'; // Importez votre HomePage
-import 'package:kassoua/views/screen/Chat/conversations_list_page.dart';
+
 import 'package:kassoua/views/screen/shop/my_listings_page.dart';
 import 'package:kassoua/views/screen/profile/profile_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
+import 'package:kassoua/views/screen/homepage/favorite_products_screen.dart';
 
 class MenuNavigation extends StatefulWidget {
   const MenuNavigation({Key? key}) : super(key: key);
@@ -19,14 +20,29 @@ class MenuNavigation extends StatefulWidget {
 
 class _MenuNavigationState extends State<MenuNavigation> {
   int _selectedIndex = 0;
+  String? _currentUserId;
 
-  // Les écrans à afficher. HomePage est maintenant utilisé ici.
-  final List<Widget> _screens = [
+  // Remove the field initialization and create a getter instead
+  List<Widget> get _screens => [
     HomePage(),
-    ConversationsListPage(),
+    FavoriteProductsScreen(userId: _currentUserId ?? ''),
     MyListingsPage(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize _currentUserId here if needed
+    _getCurrentUserId();
+  }
+
+  void _getCurrentUserId() {
+    // Get the current user ID from AuthController or wherever it's stored
+    final authController = Provider.of<AuthController>(context, listen: false);
+    _currentUserId =
+        authController.user?.uid; // Adjust based on your user model
+  }
 
   void _onItemTapped(int index) {
     final isLoggedIn =
@@ -253,12 +269,7 @@ class CustomBottomBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildNavItem(0, Iconsax.home, Iconsax.home, 'Accueil'),
-            _buildNavItem(
-              1,
-              Iconsax.message,
-              Iconsax.message,
-              'Mes discussions',
-            ),
+            _buildNavItem(1, Iconsax.heart, Iconsax.heart, 'Mes favoris'),
             _buildNavItem(2, Iconsax.shop, Iconsax.shop, 'Ma boutique'),
             _buildNavItem(3, Iconsax.user, Iconsax.user, 'Profil'),
           ],

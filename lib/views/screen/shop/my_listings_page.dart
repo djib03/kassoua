@@ -37,7 +37,8 @@ class _MyListingsPageState extends State<MyListingsPage> {
                 Theme.of(context).brightness == Brightness.dark
                     ? AppColors.textWhite
                     : Colors.black,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
           ),
         ),
         elevation: 0,
