@@ -10,9 +10,14 @@ import 'package:iconsax/iconsax.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kassoua/views/screen/shop/product_detail_vendeur.dart';
+import 'package:kassoua/controllers/auth_controller.dart';
 
 class MyListingsPage extends StatefulWidget {
-  const MyListingsPage({Key? key}) : super(key: key);
+  final AuthController
+  authController; // Utiliser le type spécifique, pas dynamic
+
+  const MyListingsPage({Key? key, required this.authController})
+    : super(key: key);
 
   @override
   State<MyListingsPage> createState() => _MyListingsPageState();
@@ -20,15 +25,25 @@ class MyListingsPage extends StatefulWidget {
 
 class _MyListingsPageState extends State<MyListingsPage> {
   final FirestoreService _firestoreService = FirestoreService();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  String? get currentUserId => _auth.currentUser?.uid;
+
+  String? get currentUserId {
+    // Utiliser l'AuthController injecté
+    if (widget.authController.userData != null) {
+      return widget.authController.userData!.id;
+    }
+    // Fallback pour Firebase Auth
+    if (widget.authController.user != null) {
+      return widget.authController.user!.uid;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.black : AppColors.white,
+      backgroundColor: isDark ? Color(0xFF121212) : AppColors.white,
       appBar: AppBar(
         title: Text(
           'Mes annonces',
@@ -42,7 +57,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
           ),
         ),
         elevation: 0,
-        backgroundColor: isDark ? AppColors.black : Colors.white,
+        backgroundColor: isDark ? Color(0xFF121212) : Colors.white,
         actions: [
           Container(
             margin: EdgeInsets.only(right: DMSizes.md),

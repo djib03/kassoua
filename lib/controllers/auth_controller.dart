@@ -10,23 +10,36 @@ import 'package:kassoua/services/auth_service.dart';
 class AuthController extends ChangeNotifier {
   final AuthService _authService;
   User? _user;
-  Utilisateur? _userData; // Ajoutez cette ligne
+  Utilisateur? _userData;
   bool _isLoading = false;
+
+  // Méthode corrigée pour vérifier l'état de connexion
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final isLoggedInPref = prefs.getBool('isLoggedIn') ?? false;
-    final loggedInUserId = prefs.getString('loggedInUserId');
 
-    // Pour l'auth téléphone, on vérifie juste les préférences et l'ID utilisateur
-    // Pour l'auth Firebase, on vérifie aussi currentUser
-    return isLoggedInPref &&
-        loggedInUserId != null &&
-        loggedInUserId.isNotEmpty;
+    if (!isLoggedInPref) {
+      return false;
+    }
+
+    // Vérifier le type d'authentification
+    final authType = prefs.getString('authType') ?? 'firebase';
+
+    if (authType == 'firebase') {
+      // Pour Firebase Auth, vérifier currentUser
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      final userId = prefs.getString('userId');
+      return firebaseUser != null && userId != null && userId.isNotEmpty;
+    } else {
+      // Pour l'auth téléphone, vérifier l'ID du document
+      final loggedInUserId = prefs.getString('loggedInUserId');
+      return loggedInUserId != null && loggedInUserId.isNotEmpty;
+    }
   }
 
   bool get isLoading => _isLoading;
   User? get user => _user;
-  Utilisateur? get userData => _userData; // Ajoutez cette ligne
+  Utilisateur? get userData => _userData;
 
   Future<String?> signInWithPhoneAndPassword({
     required String telephone,
@@ -35,45 +48,38 @@ class AuthController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      // 1. Appelle le service d'authentification personnalisé pour valider le téléphone et le mot de passe
+      // 1. Valider avec le service d'authentification
       final String? authError = await _authService.signInWithPhoneAndPassword(
         telephone: telephone,
         password: password,
       );
 
       if (authError != null) {
-        return authError; // Erreur d'authentification (ex: mauvais mot de passe)
+        return authError;
       }
 
-      // 2. Si l'authentification est réussie, récupère les données de l'utilisateur depuis Firestore
-      // en utilisant le numéro de téléphone comme critère de recherche.
+      // 2. Récupérer les données utilisateur depuis Firestore
       final usersCollection = FirebaseFirestore.instance.collection('users');
       final querySnapshot =
           await usersCollection.where('telephone', isEqualTo: telephone).get();
 
       if (querySnapshot.docs.isEmpty) {
-        // Ce cas ne devrait pas arriver si _authService.signInWithPhoneAndPassword a réussi,
-        // mais c'est une sécurité.
         return 'Erreur interne: Utilisateur non trouvé après authentification.';
       }
 
       final userDataDoc = querySnapshot.docs.first;
       _userData = Utilisateur.fromMap(userDataDoc.data(), userDataDoc.id);
 
-      // 3. Mettre à jour les préférences partagées pour maintenir l'état de connexion.
-      // Puisqu'il n'y a pas d'UID Firebase Auth, nous stockons l'ID du document Firestore.
+      // 3. Mettre à jour les préférences pour l'auth téléphone
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
-      await prefs.setString(
-        'loggedInUserId',
-        _userData!.id,
-      ); // Stocke l'ID du document Firestore
+      await prefs.setString('authType', 'phone');
+      await prefs.setString('loggedInUserId', _userData!.id);
 
-      // Ici, _user (l'objet Firebase Auth User) restera null.
-      // Si d'autres parties de votre application s'appuient strictement sur _user non-null,
-      // vous devrez peut-être revoir leur logique ou simuler un objet User minimal.
+      // Nettoyer les anciennes préférences Firebase si elles existent
+      await prefs.remove('userId');
 
-      return null; // Connexion réussie
+      return null; // Succès
     } catch (e) {
       return 'Une erreur inattendue s\'est produite lors de la connexion : $e';
     } finally {
@@ -82,9 +88,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  //methode pour creer un compte avec numero
-  /// Inscription avec numéro de téléphone et mot de passe
-  /// Retourne un message d'erreur ou null si succès
   Future<String?> signUpWithPhone({
     required String telephone,
     required String password,
@@ -92,59 +95,48 @@ class AuthController extends ChangeNotifier {
     required String prenom,
   }) async {
     try {
-      // 1. Valider l'unicité du numéro de téléphone via AuthService
+      // 1. Valider l'unicité du numéro
       String? validationError = await _authService.validatePhoneSignUp(
         telephone: telephone,
       );
 
       if (validationError != null) {
-        return validationError; // Le numéro de téléphone est déjà utilisé ou autre erreur de validation
+        return validationError;
       }
 
       // 2. Hasher le mot de passe
       final hashedPassword = sha256.convert(utf8.encode(password)).toString();
 
-      // 3. Créer un nouveau document utilisateur dans Firestore
+      // 3. Créer le document utilisateur
       final docRef = await FirebaseFirestore.instance.collection('users').add({
-        'telephone':
-            telephone, // Utilisez 'telephone' pour être cohérent avec votre Firestore
+        'telephone': telephone, // Utiliser 'telephone' de manière cohérente
         'password': hashedPassword,
         'prenom': prenom,
         'nom': nom,
-        'email':
-            '', // L'email est explicitement vide pour une inscription par téléphone
-        'dateInscription':
-            FieldValue.serverTimestamp(), // Utilisez un timestamp serveur
-        // Ajoutez d'autres champs par défaut si nécessaire (photoProfil, dateNaissance, genre)
+        'email': '',
+        'dateInscription': FieldValue.serverTimestamp(),
         'photoProfil': null,
         'dateNaissance': null,
         'genre': null,
       });
 
-      // 4. Mettre à jour les données utilisateur locales dans AuthController
-      // Note: Puisqu'il n'y a pas d'utilisateur Firebase Auth créé directement ici,
-      // _user restera null pour ce type d'authentification.
-      // C'est pourquoi nous devons gérer _userData directement avec l'ID du document Firestore.
+      // 4. Mettre à jour les données locales
       final Utilisateur newUser = Utilisateur(
-        id: docRef.id, // L'ID du document Firestore est l'ID de l'utilisateur
+        id: docRef.id,
         nom: nom,
         prenom: prenom,
         email: '',
         telephone: telephone,
-        dateInscription:
-            DateTime.now(), // Ou utilisez le temps du serveur si vous le récupérez
+        dateInscription: DateTime.now(),
         photoProfil: null,
         dateNaissance: null,
         genre: null,
       );
 
-      _userData = newUser; // Définir les données utilisateur actuelles
+      _userData = newUser;
       notifyListeners();
 
-      return null; // Succès de l'inscription
-    } on FirebaseAuthException catch (e) {
-      // Cette partie peut être moins pertinente ici si Firebase Auth n'est pas directement utilisé pour l'inscription téléphone
-      return e.message ?? "Une erreur d'authentification s'est produite.";
+      return null; // Succès
     } catch (e) {
       return 'Une erreur inattendue s\'est produite lors de l\'inscription : $e';
     }
@@ -154,7 +146,6 @@ class AuthController extends ChangeNotifier {
     : _authService = authService ?? AuthService() {
     _authService.authStateChanges.listen((User? user) {
       _user = user;
-      // Si l'utilisateur se déconnecte, effacer les données
       if (user == null) {
         _userData = null;
       }
@@ -163,7 +154,6 @@ class AuthController extends ChangeNotifier {
     initialize();
   }
 
-  // Initialisation
   Future<void> initialize() async {
     await _checkAuthState();
   }
@@ -182,7 +172,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Vérifie si l'utilisateur est connecté (asynchrone)
   Future<bool> signIn(String email, String password) async {
     _isLoading = true;
     notifyListeners();
@@ -192,11 +181,14 @@ class AuthController extends ChangeNotifier {
         _user = credential.user;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('authType', 'firebase');
         await prefs.setString('userId', _user!.uid);
 
-        // Charger les données utilisateur immédiatement après connexion
-        _userData = await _fetchUserDataInternal();
+        // Nettoyer les anciennes préférences téléphone
+        await prefs.remove('loggedInUserId');
 
+        // Charger les données utilisateur
+        _userData = await _fetchUserDataInternal();
         return true;
       }
       return false;
@@ -214,26 +206,35 @@ class AuthController extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      final loggedInUserId = prefs.getString('loggedInUserId');
+      final authType = prefs.getString('authType') ?? 'firebase';
 
-      if (isLoggedIn && loggedInUserId != null && loggedInUserId.isNotEmpty) {
-        // Vérifier si c'est un utilisateur Firebase ou téléphone
-        if (_authService.currentUser != null) {
-          // Utilisateur Firebase
-          _user = _authService.currentUser;
-          _userData = await _fetchUserDataInternal();
-        } else {
-          // Utilisateur téléphone - récupérer depuis Firestore avec l'ID
-          _userData = await _fetchPhoneUserData(loggedInUserId);
-          if (_userData == null) {
-            // Les données n'existent plus, déconnecter
-            await _signOutLocally();
-          }
-        }
-      } else {
+      if (!isLoggedIn) {
         _user = null;
         _userData = null;
         await _signOutLocally();
+        return;
+      }
+
+      if (authType == 'firebase') {
+        // Vérification pour Firebase Auth
+        final userId = prefs.getString('userId');
+        if (_authService.currentUser != null && userId != null) {
+          _user = _authService.currentUser;
+          _userData = await _fetchUserDataInternal();
+        } else {
+          await _signOutLocally();
+        }
+      } else {
+        // Vérification pour l'auth téléphone
+        final loggedInUserId = prefs.getString('loggedInUserId');
+        if (loggedInUserId != null && loggedInUserId.isNotEmpty) {
+          _userData = await _fetchPhoneUserData(loggedInUserId);
+          if (_userData == null) {
+            await _signOutLocally();
+          }
+        } else {
+          await _signOutLocally();
+        }
       }
     } catch (e) {
       _user = null;
@@ -259,8 +260,6 @@ class AuthController extends ChangeNotifier {
       }
 
       final data = doc.data()!;
-      print('Données utilisateur téléphone récupérées: $data');
-
       return Utilisateur.fromMap(data, doc.id);
     } catch (e) {
       print(
@@ -270,18 +269,15 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Vérifie si l'utilisateur est connecté (synchrone)
   bool get isLoggedInSync {
     // Pour l'auth Firebase
     if (_user != null && _authService.currentUser != null) {
       return true;
     }
-
     // Pour l'auth téléphone
     if (_userData != null) {
       return true;
     }
-
     return false;
   }
 
@@ -290,11 +286,11 @@ class AuthController extends ChangeNotifier {
     await prefs.setBool('isLoggedIn', false);
     await prefs.remove('userId');
     await prefs.remove('loggedInUserId');
+    await prefs.remove('authType');
     _user = null;
     _userData = null;
   }
 
-  // Déconnexion
   Future<void> signOut() async {
     _isLoading = true;
     notifyListeners();
@@ -312,16 +308,15 @@ class AuthController extends ChangeNotifier {
   Future<Utilisateur?> _fetchUserDataInternal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final loggedInUserId = prefs.getString('loggedInUserId');
+      final authType = prefs.getString('authType') ?? 'firebase';
 
-      if (loggedInUserId == null || loggedInUserId.isEmpty) {
-        print('Aucun ID utilisateur stocké');
-        return null;
-      }
+      if (authType == 'firebase') {
+        // Utilisateur Firebase
+        final userId = prefs.getString('userId');
+        if (userId == null || _authService.currentUser == null) {
+          return null;
+        }
 
-      // Vérifier si c'est un utilisateur Firebase ou téléphone
-      if (_authService.currentUser != null) {
-        // Utilisateur Firebase - utiliser l'UID comme ID de document
         final doc =
             await FirebaseFirestore.instance
                 .collection('users')
@@ -329,16 +324,16 @@ class AuthController extends ChangeNotifier {
                 .get();
 
         if (!doc.exists) {
-          print(
-            'Document Firestore inexistant pour UID Firebase: ${_authService.currentUser!.uid}',
-          );
           return null;
         }
 
-        final data = doc.data()!;
-        return Utilisateur.fromMap(data, doc.id);
+        return Utilisateur.fromMap(doc.data()!, doc.id);
       } else {
-        // Utilisateur téléphone - utiliser l'ID du document stocké
+        // Utilisateur téléphone
+        final loggedInUserId = prefs.getString('loggedInUserId');
+        if (loggedInUserId == null) {
+          return null;
+        }
         return await _fetchPhoneUserData(loggedInUserId);
       }
     } catch (e) {
@@ -348,22 +343,16 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<Utilisateur?> fetchUserData() async {
-    // Si les données sont déjà en cache, les retourner
     if (_userData != null) {
       return _userData;
     }
-
-    // Sinon, les récupérer et les mettre en cache
     _userData = await _fetchUserDataInternal();
     notifyListeners();
     return _userData;
   }
 
-  // Ajoutez une méthode pour rafraîchir les données si nécessaire
   Future<void> refreshUserData() async {
     _userData = await _fetchUserDataInternal();
     notifyListeners();
   }
-
-  // Récupérer les données utilisateur Firestore
 }

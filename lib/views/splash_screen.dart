@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/controllers/auth_controller.dart'; // Assurez-vous que c'est le bon chemin
-import 'package:kassoua/views/screen/homepage/menu_navigation.dart'; // Assurez-vous que c'est le bon chemin
-import 'package:kassoua/views/screen/auth/auth_screen_selection.dart'; // Assurez-vous que c'est le bon chemin
+import 'package:kassoua/controllers/auth_controller.dart';
+import 'package:kassoua/views/screen/homepage/menu_navigation.dart';
+import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kassoua/services/firestore_service.dart'; // Importez votre service Firestore
+import 'package:kassoua/services/firestore_service.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -27,8 +28,8 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
   bool _canSkip = true;
   String _loadingText = "Initialisation...";
 
-  final FirestoreService _firestoreService =
-      FirestoreService(); // Instanciez votre service
+  final FirestoreService _firestoreService = FirestoreService();
+  final AuthController _authController = AuthController();
 
   @override
   void initState() {
@@ -70,14 +71,25 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
 
   Future<void> _startSplashSequence() async {
     try {
+      // Étape 1: Préchargement des images
+      _updateLoadingText("Chargement des ressources...");
       await _preloadImages();
+
+      // Étape 2: Démarrage des animations
       _logoController.forward();
       await Future.delayed(const Duration(milliseconds: 500));
       _progressController.forward();
+
+      // Étape 3: Initialisation de l'application
+      _updateLoadingText("Initialisation de l'application...");
       await _initializeApp();
 
+      // Étape 4: Vérification de l'authentification
+      _updateLoadingText("Vérification de votre session...");
+      await _checkAuthenticationStatus();
+
       // Attendre la fin des animations ou un temps minimum
-      await Future.delayed(const Duration(seconds: 4));
+      await Future.delayed(const Duration(seconds: 1));
 
       if (mounted && _canSkip) {
         _navigateToNextScreen();
@@ -101,10 +113,58 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _initializeApp() async {
-    // Simuler l'initialisation de l'application
-    await Future.delayed(const Duration(milliseconds: 1000));
+    try {
+      // Initialiser le contrôleur d'authentification
+      await _authController.initialize();
 
-    // Ici, vous pouvez ajouter d'autres initialisations si nécessaire
+      // Attendre un peu pour que l'initialisation soit complète
+      await Future.delayed(const Duration(milliseconds: 500));
+    } catch (e) {
+      debugPrint("Error initializing app: $e");
+    }
+  }
+
+  Future<void> _checkAuthenticationStatus() async {
+    try {
+      // Utiliser la méthode corrigée du contrôleur
+      bool isLoggedIn = await _authController.isLoggedIn();
+
+      if (isLoggedIn) {
+        _updateLoadingText("Connexion détectée...");
+
+        // Vérifier le type d'authentification
+        final prefs = await SharedPreferences.getInstance();
+        final authType = prefs.getString('authType') ?? 'firebase';
+
+        if (authType == 'firebase') {
+          // Pour Firebase Auth, vérifier si l'utilisateur Firebase existe toujours
+          User? currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser != null) {
+            _updateLoadingText("Vérification de votre adresse...");
+            await _firestoreService.createDefaultAddressFromCurrentLocation(
+              currentUser.uid,
+            );
+          }
+        } else {
+          // Pour l'auth téléphone, récupérer l'utilisateur depuis les données stockées
+          await _authController.fetchUserData();
+          if (_authController.userData != null) {
+            _updateLoadingText("Vérification de votre adresse...");
+            await _firestoreService.createDefaultAddressFromCurrentLocation(
+              _authController.userData!.id,
+            );
+          }
+        }
+
+        _updateLoadingText("Prêt !");
+      } else {
+        _updateLoadingText("Redirection vers la connexion...");
+      }
+    } catch (e) {
+      debugPrint("Error checking authentication: $e");
+      // En cas d'erreur, rediriger vers l'écran de connexion
+      _updateLoadingText("Redirection vers la connexion...");
+    }
   }
 
   void _navigateToNextScreen() async {
@@ -113,80 +173,83 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
     _canSkip = false;
 
     try {
-      AuthController authController = AuthController();
-      bool isLoggedIn = await authController.isLoggedIn();
-      User? currentUser = FirebaseAuth.instance.currentUser;
+      bool isLoggedIn = await _authController.isLoggedIn();
 
-      if (isLoggedIn && currentUser != null) {
-        // L'utilisateur est connecté. Vérifier et créer l'adresse par défaut.
-        _updateLoadingText("Vérification de votre adresse...");
-        await _firestoreService.createDefaultAddressFromCurrentLocation(
-          currentUser.uid,
-        );
-        _updateLoadingText("Prêt !");
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder:
-                (context, animation, secondaryAnimation) =>
-                    const MenuNavigation(),
-            transitionsBuilder: (
-              context,
-              animation,
-              secondaryAnimation,
-              child,
-            ) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 800),
-          ),
-        );
+      if (isLoggedIn) {
+        // Vérifier que les données utilisateur sont disponibles
+        if (_authController.userData != null || _authController.user != null) {
+          // Naviguer vers l'écran principal
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const MenuNavigation(),
+              transitionsBuilder: (
+                context,
+                animation,
+                secondaryAnimation,
+                child,
+              ) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 800),
+            ),
+          );
+        } else {
+          // Données utilisateur manquantes, rediriger vers la connexion
+          _navigateToAuth();
+        }
       } else {
-        // L'utilisateur n'est pas connecté
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder:
-                (context, animation, secondaryAnimation) =>
-                    const AuthSelectionScreen(),
-            transitionsBuilder: (
-              context,
-              animation,
-              secondaryAnimation,
-              child,
-            ) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 800),
-          ),
-        );
+        // Utilisateur non connecté
+        _navigateToAuth();
       }
     } catch (error) {
       _handleError(error);
     }
   }
 
-  void _handleError(dynamic error) {
-    debugPrint("Splash screen error: $error");
-    // Fallback navigation
+  void _navigateToAuth() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const AuthSelectionScreen()),
+      PageRouteBuilder(
+        pageBuilder:
+            (context, animation, secondaryAnimation) =>
+                const AuthSelectionScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 800),
+      ),
     );
   }
 
+  void _handleError(dynamic error) {
+    debugPrint("Splash screen error: $error");
+    _updateLoadingText("Erreur de chargement...");
+
+    // Attendre un peu puis rediriger vers l'écran de connexion
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        _navigateToAuth();
+      }
+    });
+  }
+
   SystemUiOverlayStyle get systemOverlayStyle => SystemUiOverlayStyle(
-    statusBarColor: AppColors.primary, // Couleur de la barre d'état
-    statusBarIconBrightness: Brightness.light, // Icônes claires
-    statusBarBrightness: Brightness.light, // Texte sombre
-    systemNavigationBarColor:
-        AppColors.primary, // Couleur de la barre de navigation
-    systemNavigationBarIconBrightness: Brightness.light, // Icônes claires
+    statusBarColor: AppColors.primary,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarColor: AppColors.primary,
+    systemNavigationBarIconBrightness: Brightness.light,
   );
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: _buildSplashBody(context));
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemOverlayStyle,
+      child: Scaffold(body: _buildSplashBody(context)),
+    );
   }
 
   Widget _buildSplashBody(BuildContext context) {
@@ -252,7 +315,7 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
                 return Opacity(
                   opacity: _fadeAnimation.value,
                   child: const Text(
-                    "Vender et Acheter en toute simplicité",
+                    "Vendre et Acheter en toute simplicité",
                     style: TextStyle(
                       fontFamily: 'poppins',
                       fontSize: 16.0,
@@ -272,38 +335,73 @@ class SplashState extends State<SplashScreen> with TickerProviderStateMixin {
           child: Text(
             _loadingText,
             key: ValueKey(_loadingText),
-            style: const TextStyle(fontSize: 16.0, color: Colors.white70),
+            style: const TextStyle(
+              fontSize: 16.0,
+              color: Colors.white70,
+              fontFamily: 'poppins',
+            ),
             semanticsLabel: _loadingText,
+            textAlign: TextAlign.center,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 20),
         _buildProgressIndicator(),
       ],
     );
   }
 
   Widget _buildLogo() {
-    return Image.asset(
-      "assets/images/logos/app_logo.png",
+    return Container(
       width: 200,
       height: 200,
-      alignment: Alignment.center,
-      semanticLabel: "Logo de l'application Kassoua",
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 5,
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Image.asset(
+        "assets/images/logos/app_logo.png",
+        width: 200,
+        height: 200,
+        alignment: Alignment.center,
+        semanticLabel: "Logo de l'application Kassoua",
+      ),
     );
   }
 
   Widget _buildProgressIndicator() {
     return SizedBox(
-      width: 200,
+      width: 250,
       child: Column(
         children: [
           AnimatedBuilder(
             animation: _progressAnimation,
             builder: (context, child) {
-              return CircularProgressIndicator(
+              return LinearProgressIndicator(
                 value: _progressAnimation.value,
                 backgroundColor: Colors.white.withOpacity(0.3),
                 valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                minHeight: 4,
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          AnimatedBuilder(
+            animation: _progressAnimation,
+            builder: (context, child) {
+              return Text(
+                "${(_progressAnimation.value * 100).toInt()}%",
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontFamily: 'poppins',
+                ),
               );
             },
           ),

@@ -33,7 +33,7 @@ class _MenuNavigationState extends State<MenuNavigation> {
       FavoriteProductsScreen(
         userId: currentUserId,
       ), // Passer l'ID de l'utilisateur
-      const MyListingsPage(),
+      MyListingsPage(authController: context.read<AuthController>()),
       const ProfileScreen(),
     ];
   }

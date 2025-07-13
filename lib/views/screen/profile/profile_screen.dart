@@ -457,10 +457,7 @@ class ProfileScreen extends StatelessWidget {
                   child:
                       (userData.photoProfil == null ||
                               userData.photoProfil!.isEmpty)
-                          ? Image.asset(
-                            'assets/images/user.png', // Assurez-vous d'avoir cet asset
-                            fit: BoxFit.cover,
-                          )
+                          ? Icon(Iconsax.user)
                           : CachedNetworkImage(
                             imageUrl: userData.photoProfil!,
                             fit: BoxFit.cover,
@@ -588,7 +585,7 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      backgroundColor: isDark ? AppColors.black : Colors.grey[50],
+      backgroundColor: isDark ? Color(0xFF121212) : Colors.grey[50],
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -742,24 +739,7 @@ class ProfileScreen extends StatelessWidget {
                         },
                         color: AppColors.primary,
                       ),
-                      _buildMenuItem(
-                        icon: Iconsax.notification,
-                        title: 'Notifications',
-                        subtitle: 'Gérer vos préférences de notification',
-                        onTap: () {
-                          if (!isLoggedIn) {
-                            _showLoginRequiredSnackBar(context);
-                            return;
-                          }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NotificationScreen(),
-                            ),
-                          );
-                        },
-                        color: AppColors.primary,
-                      ),
+
                       _buildMenuItem(
                         icon: Iconsax.logout,
                         title: 'Déconnexion',

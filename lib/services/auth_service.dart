@@ -1,5 +1,3 @@
-// Fichier: auth_service.dart
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
@@ -26,10 +24,9 @@ class AuthService {
     try {
       final users = FirebaseFirestore.instance.collection('users');
 
-      // Rechercher l'utilisateur avec le téléphone (assurez-vous que le champ est 'phone' ou 'telephone' dans Firestore)
-      // Ici, j'utilise 'phone' pour rester cohérent avec votre utilisation précédente dans signUpWithPhoneAndPassword.
+      // Rechercher l'utilisateur avec le téléphone (utiliser 'telephone' pour être cohérent)
       final querySnapshot =
-          await users.where('phone', isEqualTo: telephone).get();
+          await users.where('telephone', isEqualTo: telephone).get();
 
       if (querySnapshot.docs.isEmpty) {
         return 'Aucun compte trouvé pour ce numéro.';
@@ -45,24 +42,24 @@ class AuthService {
         return 'Mot de passe incorrect.';
       }
 
-      // Connexion réussie (pas de connexion Firebase Auth ici, juste validation)
+      // Connexion réussie
       return null;
     } catch (e) {
       return 'Erreur de connexion : $e';
     }
   }
 
-  // Ancienne méthode signUpWithPhoneAndPassword renommée et modifiée
-  // Elle ne fait plus que valider l'unicité du téléphone.
+  // Valider l'unicité du numéro de téléphone pour l'inscription
   Future<String?> validatePhoneSignUp({required String telephone}) async {
     try {
       final users = FirebaseFirestore.instance.collection('users');
 
-      // Vérifie si le téléphone est déjà utilisé
+      // Vérifier si le téléphone est déjà utilisé (utiliser 'telephone' pour être cohérent)
       final existingUser =
-          await users.where('phone', isEqualTo: telephone).get();
+          await users.where('telephone', isEqualTo: telephone).get();
+
       if (existingUser.docs.isNotEmpty) {
-        return 'Numéro déjà utilisé.';
+        return 'Ce numéro de téléphone est déjà utilisé.';
       }
 
       return null; // Succès: le numéro est unique
@@ -100,7 +97,7 @@ class AuthService {
     return _firebaseAuth.signOut();
   }
 
-  // Phone Number Authentication (méthodes liées à l'OTP, inchangées)
+  // Phone Number Authentication (méthodes liées à l'OTP)
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
     required Function(PhoneAuthCredential) onVerificationCompleted,

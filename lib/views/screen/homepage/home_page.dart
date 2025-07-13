@@ -5,16 +5,15 @@ import 'package:kassoua/views/screen/homepage/section/banner_carousel.dart';
 import 'package:kassoua/views/screen/homepage/section/category_section.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/views/screen/homepage/search_page.dart';
-import 'package:kassoua/views/screen/homepage/favorite_products_screen.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/favori.dart';
 import 'package:kassoua/models/product.dart';
-import 'package:kassoua/views/widgets/product_card.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kassoua/views/screen/homepage/product_list_section.dart';
 import 'package:kassoua/models/image_produit.dart';
-import 'package:kassoua/views/screen/shop/product_detail_vendeur.dart'; // ou le nom de votre écran vendeur
+import 'package:kassoua/views/screen/shop/product_detail_vendeur.dart';
 import 'package:kassoua/views/screen/homepage/product_detail_acheteur.dart';
 
 class HomePage extends StatefulWidget {
@@ -125,10 +124,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       print('Erreur lors de l\'écoute des favoris: $e');
     }
   }
-
-  // bool _isFavorite(String productId) {
-  //   return _favoriteProductIdsNotifier.value.contains(productId);
-  // }
 
   Future<void> _onToggleFavorite(String productId) async {
     if (_currentUserId == null) {
@@ -484,7 +479,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     if (!_isInitialized) {
       return Scaffold(
-        backgroundColor: isDark ? AppColors.black : Colors.grey[50],
+        backgroundColor: isDark ? Color(0xFF121212) : Colors.grey[50],
         body: const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -492,7 +487,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.black : Colors.grey[50],
+      backgroundColor: isDark ? Color(0xFF121212) : Colors.grey[50],
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: RefreshIndicator(
@@ -502,11 +497,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           backgroundColor: isDark ? AppColors.black : Colors.white,
           child: NotificationListener<ScrollNotification>(
             onNotification: (ScrollNotification scrollInfo) {
-              if (_hasMoreProducts &&
-                  !_isLoadingMore &&
-                  scrollInfo.metrics.pixels >=
-                      scrollInfo.metrics.maxScrollExtent * 0.8) {
-                _loadMoreProductsAutomatically();
+              // ✅ CORRECTION: Vérifier que le scroll provient du CustomScrollView principal
+              // et non d'un scroll horizontal dans les catégories
+              if (scrollInfo.metrics.axisDirection == AxisDirection.down &&
+                  scrollInfo.depth == 0) {
+                // depth 0 = scroll principal
+                if (_hasMoreProducts &&
+                    !_isLoadingMore &&
+                    scrollInfo.metrics.pixels >=
+                        scrollInfo.metrics.maxScrollExtent * 0.8) {
+                  _loadMoreProductsAutomatically();
+                }
               }
               return false;
             },
@@ -524,8 +525,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         const SizedBox(height: 19),
                         CategorySection(
                           isDark: isDark,
-                          showSkeletonLoader:
-                              !_isInitialized, // ← Contrôler le skeleton
+                          showSkeletonLoader: false, // ← Toujours désactivé
                         ),
                         const SizedBox(height: 20),
                         _buildProductsSection(isDark),
@@ -593,7 +593,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       expandedHeight: 0,
       floating: true,
       pinned: true,
-      backgroundColor: isDark ? AppColors.black : Colors.white,
+      backgroundColor: isDark ? Color(0xFF121212) : Colors.white,
       elevation: 0,
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
@@ -629,7 +629,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
           isDark: isDark,
         ),
-
         const SizedBox(width: 8),
       ],
     );

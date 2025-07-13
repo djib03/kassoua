@@ -2,7 +2,7 @@ import 'package:kassoua/views/screen/homepage/menu_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
-
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:email_validator/email_validator.dart';
 
 import 'package:flutter/services.dart';
@@ -24,11 +24,16 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _identifierController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isPhone = true; // Téléphone en premier par défaut
+  String? _phoneNumber;
+  String? _email;
+
   final AuthService _authService = AuthService();
   String? _verificationId;
 
@@ -37,48 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _identifierController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  // Fonction pour détecter le type d'identifiant
-  bool _isPhoneNumber(String identifier) {
-    // Vérifier si c'est un format téléphone nigérien (+227 + 8 chiffres)
-    final phoneRegex = RegExp(r'^\+227\d{8}$');
-    return phoneRegex.hasMatch(identifier);
-  }
-
-  bool _isEmail(String identifier) {
-    return identifier.contains('@') && EmailValidator.validate(identifier);
-  }
-
-  // Fonction pour formater le numéro de téléphone
-  String _formatPhoneNumber(String input) {
-    // Supprimer tous les espaces et caractères non numériques sauf +
-    String cleaned = input.replaceAll(RegExp(r'[^\d+]'), '');
-
-    // Si commence par +227, garder tel quel
-    if (cleaned.startsWith('+227')) {
-      return cleaned;
-    }
-
-    // Si commence par 227, ajouter le +
-    if (cleaned.startsWith('227')) {
-      return '+$cleaned';
-    }
-
-    // Si c'est juste 8 chiffres, ajouter +227
-    if (cleaned.length == 8 && !cleaned.startsWith('0')) {
-      return '+227$cleaned';
-    }
-
-    // Si commence par 0 et fait 9 chiffres, remplacer 0 par +227
-    if (cleaned.startsWith('0') && cleaned.length == 9) {
-      return '+227${cleaned.substring(1)}';
-    }
-
-    return cleaned;
   }
 
   // Widget pour créer un champ de saisie avec le style harmonisé
@@ -134,19 +101,191 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Widget pour le champ téléphone avec style similaire
+  Widget _buildPhoneField() {
+    final isDark = _isDarkMode(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Iconsax.call, color: AppColors.primary, size: 24),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: IntlPhoneField(
+                  showCountryFlag: false,
+                  showDropdownIcon: false,
+                  controller: _phoneController,
+                  enabled: !_isLoading,
+                  decoration: InputDecoration(
+                    labelText: 'Numéro de téléphone',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    suffixIcon: TextButton(
+                      onPressed:
+                          _isLoading
+                              ? null
+                              : () {
+                                setState(() {
+                                  _isPhone = !_isPhone;
+                                  _phoneController.clear();
+                                });
+                              },
+                      child: Text(
+                        "Utiliser l'email",
+                        style: TextStyle(
+                          color: _isLoading ? Colors.grey : AppColors.primary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ),
+                  initialCountryCode: 'NE',
+                  onChanged: (phone) {
+                    setState(() {
+                      _phoneNumber = phone.completeNumber;
+                    });
+                  },
+                  validator: (value) {
+                    return null;
+                  },
+                  keyboardType: TextInputType.phone,
+                  disableLengthCheck: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Message d'erreur à l'extérieur du champ
+        if (_phoneNumber != null &&
+            _phoneNumber!.isNotEmpty &&
+            _phoneNumber!.length < 12)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, left: 12),
+            child: Text(
+              'Numéro de téléphone invalide',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Widget pour le champ email avec style similaire
+  Widget _buildEmailField() {
+    final isDark = _isDarkMode(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Iconsax.message, color: AppColors.primary, size: 24),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextFormField(
+              controller: _emailController,
+              enabled: !_isLoading,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                suffixIcon: TextButton(
+                  onPressed:
+                      _isLoading
+                          ? null
+                          : () {
+                            setState(() {
+                              _isPhone = !_isPhone;
+                              _emailController.clear();
+                            });
+                          },
+                  child: Text(
+                    "Utiliser le téléphone",
+                    style: TextStyle(
+                      color: _isLoading ? Colors.grey : AppColors.primary,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Veuillez entrer votre email';
+                }
+                if (!EmailValidator.validate(value)) {
+                  return 'Veuillez entrer un email valide';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  _email = value;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _signIn() async {
     if (_formKey.currentState!.validate()) {
+      // Validation manuelle du téléphone si c'est le mode téléphone
+      if (_isPhone &&
+          (_phoneNumber == null ||
+              _phoneNumber!.isEmpty ||
+              _phoneNumber!.length < 8)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Veuillez entrer un numéro de téléphone valide'),
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _isLoading = true;
       });
 
       try {
-        String identifier = _identifierController.text.trim();
         String password = _passwordController.text;
 
-        if (_isEmail(identifier)) {
+        if (!_isPhone && _email != null && _email!.isNotEmpty) {
           // Connexion par email
-          await _authService.signInWithEmail(identifier, password);
+          await _authService.signInWithEmail(_email!, password);
 
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
@@ -158,7 +297,9 @@ class _LoginScreenState extends State<LoginScreen> {
               (route) => false,
             );
           }
-        } else if (_isPhoneNumber(identifier)) {
+        } else if (_isPhone &&
+            _phoneNumber != null &&
+            _phoneNumber!.isNotEmpty) {
           // Connexion par téléphone avec mot de passe
           final authController = Provider.of<AuthController>(
             context,
@@ -166,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
 
           final errorMessage = await authController.signInWithPhoneAndPassword(
-            telephone: identifier,
+            telephone: _phoneNumber!,
             password: password,
           );
 
@@ -190,12 +331,10 @@ class _LoginScreenState extends State<LoginScreen> {
             }
           }
         } else {
-          // Format non reconnu
+          // Aucune méthode de connexion valide
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'Format d\'identifiant non reconnu. Utilisez un email ou un numéro de téléphone (+227XXXXXXXX)',
-              ),
+              content: Text('Veuillez entrer un identifiant valide'),
             ),
           );
         }
@@ -248,7 +387,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: DMSizes.sm),
               Text(
-                "Connectez-vous avec votre email ou numéro de téléphone",
+                "Connectez-vous avec votre téléphone ou email",
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color:
                       isDark
@@ -258,42 +397,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: DMSizes.spaceBtwSections),
 
-              // Champ Identifiant unifié
-              _buildStyledField(
-                label: 'Email ou numéro de téléphone',
-                icon: Iconsax.user,
-                controller: _identifierController,
-                keyboardType: TextInputType.text,
-                onChanged: (value) {
-                  // Seulement formater si la saisie ressemble à un numéro de téléphone
-                  // et ne contient pas de '@' pour l'instant.
-                  // Cela permet à l'utilisateur de commencer à taper un email normalement.
-                  if (!value.contains('@') &&
-                      (value.startsWith('+') ||
-                          RegExp(r'^\d+$').hasMatch(value))) {
-                    String formatted = _formatPhoneNumber(value);
-                    if (formatted != value) {
-                      _identifierController.value = TextEditingValue(
-                        text: formatted,
-                        selection: TextSelection.collapsed(
-                          offset: formatted.length,
-                        ),
-                      );
-                    }
-                  }
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer votre email ou numéro de téléphone';
-                  }
-
-                  if (!_isEmail(value) && !_isPhoneNumber(value)) {
-                    return 'Format invalide. Utilisez un email ou +227XXXXXXXX';
-                  }
-
-                  return null;
-                },
-              ),
+              // Champ téléphone/email unifié
+              if (_isPhone) _buildPhoneField() else _buildEmailField(),
               const SizedBox(height: DMSizes.spaceBtwInputFields),
 
               // Champ Mot de passe

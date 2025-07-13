@@ -44,9 +44,6 @@ class CategoryService {
         .orderBy('ordre')
         .snapshots()
         .map((snapshot) {
-          print(
-            'Nombre de catégories principales trouvées : ${snapshot.docs.length}',
-          );
           snapshot.docs.forEach((doc) {
             print('Document : ${doc.id} - Données : ${doc.data()}');
           });
