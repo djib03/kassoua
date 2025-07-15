@@ -56,7 +56,11 @@ class Utilisateur {
     };
   }
 
-  Utilisateur copyWith({String? photoProfil}) {
+  Utilisateur copyWith({
+    String? photoProfil,
+    required String nom,
+    required String prenom,
+  }) {
     return Utilisateur(
       id: id,
       nom: nom,

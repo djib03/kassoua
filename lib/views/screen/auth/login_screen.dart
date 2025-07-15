@@ -35,7 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _email;
 
   final AuthService _authService = AuthService();
-  String? _verificationId;
 
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
@@ -370,8 +369,16 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: isDark ? AppColors.black : AppColors.white,
         automaticallyImplyLeading: false,
         centerTitle: true,
+
         elevation: 0,
         title: Text('Se connecter', style: appBarTextStyle),
+        leading: IconButton(
+          icon: Icon(
+            Iconsax.arrow_left,
+            color: isDark ? Colors.white : Colors.black,
+          ),
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(DMSizes.defaultSpace),
@@ -431,11 +438,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
 
-              const SizedBox(height: DMSizes.spaceBtwInputFields),
+              const SizedBox(height: 10),
 
               // Mot de passe oublié
               Align(
-                alignment: Alignment.centerRight,
+                alignment: Alignment.center,
                 child: TextButton(
                   onPressed:
                       _isLoading
@@ -457,7 +464,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: DMSizes.spaceBtwSections),
+              const SizedBox(height: 10),
 
               // Bouton de connexion
               SizedBox(

@@ -241,32 +241,21 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                 height: 60,
                 margin: EdgeInsets.only(right: 12),
                 child: Material(
-                  color: Colors.green.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () => _callVendeur(),
-                    child: Icon(Iconsax.call, color: Colors.green, size: 24),
+                    child: Icon(
+                      Iconsax.call,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
 
             // Bouton SMS
-            if (vendeur?.telephone != null)
-              Container(
-                width: 60,
-                height: 60,
-                margin: EdgeInsets.only(right: 12),
-                child: Material(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => _sendSMS(),
-                    child: Icon(Iconsax.message, color: Colors.blue, size: 24),
-                  ),
-                ),
-              ),
 
             // Bouton principal - WhatsApp
             Expanded(
@@ -280,8 +269,8 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                         colors:
                             produit.statut == 'disponible'
                                 ? [
-                                  Color(0xFF25D366), // Couleur WhatsApp
-                                  Color(0xFF25D366).withOpacity(0.8),
+                                  AppColors.primary, // Couleur WhatsApp
+                                  AppColors.primary.withOpacity(0.8),
                                 ]
                                 : [Colors.grey, Colors.grey.withOpacity(0.8)],
                       ),
@@ -679,7 +668,11 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                         : null,
                 child:
                     vendeur?.photoProfil == null
-                        ? Icon(Icons.person, color: AppColors.primary, size: 25)
+                        ? Icon(
+                          Iconsax.profile,
+                          color: AppColors.primary,
+                          size: 25,
+                        )
                         : null,
               ),
               SizedBox(width: 12),
@@ -703,28 +696,8 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                   ],
                 ),
               ),
+
               // Boutons de contact rapide
-              Row(
-                children: [
-                  if (vendeur?.telephone != null) ...[
-                    IconButton(
-                      onPressed: _callVendeur,
-                      icon: Icon(Iconsax.call, color: Colors.green),
-                      tooltip: 'Appeler',
-                    ),
-                    IconButton(
-                      onPressed: _sendSMS,
-                      icon: Icon(Iconsax.message, color: Colors.blue),
-                      tooltip: 'SMS',
-                    ),
-                    IconButton(
-                      onPressed: _contactViaWhatsApp,
-                      icon: Icon(Icons.message, color: Color(0xFF25D366)),
-                      tooltip: 'WhatsApp',
-                    ),
-                  ],
-                ],
-              ),
             ],
           ),
         ],
@@ -1222,7 +1195,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
               ),
             ],
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.primary,
           duration: Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(

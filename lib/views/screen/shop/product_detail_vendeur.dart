@@ -597,7 +597,9 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: (isAvailable ? Colors.green : Colors.red).withOpacity(0.3),
+            color: (isAvailable ? AppColors.primary : Colors.red).withOpacity(
+              0.3,
+            ),
             blurRadius: 8,
             offset: Offset(0, 4),
           ),

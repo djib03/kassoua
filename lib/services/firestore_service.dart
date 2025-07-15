@@ -39,7 +39,7 @@ class FirestoreService {
         .snapshots()
         .map((snapshot) {
           return snapshot.docs.map((doc) {
-            return Produit.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+            return Produit.fromMap(doc.data(), doc.id);
           }).toList();
         });
   }

@@ -4,7 +4,6 @@ import 'package:kassoua/views/screen/profile/user_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/views/screen/profile/notification_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:kassoua/models/user.dart';
@@ -12,6 +11,7 @@ import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:kassoua/views/screen/profile/change_password_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -368,48 +368,197 @@ class ProfileScreen extends StatelessWidget {
     }
     // Si les deux existent, vous pouvez choisir votre préférence
     else if (userData.telephone.isNotEmpty && userData.email.isNotEmpty) {
-      // Ici vous pouvez choisir : prioriser le téléphone ou l'email
-      return userData.telephone; // ou userData.email selon votre préférence
+      // Prioriser l'email pour les utilisateurs Firebase
+      return userData.email;
     } else {
       return 'Contact non disponible';
     }
   }
 
   // Helper method for logged-in user profile
+  // Remplacez la méthode _buildUserProfile par cette version corrigée :
+
   Widget _buildUserProfile(
     BuildContext context,
     Utilisateur? userData,
     bool isLoggedIn,
     bool isDark,
   ) {
-    // Si l'utilisateur n'est PAS connecté ou userData est null, affichez le message simple
-    if (!isLoggedIn || userData == null) {
-      return Row(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: AppColors.primary.withOpacity(0.2),
-            child: const Icon(Iconsax.user, size: 40, color: AppColors.primary),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Non connecté',
-                style: Theme.of(context).textTheme.headlineMedium,
+    // Si l'utilisateur n'est PAS connecté, affichez le message simple
+    if (!isLoggedIn) {
+      return Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.dark : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color:
+                  isDark
+                      ? Colors.black.withOpacity(0.2)
+                      : Colors.grey.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: AppColors.primary.withOpacity(0.2),
+              child: const Icon(
+                Iconsax.user,
+                size: 40,
+                color: AppColors.primary,
               ),
-              Text(
-                'Veuillez vous connecter',
-                style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // AJOUT: Limiter la hauteur
+                children: [
+                  Text(
+                    'Non connecté',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  Text(
+                    'Veuillez vous connecter',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       );
     }
 
-    // Si l'utilisateur est connecté, affichez le design plus riche de _buildUserProfile
+    // Si l'utilisateur est connecté mais userData est null, afficher un skeleton ou un état de chargement
+    if (userData == null) {
+      return Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.dark : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color:
+                  isDark
+                      ? Colors.black.withOpacity(0.2)
+                      : Colors.grey.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Profile picture placeholder
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primaryDark, AppColors.accent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[900] : Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(35),
+                  child: SizedBox(
+                    width: 70,
+                    height: 70,
+                    child: Container(
+                      color: AppColors.primary.withOpacity(0.1),
+                      child: Icon(
+                        Icons.account_circle_outlined,
+                        size: 35,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+            // User info placeholder
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min, // AJOUT: Limiter la hauteur
+                children: [
+                  Text(
+                    'Chargement...',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color:
+                          isDark ? AppColors.textWhite : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Récupération des données...',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Loading indicator
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Chargement',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Si l'utilisateur est connecté, affichez le design plus riche
     final String displayName = '${userData.nom} ${userData.prenom}'.trim();
     final String displayIdentifier = _getDisplayIdentifier(userData);
 
@@ -457,7 +606,11 @@ class ProfileScreen extends StatelessWidget {
                   child:
                       (userData.photoProfil == null ||
                               userData.photoProfil!.isEmpty)
-                          ? Icon(Iconsax.user)
+                          ? Icon(
+                            Iconsax.user,
+                            size: 50,
+                            color: AppColors.primary.withOpacity(0.7),
+                          )
                           : CachedNetworkImage(
                             imageUrl: userData.photoProfil!,
                             fit: BoxFit.cover,
@@ -470,7 +623,7 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                             errorWidget:
                                 (context, url, error) => const Icon(
-                                  Iconsax.profile, // Ou Icons.error_outline
+                                  Iconsax.profile,
                                   color: AppColors.error,
                                   size: 30,
                                 ),
@@ -485,6 +638,7 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min, // AJOUT: Limiter la hauteur
               children: [
                 Text(
                   displayName.isEmpty ? 'Utilisateur' : displayName,
@@ -721,6 +875,25 @@ class ProfileScreen extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                       _buildMenuItem(
+                        icon: Icons.password,
+                        title: 'Modifier le mot de passe',
+                        subtitle: 'Changer votre mot de passe',
+                        onTap: () {
+                          if (!isLoggedIn) {
+                            _showLoginRequiredSnackBar(context);
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const ChangePasswordScreen(),
+                            ),
+                          );
+                        },
+                        color: AppColors.primary,
+                      ),
+                      _buildMenuItem(
                         icon: Iconsax.location,
                         title: 'Mes adresses',
                         subtitle: 'Gérer vos adresses de livraison',
@@ -764,7 +937,7 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 70),
           ],
         ),
       ),
@@ -798,7 +971,7 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(15),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -913,7 +1086,7 @@ class ProfileScreen extends StatelessWidget {
                             Text(
                               'Se déconnecter',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

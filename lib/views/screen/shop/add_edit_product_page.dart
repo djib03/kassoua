@@ -14,6 +14,8 @@ import 'package:kassoua/services/cloudinary_service.dart';
 import 'package:kassoua/models/image_produit.dart';
 import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:kassoua/controllers/auth_controller.dart';
 
 class AddEditProductPage extends StatefulWidget {
   final String? productId;
@@ -435,39 +437,52 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
       });
 
       try {
-        // Retrieve logged-in user
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
+        // Récupérer l'utilisateur via AuthController au lieu de FirebaseAuth
+        final authController = Provider.of<AuthController>(
+          context,
+          listen: false,
+        );
+
+        String? currentUserId;
+
+        // Vérifier l'état de connexion
+        if (!authController.isLoggedInSync) {
           throw Exception("Utilisateur non connecté");
         }
 
-        // Create the product
+        // Récupérer l'ID utilisateur selon le type d'auth
+        if (authController.user != null) {
+          // Auth Firebase
+          currentUserId = authController.user!.uid;
+        } else if (authController.userData != null) {
+          // Auth téléphone personnalisée
+          currentUserId = authController.userData!.id;
+        } else {
+          throw Exception("Impossible de récupérer l'ID utilisateur");
+        }
+
+        // Créer le produit
         final produit = Produit(
           id: widget.productId ?? UniqueKey().toString(),
           nom: _titleController.text,
           description: _descriptionController.text,
-          prix: double.parse(
-            _priceController.text.replaceAll(' ', ''),
-          ), // Remove spaces before parsing
-          etat: _selectedProductState ?? 'occasion', // Use selected state
-          // quantite: 1, // Quantity is always 1 for marketplace announcements
-          statut: 'disponible', // Default status for new announcements
+          prix: double.parse(_priceController.text.replaceAll(' ', '')),
+          etat: _selectedProductState ?? 'occasion',
+          statut: 'disponible',
           dateAjout: DateTime.now(),
-          vendeurId: user.uid,
+          vendeurId: currentUserId, // Utiliser l'ID récupéré
           categorieId: _selectedCategory ?? '',
           adresseId: _selectedAdresseId ?? '',
-          isLivrable: _isDeliverable, // Nouvelle ligne
-          estnegociable: _isNegotiable, // Nouvelle ligne
+          isLivrable: _isDeliverable,
+          estnegociable: _isNegotiable,
         );
 
-        // Save to Firestore
+        // Sauvegarder en Firestore
         await FirestoreService().addProduit(produit);
 
-        // Upload images to Cloudinary and create ImageProduit documents
+        // Uploader les images
         for (var imageFile in _selectedImages) {
-          final url = await uploadImageToCloudinary(
-            imageFile,
-          ); // Implement this function
+          final url = await uploadImageToCloudinary(imageFile);
           if (url != null) {
             final imageProduit = ImageProduit(
               id: UniqueKey().toString(),
@@ -485,7 +500,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                   ? 'Annonce modifiée avec succès!'
                   : 'Annonce publiée avec succès!',
             ),
-            backgroundColor: AppColors.success,
+            backgroundColor: AppColors.primary,
           ),
         );
 
@@ -494,7 +509,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur: $e'),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.grey,
           ),
         );
       } finally {
@@ -626,9 +641,14 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     _buildProductStateDropdown(), // New: Product State dropdown
                     SizedBox(height: DMSizes.md),
                     StreamBuilder<List<Adresse>>(
-                      stream: FirestoreService().getAdressesStream(
-                        FirebaseAuth.instance.currentUser!.uid,
-                      ),
+                      stream:
+                          FirebaseAuth.instance.currentUser != null
+                              ? FirestoreService().getAdressesStream(
+                                FirebaseAuth.instance.currentUser!.uid,
+                              )
+                              : Stream.value(
+                                [],
+                              ), // Stream vide si pas d'utilisateur
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -639,10 +659,15 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                         if (snapshot.hasError) {
                           return Text('Erreur lors du chargement des adresses');
                         }
+
                         final adresses = snapshot.data ?? [];
                         if (adresses.isEmpty) {
-                          return Text(
-                            'Aucune adresse trouvée. Veuillez en ajouter une.',
+                          return Container(
+                            padding: EdgeInsets.all(DMSizes.md),
+                            child: Text(
+                              'Aucune adresse trouvée. Veuillez en ajouter une.',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
                           );
                         }
                         return _buildAdresseDropdown(adresses);

@@ -49,6 +49,90 @@ class AuthService {
     }
   }
 
+  // Changer le mot de passe pour les utilisateurs avec authentification téléphone
+  Future<String?> changePhonePassword({
+    required String telephone,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final users = FirebaseFirestore.instance.collection('users');
+
+      // Rechercher l'utilisateur avec le téléphone
+      final querySnapshot =
+          await users.where('telephone', isEqualTo: telephone).get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return 'Aucun compte trouvé pour ce numéro.';
+      }
+
+      final userDoc = querySnapshot.docs.first;
+      final userData = userDoc.data();
+      final storedHashedPassword = userData['password'];
+
+      // Vérifier l'ancien mot de passe
+      final hashedCurrentPassword =
+          sha256.convert(utf8.encode(currentPassword)).toString();
+
+      if (hashedCurrentPassword != storedHashedPassword) {
+        return 'Mot de passe actuel incorrect.';
+      }
+
+      // Hasher le nouveau mot de passe
+      final hashedNewPassword =
+          sha256.convert(utf8.encode(newPassword)).toString();
+
+      // Mettre à jour le mot de passe dans Firestore
+      await userDoc.reference.update({
+        'password': hashedNewPassword,
+        'dateModificationMotDePasse': FieldValue.serverTimestamp(),
+      });
+
+      return null; // Succès
+    } catch (e) {
+      return 'Erreur lors du changement de mot de passe : $e';
+    }
+  }
+
+  // Changer le mot de passe pour les utilisateurs Firebase Auth
+  Future<String?> changeFirebasePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        return 'Aucun utilisateur connecté.';
+      }
+
+      // Ré-authentifier l'utilisateur avec son mot de passe actuel
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      // Changer le mot de passe
+      await user.updatePassword(newPassword);
+
+      return null; // Succès
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'wrong-password':
+          return 'Mot de passe actuel incorrect.';
+        case 'weak-password':
+          return 'Le nouveau mot de passe est trop faible.';
+        case 'requires-recent-login':
+          return 'Veuillez vous reconnecter pour effectuer cette action.';
+        default:
+          return 'Erreur lors du changement de mot de passe : ${e.message}';
+      }
+    } catch (e) {
+      return 'Erreur lors du changement de mot de passe : $e';
+    }
+  }
+
   // Valider l'unicité du numéro de téléphone pour l'inscription
   Future<String?> validatePhoneSignUp({required String telephone}) async {
     try {

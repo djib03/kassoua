@@ -6,6 +6,7 @@ import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddressManagementScreen extends StatefulWidget {
   const AddressManagementScreen({Key? key}) : super(key: key);
@@ -17,49 +18,78 @@ class AddressManagementScreen extends StatefulWidget {
 
 class _AddressManagementScreenState extends State<AddressManagementScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  String?
-  currentUserId; // Rendre non final pour pouvoir le définir dans initState
+  String? currentUserId;
+  String? authType;
 
   @override
   void initState() {
     super.initState();
-    currentUserId = FirebaseAuth.instance.currentUser?.uid; // Initialiser ici
+    _initializeUser();
+  }
+
+  Future<void> _initializeUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final authTypeFromPrefs = prefs.getString('authType') ?? 'firebase';
+
+    setState(() {
+      authType = authTypeFromPrefs;
+
+      if (authTypeFromPrefs == 'firebase') {
+        currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      } else {
+        currentUserId = prefs.getString('loggedInUserId');
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (currentUserId == null) {
       return Scaffold(
+        backgroundColor: isDark ? AppColors.black : AppColors.white,
         appBar: AppBar(
-          title: const Text('Mes Adresses'),
-          backgroundColor: AppColors.primary,
+          backgroundColor: isDark ? AppColors.black : AppColors.white,
+          elevation: 0,
+          iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                isDark ? Brightness.light : Brightness.dark,
+            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          ),
+          title: Text(
+            'Mes Adresses',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+          ),
         ),
-
         body: const Center(
           child: Text('Veuillez vous connecter pour voir vos adresses'),
         ),
       );
     }
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-          Theme.of(context).brightness == Brightness.dark
-              ? AppColors.black
-              : AppColors.white,
+      backgroundColor: isDark ? AppColors.black : AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        iconTheme: IconThemeData(color: Colors.white),
-        // systemOverlayStyle: SystemUiOverlayStyle(
-        //   statusBarColor:
-        //       Colors.transparent, // Transparente pour un meilleur rendu
-        //   statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        //   statusBarBrightness:
-        //       isDark ? Brightness.dark : Brightness.light, // Pour iOS
-        // ),
+        backgroundColor: isDark ? AppColors.black : AppColors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        ),
         title: Text(
           'Mes Adresses',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black,
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -76,7 +106,7 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
               );
             }
             await _firestoreService.addAdresse(result);
-            _showSnackBar('Adresse ajoutée avec succès!', Colors.green);
+            _showSnackBar('Adresse ajoutée avec succès!', AppColors.primary);
           }
         },
         backgroundColor: AppColors.primary,
@@ -87,31 +117,114 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
         stream: _firestoreService.getAdressesStream(currentUserId!),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Erreur: ${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.withOpacity(0.6),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Erreur: ${snapshot.error}',
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black87,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
           }
 
           final adresses = snapshot.data;
 
           if (adresses == null || adresses.isEmpty) {
-            return const Center(
-              child: Text(
-                'Aucune adresse enregistrée. Ajoutez-en une nouvelle !',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.location_off_outlined,
+                    size: 80,
+                    color: (isDark ? Colors.white : Colors.black).withOpacity(
+                      0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Aucune adresse enregistrée',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ajoutez votre première adresse pour commencer',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (ctx) => const AddEditAddressScreen(),
+                        ),
+                      );
+                      if (result != null && result is Adresse) {
+                        if (result.isDefaut) {
+                          await _firestoreService.resetDefaultAddresses(
+                            currentUserId!,
+                            newDefaultId: result.id,
+                          );
+                        }
+                        await _firestoreService.addAdresse(result);
+                        _showSnackBar(
+                          'Adresse ajoutée avec succès!',
+                          AppColors.primary,
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Ajouter une adresse'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(10.0),
             itemCount: adresses.length,
             itemBuilder: (ctx, index) {
               final adresse = adresses[index];
-              return _buildAddressCard(adresse);
+              return _buildAddressCard(adresse, isDark);
             },
           );
         },
@@ -119,17 +232,21 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
     );
   }
 
-  Widget _buildAddressCard(Adresse adresse) {
+  Widget _buildAddressCard(Adresse adresse, bool isDark) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      color:
-          Theme.of(context).brightness == Brightness.dark
-              ? AppColors.dark
-              : AppColors.white,
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      margin: const EdgeInsets.only(bottom: 16),
+      color: isDark ? AppColors.dark : AppColors.white,
+      elevation: isDark ? 4 : 2,
+      shadowColor: isDark ? Colors.black54 : Colors.black12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? Colors.white10 : Colors.black12,
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(15.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -139,9 +256,10 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
                 Expanded(
                   child: Text(
                     adresse.description,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -150,8 +268,8 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
                 if (adresse.isDefaut)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
@@ -159,31 +277,42 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
                     ),
                     child: const Text(
                       'Par défaut',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 18,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     adresse.quartier != null && adresse.quartier!.isNotEmpty
                         ? '${adresse.quartier}, ${adresse.ville ?? ''}'
                         : 'Lat: ${adresse.latitude.toStringAsFixed(6)}, Lng: ${adresse.longitude.toStringAsFixed(6)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              // mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
+                TextButton.icon(
                   onPressed: () async {
                     final result = await Navigator.of(context).push(
                       MaterialPageRoute(
@@ -206,20 +335,30 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
                       );
                     }
                   },
-                  child: const Text('Modifier'),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () => _confirmDeleteAddress(adresse),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Supprimer'),
-                ),
-                const SizedBox(width: 8),
-                if (!adresse.isDefaut)
-                  TextButton(
-                    onPressed: () => _setAsDefault(adresse),
-                    child: const Text('Définir par défaut'),
+                  icon: const Icon(Icons.edit_outlined, size: 14),
+                  label: const Text('Modifier'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
                   ),
+                ),
+                // const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () => _confirmDeleteAddress(adresse),
+                  icon: const Icon(Icons.delete_outline, size: 14),
+                  label: const Text('Supprimer'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+                if (!adresse.isDefaut) ...[
+                  // const SizedBox(width: 3),
+                  TextButton.icon(
+                    onPressed: () => _setAsDefault(adresse),
+                    icon: const Icon(Icons.star_outline, size: 14),
+                    label: const Text('Par défaut'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -229,20 +368,36 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
   }
 
   void _confirmDeleteAddress(Adresse adresse) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Supprimer l\'adresse'),
+          backgroundColor: isDark ? AppColors.dark : AppColors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Supprimer l\'adresse',
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: Text(
             'Êtes-vous sûr de vouloir supprimer l\'adresse "${adresse.description}" ?',
+            style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('Annuler'),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                'Annuler',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black54,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () async {
@@ -252,17 +407,19 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
                     Navigator.of(ctx).pop();
                     _showSnackBar(
                       'Adresse supprimée avec succès!',
-                      Colors.green,
+                      AppColors.primary,
                     );
                   }
                 } catch (e) {
                   if (mounted) {
-                    _showSnackBar('Erreur: $e', Colors.red);
+                    _showSnackBar('Erreur: $e', Colors.grey);
                   }
                 }
               },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Supprimer'),
+              child: const Text(
+                'Supprimer',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
           ],
         );
@@ -290,7 +447,7 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
       await _firestoreService.updateAdresse(updatedAdresse);
 
       if (mounted) {
-        _showSnackBar('Adresse définie par défaut', AppColors.primaryDark);
+        _showSnackBar('Adresse définie par défaut', AppColors.primary);
       }
     } catch (e) {
       if (mounted) {
@@ -301,9 +458,16 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
 
   void _showSnackBar(String message, Color color) {
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -85,29 +86,44 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       _isLoading = true;
     });
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final docSnapshot =
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
+      final prefs = await SharedPreferences.getInstance();
+      final authType = prefs.getString('authType') ?? 'firebase';
 
-        if (docSnapshot.exists) {
-          _currentUser = Utilisateur.fromMap(
-            docSnapshot.data()!,
-            docSnapshot.id,
-          );
-          _nameController.text = _currentUser!.nom;
-          _firstNameController.text = _currentUser!.prenom;
-          _emailController.text = _currentUser!.email;
-          _phoneController.text = _currentUser!.telephone;
-          if (_currentUser!.dateNaissance != null) {
-            _birthDateController.text =
-                "${_currentUser!.dateNaissance!.day} ${_getMonthName(_currentUser!.dateNaissance!.month)} ${_currentUser!.dateNaissance!.year}";
+      if (authType == 'firebase') {
+        // Utilisateur Firebase
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final docSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
+
+          if (docSnapshot.exists) {
+            _currentUser = Utilisateur.fromMap(
+              docSnapshot.data()!,
+              docSnapshot.id,
+            );
+            _populateFields();
           }
-          _selectedGender = _currentUser!.genre ?? 'Autre';
-          _animationController.forward();
+        }
+      } else {
+        // Utilisateur téléphone
+        final loggedInUserId = prefs.getString('loggedInUserId');
+        if (loggedInUserId != null && loggedInUserId.isNotEmpty) {
+          final docSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(loggedInUserId)
+                  .get();
+
+          if (docSnapshot.exists) {
+            _currentUser = Utilisateur.fromMap(
+              docSnapshot.data()!,
+              docSnapshot.id,
+            );
+            _populateFields();
+          }
         }
       }
     } catch (e) {
@@ -117,6 +133,21 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  void _populateFields() {
+    if (_currentUser != null) {
+      _nameController.text = _currentUser!.nom;
+      _firstNameController.text = _currentUser!.prenom;
+      _emailController.text = _currentUser!.email;
+      _phoneController.text = _currentUser!.telephone;
+      if (_currentUser!.dateNaissance != null) {
+        _birthDateController.text =
+            "${_currentUser!.dateNaissance!.day} ${_getMonthName(_currentUser!.dateNaissance!.month)} ${_currentUser!.dateNaissance!.year}";
+      }
+      _selectedGender = _currentUser!.genre ?? 'Autre';
+      _animationController.forward();
     }
   }
 
@@ -435,9 +466,10 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                                     end: Alignment.bottomRight,
                                   ),
                                 ),
-                                child: Image.asset(
-                                  'assets/images/user.png',
-                                  fit: BoxFit.cover,
+                                child: Icon(
+                                  Iconsax.user,
+                                  size: 60,
+                                  color: AppColors.primary.withOpacity(0.7),
                                 ),
                               )
                               : Image.network(
@@ -455,9 +487,12 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                                           end: Alignment.bottomRight,
                                         ),
                                       ),
-                                      child: Image.asset(
-                                        'assets/images/user.png',
-                                        fit: BoxFit.cover,
+                                      child: Icon(
+                                        Iconsax.user,
+                                        size: 60,
+                                        color: AppColors.primary.withOpacity(
+                                          0.7,
+                                        ),
                                       ),
                                     ),
                               ),
@@ -575,7 +610,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             ),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -657,8 +692,21 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       });
 
       try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final authType = prefs.getString('authType') ?? 'firebase';
+
+        String? userId;
+
+        if (authType == 'firebase') {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            userId = user.uid;
+          }
+        } else {
+          userId = prefs.getString('loggedInUserId');
+        }
+
+        if (userId != null) {
           final birthDateParts = _birthDateController.text.split(' ');
           DateTime? birthDate;
           if (birthDateParts.length == 3) {
@@ -671,7 +719,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           }
 
           final updatedUser = Utilisateur(
-            id: user.uid,
+            id: userId,
             nom: _nameController.text,
             prenom: _firstNameController.text,
             email: _emailController.text,
@@ -684,8 +732,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
 
           await FirebaseFirestore.instance
               .collection('users')
-              .doc(user.uid)
-              .set(updatedUser.toMap());
+              .doc(userId)
+              .set(updatedUser.toMap(), SetOptions(merge: true));
 
           _showSuccessSnackBar('Profil mis à jour avec succès');
           Navigator.pop(context, true);
@@ -733,21 +781,38 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         final decoded = json.decode(responseData);
         final imageUrl = decoded['secure_url'];
 
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) return;
+        final prefs = await SharedPreferences.getInstance();
+        final authType = prefs.getString('authType') ?? 'firebase';
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({'photoProfil': imageUrl});
+        String? userId;
 
-        setState(() {
-          if (_currentUser != null) {
-            _currentUser = _currentUser!.copyWith(photoProfil: imageUrl);
+        if (authType == 'firebase') {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            userId = user.uid;
           }
-        });
+        } else {
+          userId = prefs.getString('loggedInUserId');
+        }
 
-        _showSuccessSnackBar('Photo mise à jour avec succès !');
+        if (userId != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .update({'photoProfil': imageUrl});
+
+          setState(() {
+            if (_currentUser != null) {
+              _currentUser = _currentUser!.copyWith(
+                photoProfil: imageUrl,
+                nom: _nameController.text,
+                prenom: _firstNameController.text,
+              );
+            }
+          });
+
+          _showSuccessSnackBar('Photo mise à jour avec succès !');
+        }
       } else {
         print('❌ Erreur Cloudinary: ${response.statusCode}');
         _showErrorSnackBar("Erreur d'envoi (${response.statusCode})");
@@ -916,66 +981,72 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                                   ),
                                 ),
                                 _buildEditableInfoRow(
-                                  icon: Iconsax.message,
-                                  label: 'Email',
+                                  icon: Iconsax.calendar,
+                                  label: 'Date de naissance',
                                   brightness: brightness,
-                                  isRequired: false,
                                   child: _buildTextField(
-                                    controller: _emailController,
-                                    hint: 'Entrez votre email',
+                                    controller: _birthDateController,
+                                    hint:
+                                        'Sélectionnez votre date de naissance',
                                     brightness: brightness,
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (value) {
-                                      return null;
-                                    },
+                                    readOnly: true,
+                                    onTap: () => _selectDate(context),
                                   ),
                                 ),
                                 _buildEditableInfoRow(
-                                  icon: Iconsax.call,
-                                  label: 'Téléphone',
+                                  icon: Iconsax.user_octagon,
+                                  label: 'Genre',
                                   brightness: brightness,
-                                  isRequired: true,
-                                  child: _buildTextField(
-                                    controller: _phoneController,
-                                    hint: 'Entrez votre numéro de téléphone',
-                                    brightness: brightness,
-                                    keyboardType: TextInputType.phone,
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Veuillez entrer votre numéro de téléphone';
-                                      }
-                                      return null;
-                                    },
-                                  ),
+                                  child: _buildDropdownField(brightness),
                                 ),
                               ], brightness),
+
                               _buildSection(
-                                'Informations Supplémentaires',
+                                'Informations de Contact',
                                 [
                                   _buildEditableInfoRow(
-                                    icon: Iconsax.calendar,
-                                    label: 'Date de naissance',
+                                    icon: Iconsax.sms,
+                                    label: 'Email',
                                     brightness: brightness,
                                     child: _buildTextField(
-                                      controller: _birthDateController,
-                                      hint:
-                                          'Sélectionnez votre date de naissance',
+                                      controller: _emailController,
+                                      hint: 'Entrez votre email',
                                       brightness: brightness,
-                                      readOnly: true,
-                                      onTap: () => _selectDate(context),
+                                      keyboardType: TextInputType.emailAddress,
                                       validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Veuillez sélectionner votre date de naissance';
+                                        if (value != null && value.isNotEmpty) {
+                                          final emailRegex = RegExp(
+                                            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                          );
+                                          if (!emailRegex.hasMatch(value)) {
+                                            return 'Email invalide';
+                                          }
                                         }
                                         return null;
                                       },
                                     ),
                                   ),
                                   _buildEditableInfoRow(
-                                    icon: Iconsax.user4,
-                                    label: 'Genre',
+                                    icon: Iconsax.call,
+                                    label: 'Téléphone',
                                     brightness: brightness,
-                                    child: _buildDropdownField(brightness),
+                                    isRequired: true,
+                                    child: _buildTextField(
+                                      controller: _phoneController,
+                                      hint: 'Entrez votre numéro de téléphone',
+                                      brightness: brightness,
+                                      keyboardType: TextInputType.phone,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Veuillez entrer votre numéro de téléphone';
+                                        }
+                                        // Validation basique du numéro de téléphone
+                                        if (value.length < 8) {
+                                          return 'Numéro de téléphone trop court';
+                                        }
+                                        return null;
+                                      },
+                                    ),
                                   ),
                                 ],
                                 brightness,
@@ -984,7 +1055,542 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                             ],
                           ),
                         ),
-                        const SizedBox(height: 32),
+
+                        // Bouton de sauvegarde fixe en bas
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            children: [
+                              // Bouton principal de sauvegarde
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed:
+                                      (_isSaving || !_hasChanges)
+                                          ? null
+                                          : _saveProfile,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        _hasChanges
+                                            ? AppColors.primary
+                                            : Colors.grey,
+                                    foregroundColor: Colors.white,
+                                    elevation: _hasChanges ? 8 : 2,
+                                    shadowColor:
+                                        _hasChanges
+                                            ? AppColors.primary.withOpacity(0.3)
+                                            : Colors.grey.withOpacity(0.3),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child:
+                                      _isSaving
+                                          ? Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(Colors.white),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'Sauvegarde...',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                          : Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                _hasChanges
+                                                    ? Iconsax.tick_circle
+                                                    : Iconsax.document,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                _hasChanges
+                                                    ? 'Sauvegarder les modifications'
+                                                    : 'Aucune modification',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                ),
+                              ),
+
+                              // Bouton secondaire pour annuler
+                              if (_hasChanges) ...[
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: TextButton(
+                                    onPressed:
+                                        _isSaving
+                                            ? null
+                                            : () {
+                                              // Remettre les valeurs originales
+                                              _populateFields();
+                                              setState(() {
+                                                _hasChanges = false;
+                                              });
+                                            },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor:
+                                          brightness == Brightness.dark
+                                              ? Colors.white70
+                                              : Colors.black54,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Iconsax.refresh, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Annuler les modifications',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+    );
+  }
+
+  // Méthode pour afficher une boîte de dialogue de confirmation avant de quitter
+  Future<bool> _showExitConfirmationDialog() async {
+    if (!_hasChanges) return true;
+
+    return await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: Text('Modifications non sauvegardées'),
+                content: Text(
+                  'Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text('Annuler'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text('Quitter'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+  }
+
+  // Override pour intercepter le bouton retour du système
+
+  // Méthode séparée pour le contenu principal
+  Widget _buildMainContent(BuildContext context) {
+    final Brightness brightness = Theme.of(context).brightness;
+    final Color backgroundColor =
+        brightness == Brightness.dark ? AppColors.black : AppColors.white;
+    final Color cardColor =
+        brightness == Brightness.dark ? Colors.grey[900]! : AppColors.white;
+    final Color shadowColor =
+        brightness == Brightness.dark
+            ? Colors.black.withOpacity(0.3)
+            : Colors.grey.withOpacity(0.15);
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'Modifier le profil',
+          style: TextStyle(
+            color: brightness == Brightness.dark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: brightness == Brightness.dark ? Colors.white : Colors.black,
+        ),
+        leading: IconButton(
+          icon: Icon(Iconsax.arrow_left),
+          onPressed: () async {
+            if (await _showExitConfirmationDialog()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors:
+                        _hasChanges
+                            ? [
+                              AppColors.primary.withOpacity(0.2),
+                              AppColors.primary.withOpacity(0.1),
+                            ]
+                            : [
+                              Colors.grey.withOpacity(0.1),
+                              Colors.grey.withOpacity(0.05),
+                            ],
+                  ),
+                ),
+                child:
+                    _isSaving
+                        ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primary,
+                            ),
+                          ),
+                        )
+                        : Icon(
+                          Iconsax.tick_circle,
+                          color: _hasChanges ? AppColors.primary : Colors.grey,
+                          size: 20,
+                        ),
+              ),
+              onPressed: (_isSaving || !_hasChanges) ? null : _saveProfile,
+            ),
+          ),
+        ],
+      ),
+      body:
+          _isLoading && _currentUser == null
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: AppColors.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Chargement des informations...',
+                      style: TextStyle(
+                        color:
+                            brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black54,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              : FadeTransition(
+                opacity: _fadeAnimation,
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        _buildProfileHeader(brightness),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: cardColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: shadowColor,
+                                blurRadius: 25,
+                                offset: const Offset(0, 8),
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSection('Informations Personnelles', [
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.user_tag,
+                                  label: 'Nom',
+                                  brightness: brightness,
+                                  isRequired: true,
+                                  child: _buildTextField(
+                                    controller: _nameController,
+                                    hint: 'Entrez votre nom',
+                                    brightness: brightness,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Veuillez entrer votre nom';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.user,
+                                  label: 'Prénom',
+                                  brightness: brightness,
+                                  isRequired: true,
+                                  child: _buildTextField(
+                                    controller: _firstNameController,
+                                    hint: 'Entrez votre prénom',
+                                    brightness: brightness,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Veuillez entrer votre prénom';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.calendar,
+                                  label: 'Date de naissance',
+                                  brightness: brightness,
+                                  child: _buildTextField(
+                                    controller: _birthDateController,
+                                    hint:
+                                        'Sélectionnez votre date de naissance',
+                                    brightness: brightness,
+                                    readOnly: true,
+                                    onTap: () => _selectDate(context),
+                                  ),
+                                ),
+                                _buildEditableInfoRow(
+                                  icon: Iconsax.user_octagon,
+                                  label: 'Genre',
+                                  brightness: brightness,
+                                  child: _buildDropdownField(brightness),
+                                ),
+                              ], brightness),
+
+                              _buildSection(
+                                'Informations de Contact',
+                                [
+                                  _buildEditableInfoRow(
+                                    icon: Iconsax.sms,
+                                    label: 'Email',
+                                    brightness: brightness,
+                                    child: _buildTextField(
+                                      controller: _emailController,
+                                      hint: 'Entrez votre email',
+                                      brightness: brightness,
+                                      keyboardType: TextInputType.emailAddress,
+                                      validator: (value) {
+                                        if (value != null && value.isNotEmpty) {
+                                          final emailRegex = RegExp(
+                                            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                          );
+                                          if (!emailRegex.hasMatch(value)) {
+                                            return 'Email invalide';
+                                          }
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  _buildEditableInfoRow(
+                                    icon: Iconsax.call,
+                                    label: 'Téléphone',
+                                    brightness: brightness,
+                                    isRequired: true,
+                                    child: _buildTextField(
+                                      controller: _phoneController,
+                                      hint: 'Entrez votre numéro de téléphone',
+                                      brightness: brightness,
+                                      keyboardType: TextInputType.phone,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Veuillez entrer votre numéro de téléphone';
+                                        }
+                                        // Validation basique du numéro de téléphone
+                                        if (value.length < 8) {
+                                          return 'Numéro de téléphone trop court';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                                brightness,
+                                isLast: true,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Bouton de sauvegarde fixe en bas
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            children: [
+                              // Bouton principal de sauvegarde
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed:
+                                      (_isSaving || !_hasChanges)
+                                          ? null
+                                          : _saveProfile,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        _hasChanges
+                                            ? AppColors.primary
+                                            : Colors.grey,
+                                    foregroundColor: Colors.white,
+                                    elevation: _hasChanges ? 8 : 2,
+                                    shadowColor:
+                                        _hasChanges
+                                            ? AppColors.primary.withOpacity(0.3)
+                                            : Colors.grey.withOpacity(0.3),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child:
+                                      _isSaving
+                                          ? Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(Colors.white),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'Sauvegarde...',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                          : Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                _hasChanges
+                                                    ? Iconsax.tick_circle
+                                                    : Iconsax.document,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                _hasChanges
+                                                    ? 'Sauvegarder les modifications'
+                                                    : 'Aucune modification',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                ),
+                              ),
+
+                              // Bouton secondaire pour annuler
+                              if (_hasChanges) ...[
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: TextButton(
+                                    onPressed:
+                                        _isSaving
+                                            ? null
+                                            : () {
+                                              // Remettre les valeurs originales
+                                              _populateFields();
+                                              setState(() {
+                                                _hasChanges = false;
+                                              });
+                                            },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor:
+                                          brightness == Brightness.dark
+                                              ? Colors.white70
+                                              : Colors.black54,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Iconsax.refresh, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Annuler les modifications',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),

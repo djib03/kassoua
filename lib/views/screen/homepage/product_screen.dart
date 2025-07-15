@@ -371,7 +371,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                       Text(
                         'Vendeur vérifié',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.green[600],
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),

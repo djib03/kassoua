@@ -5,8 +5,8 @@ import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:kassoua/constants/colors.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -59,7 +59,7 @@ class _KassouaAppWithConnectivityState
               content: Text(
                 isOnline ? 'Vous êtes en ligne' : 'Vous êtes hors ligne',
               ),
-              backgroundColor: isOnline ? Colors.green : Colors.red,
+              backgroundColor: isOnline ? AppColors.primary : Colors.red,
               duration: const Duration(seconds: 2),
             ),
           );
@@ -73,5 +73,3 @@ class _KassouaAppWithConnectivityState
     return const KassouaApp(); // <-- et pas KassouaAppWithConnectivity !
   }
 }
-
-FirebaseMessaging messaging = FirebaseMessaging.instance;

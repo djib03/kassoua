@@ -9,7 +9,7 @@ import 'package:kassoua/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/favori.dart';
 import 'package:kassoua/models/product.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kassoua/views/screen/homepage/product_list_section.dart';
 import 'package:kassoua/models/image_produit.dart';
@@ -84,13 +84,52 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _initializeUser() {
+  Future<String?> _getCurrentUserId() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        _currentUserId = user.uid;
-        _loadFavorites();
+      // Vérifier d'abord Firebase Auth
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        return firebaseUser.uid;
       }
+
+      // Si pas Firebase, vérifier l'auth téléphone
+      final prefs = await SharedPreferences.getInstance();
+      final authType = prefs.getString('authType') ?? 'firebase';
+      final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+      if (isLoggedIn && authType == 'phone') {
+        return prefs.getString('loggedInUserId');
+      }
+
+      return null;
+    } catch (e) {
+      print('Erreur lors de la récupération de l\'ID utilisateur: $e');
+      return null;
+    }
+  }
+
+  void _initializeUser() async {
+    try {
+      // Vérifier d'abord l'authentification Firebase
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        _currentUserId = firebaseUser.uid;
+        _loadFavorites();
+      } else {
+        // Si pas d'utilisateur Firebase, vérifier l'auth téléphone
+        final prefs = await SharedPreferences.getInstance();
+        final authType = prefs.getString('authType') ?? 'firebase';
+        final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+        if (isLoggedIn && authType == 'phone') {
+          final loggedInUserId = prefs.getString('loggedInUserId');
+          if (loggedInUserId != null && loggedInUserId.isNotEmpty) {
+            _currentUserId = loggedInUserId;
+            _loadFavorites();
+          }
+        }
+      }
+
       setState(() {
         _isInitialized = true;
       });
@@ -102,16 +141,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  void _loadFavorites() {
-    if (_currentUserId == null) return;
+  void _loadFavorites() async {
+    final userId = await _getCurrentUserId();
+    if (userId == null) return;
 
     try {
       _firestoreService
-          .getFavoris(_currentUserId!)
+          .getFavoris(userId)
           .listen(
             (favoris) {
               if (mounted) {
-                // Mettre à jour le ValueNotifier au lieu de setState
                 _favoriteProductIdsNotifier.value =
                     favoris.map((f) => f.produitId).toSet();
               }
@@ -126,7 +165,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _onToggleFavorite(String productId) async {
-    if (_currentUserId == null) {
+    // Utiliser la nouvelle méthode pour obtenir l'ID utilisateur
+    final userId = await _getCurrentUserId();
+
+    if (userId == null) {
       _showSnackBar('Veuillez vous connecter pour gérer les favoris');
       return;
     }
@@ -137,7 +179,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     final wasAlreadyFavorite = currentFavorites.contains(productId);
 
-    // 🎯 MISE À JOUR OPTIMISTE : Mettre à jour le ValueNotifier (pas de setState!)
+    // Mise à jour optimiste
     final newFavorites = Set<String>.from(currentFavorites);
     if (wasAlreadyFavorite) {
       newFavorites.remove(productId);
@@ -148,14 +190,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     try {
       if (wasAlreadyFavorite) {
-        await _firestoreService.removeFavori(_currentUserId!, productId);
+        await _firestoreService.removeFavori(userId, productId);
         if (mounted) {
           _showSnackBar('Produit retiré des favoris');
         }
       } else {
         final newFavori = Favori(
           id: _firestoreService.generateNewFavoriId(),
-          userId: _currentUserId!,
+          userId: userId,
           produitId: productId,
           dateAjout: DateTime.now(),
         );
@@ -165,7 +207,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
       }
     } catch (e) {
-      // 🔄 ROLLBACK : En cas d'erreur, remettre l'état précédent
+      // Rollback en cas d'erreur
       if (mounted) {
         _favoriteProductIdsNotifier.value = currentFavorites;
         print('Erreur favoris: $e');
@@ -421,9 +463,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   final imageUrls = images.map((img) => img.url).toList();
 
                   // Vérifier si l'utilisateur connecté est le propriétaire du produit
+                  final currentUserId = await _getCurrentUserId();
                   final isOwner =
-                      _currentUserId != null &&
-                      _currentUserId == produit.vendeurId;
+                      currentUserId != null &&
+                      currentUserId == produit.vendeurId;
 
                   if (isOwner) {
                     // L'utilisateur est le vendeur → Vue vendeur
@@ -432,7 +475,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       MaterialPageRoute(
                         builder:
                             (context) => ProductDetailVendeur(
-                              // Remplacez par le nom de votre écran vendeur
                               produit: produit,
                               images: imageUrls,
                             ),

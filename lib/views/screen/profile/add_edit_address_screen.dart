@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddEditAddressScreen extends StatefulWidget {
   final Adresse? address;
@@ -25,13 +26,15 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
   bool _isLoadingLocation = false;
   double? _latitude;
   double? _longitude;
+  String? _currentUserId;
+  String? _authType;
 
   bool get isEditing => widget.address != null;
-  String? get currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
     super.initState();
+    _initializeUser();
     if (isEditing) {
       // Mode modification : pré-remplir avec les données existantes
       _descriptionController.text = widget.address!.description;
@@ -41,6 +44,21 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
       _quartierController.text = widget.address!.quartier ?? '';
       _villeController.text = widget.address!.ville ?? '';
     }
+  }
+
+  Future<void> _initializeUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final authTypeFromPrefs = prefs.getString('authType') ?? 'firebase';
+
+    setState(() {
+      _authType = authTypeFromPrefs;
+
+      if (authTypeFromPrefs == 'firebase') {
+        _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      } else {
+        _currentUserId = prefs.getString('loggedInUserId');
+      }
+    });
   }
 
   @override
@@ -53,6 +71,37 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Si l'utilisateur n'est pas connecté, afficher un message
+    if (_currentUserId == null) {
+      return Scaffold(
+        backgroundColor:
+            Theme.of(context).brightness == Brightness.dark
+                ? AppColors.black
+                : Colors.white,
+        appBar: AppBar(
+          iconTheme: IconThemeData(
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+          ),
+          title: Text(
+            'Adresse',
+            style: TextStyle(
+              color:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+            ),
+          ),
+          elevation: 0,
+        ),
+        body: const Center(
+          child: Text('Veuillez vous connecter pour gérer vos adresses'),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor:
           Theme.of(context).brightness == Brightness.dark
@@ -128,7 +177,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.green[600]!),
+                            borderSide: BorderSide(color: AppColors.primary!),
                           ),
                         ),
                         validator: (value) {
@@ -154,7 +203,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.green[600]!),
+                            borderSide: BorderSide(color: AppColors.primary),
                           ),
                         ),
                       ),
@@ -171,7 +220,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.green[600]!),
+                            borderSide: BorderSide(color: AppColors.primary!),
                           ),
                         ),
                       ),
@@ -239,7 +288,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                           _isLoadingLocation
                               ? Colors.grey[500]
                               : (_latitude != null && _longitude != null)
-                              ? Colors.green[600]
+                              ? AppColors.primary
                               : AppColors.primary,
                       fontWeight: FontWeight.w500,
                     ),
@@ -297,7 +346,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    if (currentUserId == null) {
+    if (_currentUserId == null) {
       _showSnackBar(
         'Veuillez vous connecter pour utiliser cette fonctionnalité',
         Colors.red,
@@ -369,24 +418,24 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
           });
           _showSnackBar(
             'Position et adresse approximative obtenues avec succès',
-            Colors.green,
+            AppColors.primary,
           );
         } else {
           _showSnackBar(
             'Position obtenue, mais impossible de trouver l\'adresse approximative',
-            Colors.orange,
+            Colors.grey,
           );
         }
       } catch (e) {
         _showSnackBar(
           'Position obtenue, erreur lors du géocodage: $e',
-          Colors.orange,
+          Colors.grey,
         );
       }
     } catch (e) {
       _showSnackBar(
         'Erreur lors de la récupération de la position: $e',
-        Colors.red,
+        Colors.grey,
       );
     } finally {
       setState(() {
@@ -404,10 +453,10 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
   }
 
   void _saveAddress() {
-    if (currentUserId == null) {
+    if (_currentUserId == null) {
       _showSnackBar(
         'Veuillez vous connecter pour sauvegarder une adresse',
-        Colors.red,
+        Colors.grey,
       );
       return;
     }
@@ -415,7 +464,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
     if (_latitude == null || _longitude == null) {
       _showSnackBar(
         'Veuillez d\'abord obtenir votre position GPS',
-        Colors.orange,
+        Colors.grey,
       );
       return;
     }
@@ -430,7 +479,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
         latitude: _latitude!,
         longitude: _longitude!,
         isDefaut: _isDefault,
-        idUtilisateur: currentUserId!,
+        idUtilisateur: _currentUserId!,
         quartier:
             _quartierController.text.trim().isNotEmpty
                 ? _quartierController.text.trim()

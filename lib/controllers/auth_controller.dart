@@ -13,6 +13,44 @@ class AuthController extends ChangeNotifier {
   Utilisateur? _userData;
   bool _isLoading = false;
 
+  // Méthode pour changer le mot de passe
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final authType = prefs.getString('authType') ?? 'firebase';
+
+      if (authType == 'firebase') {
+        // Changer le mot de passe pour Firebase Auth
+        return await _authService.changeFirebasePassword(
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+        );
+      } else {
+        // Changer le mot de passe pour l'auth téléphone
+        if (_userData?.telephone == null) {
+          return 'Erreur: Données utilisateur manquantes.';
+        }
+
+        return await _authService.changePhonePassword(
+          telephone: _userData!.telephone,
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+        );
+      }
+    } catch (e) {
+      return 'Une erreur inattendue s\'est produite : $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Méthode corrigée pour vérifier l'état de connexion
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
@@ -189,14 +227,51 @@ class AuthController extends ChangeNotifier {
 
         // Charger les données utilisateur
         _userData = await _fetchUserDataInternal();
+
+        // Si pas de données utilisateur trouvées, créer un document
+        if (_userData == null) {
+          print('Création du document utilisateur pour ${_user!.email}');
+          await _createFirebaseUserDocument(_user!);
+          _userData = await _fetchUserDataInternal();
+        }
+
         return true;
       }
       return false;
     } catch (e) {
+      print('Erreur lors de la connexion: $e');
       return false;
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _createFirebaseUserDocument(User firebaseUser) async {
+    try {
+      final String displayName = firebaseUser.displayName ?? '';
+      final List<String> nameParts = displayName.split(' ');
+      final String prenom = nameParts.isNotEmpty ? nameParts.first : '';
+      final String nom =
+          nameParts.length > 1 ? nameParts.skip(1).join(' ') : '';
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .set({
+            'email': firebaseUser.email ?? '',
+            'telephone': '',
+            'prenom': prenom,
+            'nom': nom,
+            'dateInscription': FieldValue.serverTimestamp(),
+            'photoProfil': firebaseUser.photoURL,
+            'dateNaissance': null,
+            'genre': null,
+          });
+
+      print('Document utilisateur créé pour: ${firebaseUser.email}');
+    } catch (e) {
+      print('Erreur lors de la création du document utilisateur: $e');
     }
   }
 
@@ -217,10 +292,15 @@ class AuthController extends ChangeNotifier {
 
       if (authType == 'firebase') {
         // Vérification pour Firebase Auth
-        final userId = prefs.getString('userId');
-        if (_authService.currentUser != null && userId != null) {
+        if (_authService.currentUser != null) {
           _user = _authService.currentUser;
           _userData = await _fetchUserDataInternal();
+
+          // Si pas de données utilisateur trouvées, créer un document
+          if (_userData == null && _user != null) {
+            await _createFirebaseUserDocument(_user!);
+            _userData = await _fetchUserDataInternal();
+          }
         } else {
           await _signOutLocally();
         }
@@ -237,6 +317,9 @@ class AuthController extends ChangeNotifier {
         }
       }
     } catch (e) {
+      print(
+        'Erreur lors de la vérification de l\'état d\'authentification: $e',
+      );
       _user = null;
       _userData = null;
       await _signOutLocally();
@@ -312,28 +395,64 @@ class AuthController extends ChangeNotifier {
 
       if (authType == 'firebase') {
         // Utilisateur Firebase
-        final userId = prefs.getString('userId');
-        if (userId == null || _authService.currentUser == null) {
+        if (_authService.currentUser == null) {
+          print('Aucun utilisateur Firebase connecté');
           return null;
         }
 
-        final doc =
+        final String firebaseUid = _authService.currentUser!.uid;
+        print('Récupération des données pour Firebase UID: $firebaseUid');
+
+        // Chercher par UID Firebase d'abord
+        DocumentSnapshot doc =
             await FirebaseFirestore.instance
                 .collection('users')
-                .doc(_authService.currentUser!.uid)
+                .doc(firebaseUid)
                 .get();
 
-        if (!doc.exists) {
-          return null;
+        if (doc.exists) {
+          print('Document trouvé par UID Firebase');
+          return Utilisateur.fromMap(
+            doc.data() as Map<String, dynamic>,
+            doc.id,
+          );
         }
 
-        return Utilisateur.fromMap(doc.data()!, doc.id);
+        // Si pas trouvé par UID, chercher par email
+        final String? userEmail = _authService.currentUser!.email;
+        if (userEmail != null) {
+          print('Recherche par email: $userEmail');
+          final QuerySnapshot querySnapshot =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .where('email', isEqualTo: userEmail)
+                  .limit(1)
+                  .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            print('Document trouvé par email');
+            final DocumentSnapshot userDoc = querySnapshot.docs.first;
+            return Utilisateur.fromMap(
+              userDoc.data() as Map<String, dynamic>,
+              userDoc.id,
+            );
+          }
+        }
+
+        print(
+          'Aucun document utilisateur trouvé pour cet utilisateur Firebase',
+        );
+        return null;
       } else {
         // Utilisateur téléphone
         final loggedInUserId = prefs.getString('loggedInUserId');
         if (loggedInUserId == null) {
+          print('Aucun ID utilisateur téléphone trouvé');
           return null;
         }
+        print(
+          'Récupération des données pour utilisateur téléphone ID: $loggedInUserId',
+        );
         return await _fetchPhoneUserData(loggedInUserId);
       }
     } catch (e) {
