@@ -26,7 +26,10 @@ class _MenuNavigationState extends State<MenuNavigation> {
     return [
       const HomePage(),
       FavoriteProductsScreen(userId: currentUserId),
-      MyListingsPage(authController: context.read<AuthController>()),
+      MyListingsPage(
+        authController: context.read<AuthController>(),
+        userId: currentUserId,
+      ),
       const ProfileScreen(),
     ];
   }
@@ -88,16 +91,7 @@ class _MenuNavigationState extends State<MenuNavigation> {
     return GestureDetector(
       onTap: () {
         if (index == 1) {
-          final authController = Provider.of<AuthController>(
-            context,
-            listen: false,
-          );
-
-          if (authController.isLoggedInSync) {
-            onItemTapped(index);
-          } else {
-            _showLoginRequiredDialog(context);
-          }
+          onItemTapped(index);
         } else {
           onItemTapped(index);
         }
@@ -119,72 +113,6 @@ class _MenuNavigationState extends State<MenuNavigation> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showLoginRequiredDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Action Requise',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Vous devez être connecté pour accéder à cette fonctionnalité.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const AuthSelectionScreen(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Iconsax.login, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Se connecter',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

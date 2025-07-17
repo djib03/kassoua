@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/services/favori_service.dart';
 import 'package:kassoua/models/image_produit.dart';
 import 'package:kassoua/models/product.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'dart:async';
+import 'package:kassoua/controllers/auth_controller.dart';
+import 'package:provider/provider.dart';
 
 class FavoriteProductsScreen extends StatefulWidget {
   final String? userId;
@@ -62,6 +65,9 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
 
       if (_currentUserId != null) {
         _loadFavoriteProducts();
+      } else {
+        // Démarrer l'animation même si pas connecté
+        _animationController.forward();
       }
     } catch (e) {
       print('Erreur lors de l\'initialisation de l\'utilisateur: $e');
@@ -223,7 +229,10 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
   }
 
   Future<void> _onRefresh() async {
-    if (_currentUserId == null) return;
+    if (_currentUserId == null) {
+      _showSnackBar('Veuillez vous connecter pour actualiser', Colors.orange);
+      return;
+    }
 
     try {
       // Vider le cache d'images pour forcer le rechargement
@@ -241,6 +250,37 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
         _showSnackBar('Erreur lors de l\'actualisation', Colors.red);
       }
     }
+  }
+
+  void _handleLogin() {
+    // Naviguer vers la page de connexion
+    // Navigator.pushNamed(context, '/login');
+
+    // Ou afficher un modal de connexion
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Connexion requise'),
+            content: const Text(
+              'Vous devez vous connecter pour accéder à cette fonctionnalité.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Rediriger vers la page de connexion
+                  // Navigator.pushNamed(context, '/login');
+                },
+                child: const Text('Se connecter'),
+              ),
+            ],
+          ),
+    );
   }
 
   bool _isDarkMode(BuildContext context) =>
@@ -294,7 +334,7 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.transparent,
       actions: [
-        if (_favoriteProducts.isNotEmpty)
+        if (_currentUserId != null && _favoriteProducts.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: Center(
@@ -320,9 +360,109 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
   }
 
   Widget _buildBody(bool isDark) {
-    // Cas 1: Utilisateur non connecté
-    if (_currentUserId == null) {
-      return _buildNotLoggedInState(isDark);
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          // Bannière d'avertissement si pas connecté
+          if (_currentUserId == null) _buildNotLoggedInBanner(isDark),
+
+          // Contenu principal
+          SizedBox(
+            height:
+                _currentUserId == null
+                    ? MediaQuery.of(context).size.height -
+                        200 // Ajuster selon la hauteur de la bannière
+                    : MediaQuery.of(context).size.height - 140,
+            child: _buildMainContent(isDark),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotLoggedInBanner(bool isDark) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color:
+              isDark
+                  ? Colors.orange.shade900.withOpacity(0.2)
+                  : Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.orange.shade700 : Colors.orange.shade200,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.orange.shade600, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Connexion requise',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color:
+                          isDark
+                              ? Colors.orange.shade300
+                              : Colors.orange.shade800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Connectez-vous pour voir vos produits favoris',
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? Colors.orange.shade400
+                              : Colors.orange.shade700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _handleLogin,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+              ),
+              child: const Text('Se connecter', style: TextStyle(fontSize: 14)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent(bool isDark) {
+    // CORRECTION: Utiliser Provider.of avec context pour obtenir l'instance
+    final authController = Provider.of<AuthController>(context);
+
+    // CORRECTION: Inverser la logique - si PAS connecté, afficher l'état guest
+    if (!authController.isLoggedInSync) {
+      return FadeTransition(
+        opacity: _fadeAnimation,
+        child: _buildEmptyStateForGuest(isDark),
+      );
     }
 
     // Cas 2: Erreur
@@ -335,11 +475,11 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
       return _buildLoadingState(isDark);
     }
 
-    // Cas 4: Aucun produit favori
+    // Cas 4: Aucun produit favori (utilisateur connecté)
     if (_favoriteProducts.isEmpty) {
       return FadeTransition(
         opacity: _fadeAnimation,
-        child: _buildEmptyState(isDark),
+        child: _buildEmptyStateForUser(isDark),
       );
     }
 
@@ -371,191 +511,201 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
 
   Widget _buildErrorState(bool isDark) {
     return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[800] : Colors.grey[100],
-                  shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[800] : Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red[400],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Erreur de chargement',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _error ?? 'Une erreur inattendue s\'est produite',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _loadFavoriteProducts,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
                 ),
-                child: Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red[400],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Erreur de chargement',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _error ?? 'Une erreur inattendue s\'est produite',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: _loadFavoriteProducts,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Réessayer'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildNotLoggedInState(bool isDark) {
+  Widget _buildEmptyStateForGuest(bool isDark) {
     return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[800] : Colors.grey[100],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.person_outline,
-                  size: 64,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[800] : Colors.grey[100],
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Connexion requise',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
+              child: Icon(
+                Iconsax.user,
+                size: 64,
+                color: isDark ? Colors.grey[500] : Colors.grey[400],
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Vous devez être connecté pour voir vos produits favoris',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Connexion requise',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
               ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Naviguer vers la page de connexion
-                  // Navigator.pushNamed(context, '/login');
-                },
-                icon: const Icon(Icons.login),
-                label: const Text('Se connecter'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Connectez-vous pour voir vos produits préférés',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _handleLogin,
+                  icon: const Icon(Icons.login),
+                  label: const Text('Se connecter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                ),
+                const SizedBox(width: 16),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.explore),
+                  label: const Text('Explorer'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState(bool isDark) {
+  Widget _buildEmptyStateForUser(bool isDark) {
     return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[800] : Colors.grey[100],
-                  shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[800] : Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.favorite_border,
+                size: 64,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Aucun produit favori',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Ajoutez des produits à vos favoris\npour les retrouver facilement ici',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.explore),
+              label: const Text('Découvrir des produits'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
                 ),
-                child: Icon(
-                  Icons.favorite_border,
-                  size: 64,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Aucun produit favori',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Ajoutez des produits à vos favoris\npour les retrouver facilement ici',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.explore),
-                label: const Text('Découvrir des produits'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

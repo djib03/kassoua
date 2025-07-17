@@ -15,8 +15,9 @@ import 'package:kassoua/controllers/auth_controller.dart';
 class MyListingsPage extends StatefulWidget {
   final AuthController
   authController; // Utiliser le type spécifique, pas dynamic
+  final String? userId;
 
-  const MyListingsPage({Key? key, required this.authController})
+  const MyListingsPage({Key? key, required this.authController, this.userId})
     : super(key: key);
 
   @override
@@ -81,7 +82,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
       ),
       body:
           currentUserId == null
-              ? _buildNotLoggedInState(context)
+              ? _buildNotLoggedInState(isDark)
               : StreamBuilder<List<Produit>>(
                 stream: _firestoreService.getUserProducts(currentUserId!),
                 builder: (context, snapshot) {
@@ -105,37 +106,99 @@ class _MyListingsPageState extends State<MyListingsPage> {
     );
   }
 
-  Widget _buildNotLoggedInState(BuildContext context) {
+  Widget _buildNotLoggedInState(bool isDark) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(DMSizes.lg),
+        padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Iconsax.user,
-              size: DMSizes.iconLg * 2,
-              color: AppColors.primary,
-            ),
-            SizedBox(height: DMSizes.spaceBtwItems),
-            Text(
-              'Veuillez vous connecter',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[800] : Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Iconsax.user,
+                size: 64,
+                color: isDark ? Colors.grey[500] : Colors.grey[400],
               ),
             ),
-            SizedBox(height: DMSizes.xs),
+            const SizedBox(height: 24),
             Text(
-              'Connectez-vous pour voir vos annonces',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              'Connexion requise',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Connectez-vous pour gérer vos annonces',
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _handleLogin,
+                  icon: const Icon(Icons.login),
+                  label: const Text('Se connecter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _handleLogin() {
+    // Naviguer vers la page de connexion
+    // Navigator.pushNamed(context, '/login');
+
+    // Ou afficher un modal de connexion
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Connexion requise'),
+            content: const Text(
+              'Vous devez vous connecter pour accéder à cette fonctionnalité.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Rediriger vers la page de connexion
+                  // Navigator.pushNamed(context, '/login');
+                },
+                child: const Text('Se connecter'),
+              ),
+            ],
+          ),
     );
   }
 

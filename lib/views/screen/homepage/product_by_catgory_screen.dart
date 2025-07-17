@@ -27,6 +27,38 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
 
   String _selectedSubCategory = 'Tous';
   List<Categorie> _subCategories = [];
+  bool _isLoadingSubCategories = true;
+  bool _hasSubCategoriesError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSubCategories();
+  }
+
+  void _loadSubCategories() async {
+    try {
+      setState(() {
+        _isLoadingSubCategories = true;
+        _hasSubCategoriesError = false;
+      });
+
+      final subCategories =
+          await _categoryService
+              .getSubCategoriesStream(widget.category.id)
+              .first;
+
+      setState(() {
+        _subCategories = subCategories;
+        _isLoadingSubCategories = false;
+      });
+    } catch (e) {
+      setState(() {
+        _hasSubCategoriesError = true;
+        _isLoadingSubCategories = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,55 +92,49 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         backgroundColor: isDark ? AppColors.black : AppColors.lightGrey,
       ),
-      body: StreamBuilder<List<Categorie>>(
-        stream: _categoryService.getSubCategoriesStream(widget.category.id),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return _buildErrorState(snapshot.error.toString());
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_hasSubCategoriesError) {
+      return _buildErrorState("Erreur lors du chargement des sous-catégories");
+    }
+
+    if (_isLoadingSubCategories) {
+      return _buildFullLoadingState();
+    }
+
+    // Si pas de sous-catégories, afficher directement les produits
+    if (_subCategories.isEmpty) {
+      return StreamBuilder<List<Produit>>(
+        stream: _productService.getProductsByCategoryStream(widget.category.id),
+        builder: (context, productSnapshot) {
+          if (productSnapshot.hasError) {
+            return _buildErrorState(productSnapshot.error.toString());
           }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingState();
+          if (productSnapshot.connectionState == ConnectionState.waiting) {
+            return _buildProductsLoadingState();
           }
 
-          final subCategories = snapshot.data ?? [];
-          _subCategories = subCategories;
+          final products = productSnapshot.data ?? [];
 
-          // Si pas de sous-catégories, afficher directement les produits de la catégorie
-          if (subCategories.isEmpty) {
-            return StreamBuilder<List<Produit>>(
-              stream: _productService.getProductsByCategoryStream(
-                widget.category.id,
-              ),
-              builder: (context, productSnapshot) {
-                if (productSnapshot.hasError) {
-                  return _buildErrorState(productSnapshot.error.toString());
-                }
-
-                if (productSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return _buildLoadingState();
-                }
-
-                final products = productSnapshot.data ?? [];
-
-                if (products.isEmpty) {
-                  return _buildEmptyProductsState();
-                }
-
-                return _buildProductsList(products);
-              },
-            );
+          if (products.isEmpty) {
+            return _buildEmptyProductsState();
           }
 
-          return Column(
-            children: [
-              _buildSubCategoryChips(),
-              Expanded(child: _buildFilteredContent()),
-            ],
-          );
+          return _buildProductsList(products);
         },
-      ),
+      );
+    }
+
+    // Avec sous-catégories
+    return Column(
+      children: [
+        _buildSubCategoryChips(),
+        Expanded(child: _buildFilteredContent()),
+      ],
     );
   }
 
@@ -142,9 +168,11 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
               ),
               selected: isSelected,
               onSelected: (selected) {
-                setState(() {
-                  _selectedSubCategory = chip;
-                });
+                if (selected) {
+                  setState(() {
+                    _selectedSubCategory = chip;
+                  });
+                }
               },
               backgroundColor: isDark ? AppColors.dark : Colors.white,
               selectedColor: AppColors.primary,
@@ -176,7 +204,7 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
           }
 
           if (productSnapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingState();
+            return _buildProductsLoadingState();
           }
 
           final products = productSnapshot.data ?? [];
@@ -192,6 +220,7 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
       // Afficher seulement les produits de la sous-catégorie sélectionnée
       final selectedSubCategory = _subCategories.firstWhere(
         (cat) => cat.nom == _selectedSubCategory,
+        orElse: () => _subCategories.first,
       );
 
       return StreamBuilder<List<Produit>>(
@@ -204,7 +233,7 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
           }
 
           if (productSnapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingState();
+            return _buildProductsLoadingState();
           }
 
           final products = productSnapshot.data ?? [];
@@ -439,58 +468,108 @@ class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
     return '${withSpaces.split('').reversed.join()} FCFA';
   }
 
-  Widget _buildLoadingState() {
-    return Skeletonizer(
-      enabled: true,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 3,
-        itemBuilder: (context, index) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.grey[300],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildProductsLoadingState() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Titre avec skeleton
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Skeletonizer(
+            enabled: true,
+            child: Container(height: 20, width: 150, color: Colors.grey[300]),
+          ),
+        ),
+        // Liste des produits avec skeleton
+        Expanded(
+          child: Skeletonizer(
+            enabled: true,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 5,
+              itemBuilder: (context, index) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                       children: [
                         Container(
-                          height: 16,
-                          width: double.infinity,
-                          color: Colors.grey[300],
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[300],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 12,
-                          width: 150,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 14,
-                          width: 100,
-                          color: Colors.grey[300],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 16,
+                                width: double.infinity,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                height: 12,
+                                width: 150,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                height: 14,
+                                width: 100,
+                                color: Colors.grey[300],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFullLoadingState() {
+    return Column(
+      children: [
+        // Chips skeleton
+        Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: 4,
+            itemBuilder: (context, index) {
+              return Container(
+                margin: const EdgeInsets.only(right: 12),
+                child: Skeletonizer(
+                  enabled: true,
+                  child: Chip(
+                    label: Container(
+                      width: 60,
+                      height: 20,
+                      color: Colors.grey[300],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Products skeleton
+        Expanded(child: _buildProductsLoadingState()),
+      ],
     );
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/views/screen/homepage/section/app_bar_action.dart';
@@ -23,18 +25,23 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageState extends State<HomePage>
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
   final GlobalKey<ProductListSectionState> _productListKey = GlobalKey();
 
+  // 🚀 OPTIMISATION: Cache amélioré avec expiration
   final Map<String, Future<Map<String, dynamic>>> _productDataCache = {};
   final Map<String, String> _productLocationCache = {};
   final Map<String, ImageProduit?> _productImageCache = {};
+  final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheExpiration = Duration(minutes: 5);
 
   // 🔧 NOUVEAU: Gestion des états de favoris en cours
   final Set<String> _processingFavorites = <String>{};
+
   // Variables pour les favoris et utilisateur
   final FirestoreService _firestoreService = FirestoreService();
   late final ValueNotifier<Set<String>> _favoriteProductIdsNotifier;
@@ -42,15 +49,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isInitialized = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Variables pour la section produits (intégrées)
+  // 🚀 OPTIMISATION: Variables pour la pagination intelligente
   int _displayLimit = 6;
-
+  static const int _loadIncrement = 6;
   bool _isLoadingMore = false;
   bool _hasMoreProducts = true;
+
+  // 🚀 NOUVEAU: Debouncing pour éviter les appels multiples
+  Timer? _debounceTimer;
+
+  // 🚀 NOUVEAU: Preloading des images
+  final Set<String> _preloadedImages = {};
 
   bool _isDarkMode(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
   late final ScrollController _scrollController;
+
+  // 🚀 OPTIMISATION: Garder la page en mémoire
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -59,29 +76,58 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _scrollController = ScrollController();
     _initializeAnimations();
     _initializeUser();
+
+    // 🚀 OPTIMISATION: Precharger les données critiques
+    _preloadCriticalData();
   }
 
   void _initializeAnimations() {
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600), // Réduit de 800ms à 600ms
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _animationController.forward();
   }
 
+  // 🚀 NOUVEAU: Precharger les données critiques
+  void _preloadCriticalData() {
+    // Precharger les favoris si l'utilisateur est connecté
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_currentUserId != null) {
+        _loadFavorites();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _scrollController.dispose();
     _animationController.dispose();
     _productDataCache.clear();
     _productLocationCache.clear();
     _productImageCache.clear();
+    _cacheTimestamps.clear();
     _favoriteProductIdsNotifier.dispose();
     _processingFavorites.clear();
     super.dispose();
+  }
+
+  // 🚀 OPTIMISATION: Cache intelligent avec expiration
+  bool _isCacheValid(String key) {
+    final timestamp = _cacheTimestamps[key];
+    if (timestamp == null) return false;
+    return DateTime.now().difference(timestamp) < _cacheExpiration;
+  }
+
+  void _updateCache(String key, dynamic value) {
+    _cacheTimestamps[key] = DateTime.now();
+    if (value is ImageProduit?) {
+      _productImageCache[key] = value;
+    }
   }
 
   Future<String?> _getCurrentUserId() async {
@@ -164,63 +210,73 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  // 🚀 OPTIMISATION: Toggle favori avec debouncing
   Future<void> _onToggleFavorite(String productId) async {
-    // Utiliser la nouvelle méthode pour obtenir l'ID utilisateur
-    final userId = await _getCurrentUserId();
-
-    if (userId == null) {
-      _showSnackBar('Veuillez vous connecter pour gérer les favoris');
-      return;
+    if (_processingFavorites.contains(productId)) {
+      return; // Éviter les appels multiples
     }
 
-    // Récupérer l'état actuel des favoris
-    final currentFavorites = Set<String>.from(
-      _favoriteProductIdsNotifier.value,
-    );
-    final wasAlreadyFavorite = currentFavorites.contains(productId);
-
-    // Mise à jour optimiste
-    final newFavorites = Set<String>.from(currentFavorites);
-    if (wasAlreadyFavorite) {
-      newFavorites.remove(productId);
-    } else {
-      newFavorites.add(productId);
-    }
-    _favoriteProductIdsNotifier.value = newFavorites;
+    _processingFavorites.add(productId);
 
     try {
+      // Utiliser la nouvelle méthode pour obtenir l'ID utilisateur
+      final userId = await _getCurrentUserId();
+
+      if (userId == null) {
+        _showSnackBar('Veuillez vous connecter pour gérer les favoris');
+        return;
+      }
+
+      // Récupérer l'état actuel des favoris
+      final currentFavorites = Set<String>.from(
+        _favoriteProductIdsNotifier.value,
+      );
+      final wasAlreadyFavorite = currentFavorites.contains(productId);
+
+      // Mise à jour optimiste
+      final newFavorites = Set<String>.from(currentFavorites);
       if (wasAlreadyFavorite) {
-        await _firestoreService.removeFavori(userId, productId);
-        if (mounted) {
-          _showSnackBar('Produit retiré des favoris');
-        }
+        newFavorites.remove(productId);
       } else {
-        final newFavori = Favori(
-          id: _firestoreService.generateNewFavoriId(),
-          userId: userId,
-          produitId: productId,
-          dateAjout: DateTime.now(),
-        );
-        await _firestoreService.addFavori(newFavori);
+        newFavorites.add(productId);
+      }
+      _favoriteProductIdsNotifier.value = newFavorites;
+
+      try {
+        if (wasAlreadyFavorite) {
+          await _firestoreService.removeFavori(userId, productId);
+          if (mounted) {
+            _showSnackBar('Produit retiré des favoris');
+          }
+        } else {
+          final newFavori = Favori(
+            id: _firestoreService.generateNewFavoriId(),
+            userId: userId,
+            produitId: productId,
+            dateAjout: DateTime.now(),
+          );
+          await _firestoreService.addFavori(newFavori);
+          if (mounted) {
+            _showSnackBar('Produit ajouté aux favoris');
+          }
+        }
+      } catch (e) {
+        // Rollback en cas d'erreur
         if (mounted) {
-          _showSnackBar('Produit ajouté aux favoris');
+          _favoriteProductIdsNotifier.value = currentFavorites;
+          print('Erreur favoris: $e');
+          _showSnackBar('Erreur lors de la modification des favoris');
         }
       }
-    } catch (e) {
-      // Rollback en cas d'erreur
-      if (mounted) {
-        _favoriteProductIdsNotifier.value = currentFavorites;
-        print('Erreur favoris: $e');
-        _showSnackBar('Erreur lors de la modification des favoris');
-      }
+    } finally {
+      _processingFavorites.remove(productId);
     }
   }
 
-  // ===== MÉTHODES POUR LA SECTION PRODUITS (Intégrées) =====
-
+  // 🚀 OPTIMISATION: Chargement d'image avec cache intelligent
   Future<ImageProduit?> getImagePrincipale(String produitId) async {
-    // Vérifier le cache
-    if (_productImageCache.containsKey(produitId)) {
+    // Vérifier le cache valide
+    if (_isCacheValid(produitId) && _productImageCache.containsKey(produitId)) {
       return _productImageCache[produitId];
     }
 
@@ -238,14 +294,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         image = ImageProduit.fromMap(doc.data(), doc.id);
       }
 
-      // Mettre en cache
-      _productImageCache[produitId] = image;
+      // Mettre en cache avec timestamp
+      _updateCache(produitId, image);
+
+      // 🚀 NOUVEAU: Preload de l'image
+      if (image?.url != null && !_preloadedImages.contains(image!.url)) {
+        _preloadImage(image.url);
+      }
+
       return image;
     } catch (e) {
       print('Erreur lors du chargement de l\'image: $e');
-      _productImageCache[produitId] = null;
+      _updateCache(produitId, null);
       return null;
     }
+  }
+
+  // 🚀 NOUVEAU: Preload des images pour une meilleure fluidité
+  void _preloadImage(String imageUrl) {
+    if (_preloadedImages.contains(imageUrl)) return;
+
+    _preloadedImages.add(imageUrl);
+    precacheImage(NetworkImage(imageUrl), context).catchError((error) {
+      print('Erreur preload image: $error');
+    });
   }
 
   void _showSnackBar(String message) {
@@ -263,70 +335,94 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  // =============================================
-  // 5. WIDGETS HELPER POUR L'UI
-  // =============================================
-
+  // 🚀 OPTIMISATION: Indicateurs de chargement plus fluides
   Widget _buildLoadingIndicator() {
-    return const Column(
-      children: [
-        SizedBox(height: 8),
-        Center(
-          child: Column(
-            children: [
-              CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Chargement...',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.scale(
+            scale: value,
+            child: const Column(
+              children: [
+                SizedBox(height: 8),
+                Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Chargement...',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(height: 16),
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: 16),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildEndOfContentIndicator(bool isDark) {
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.grey[800] : Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.check_circle_outline,
-                color: AppColors.primary,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Tous les produits ont été chargés',
-                style: TextStyle(
-                  color: isDark ? AppColors.textWhite : AppColors.black,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 20,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[800] : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tous les produits ont été chargés',
+                        style: TextStyle(
+                          color: isDark ? AppColors.textWhite : AppColors.black,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -360,6 +456,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _displayLimit = 6;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Réessayer'),
             ),
           ],
         ),
@@ -404,22 +513,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // ===== CONSTRUCTION DE LA SECTION PRODUITS =====
+  // 🚀 OPTIMISATION: Section produits avec gestion intelligente du cache
   Widget _buildProductsSection(bool isDark) {
     return StreamBuilder<List<Produit>>(
       stream: _firestoreService.getAllProductsStream(),
       builder: (context, snapshot) {
-        // ✅ MONTRER le skeleton loader pendant le chargement
+        // ✅ Skeleton loader optimisé
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ProductListSection(
             key: _productListKey,
-            products: [], // Liste vide
+            products: [],
             isDark: isDark,
             favoriteProductIdsNotifier: _favoriteProductIdsNotifier,
             onToggleFavorite: _onToggleFavorite,
             scrollController: _scrollController,
             onProductTap: null,
-            showSkeletonLoader: true, // ← Activer le skeleton
+            showSkeletonLoader: true,
           );
         }
 
@@ -434,6 +543,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         final products = snapshot.data ?? [];
         final displayProducts = products.take(_displayLimit).toList();
         final hasMoreProducts = products.length > _displayLimit;
+
+        // 🚀 NOUVEAU: Preload des images des produits suivants
+        _preloadNextProductImages(products, _displayLimit);
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _hasMoreProducts != hasMoreProducts) {
@@ -452,56 +564,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               favoriteProductIdsNotifier: _favoriteProductIdsNotifier,
               onToggleFavorite: _onToggleFavorite,
               scrollController: _scrollController,
-              showSkeletonLoader: false, // ← Désactiver le skeleton
-              onProductTap: (Produit produit) async {
-                try {
-                  // Récupérer les images du produit
-                  final images =
-                      await _firestoreService
-                          .getImagesProduit(produit.id)
-                          .first;
-                  final imageUrls = images.map((img) => img.url).toList();
-
-                  // Vérifier si l'utilisateur connecté est le propriétaire du produit
-                  final currentUserId = await _getCurrentUserId();
-                  final isOwner =
-                      currentUserId != null &&
-                      currentUserId == produit.vendeurId;
-
-                  if (isOwner) {
-                    // L'utilisateur est le vendeur → Vue vendeur
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => ProductDetailVendeur(
-                              produit: produit,
-                              images: imageUrls,
-                            ),
-                      ),
-                    );
-                  } else {
-                    // L'utilisateur n'est pas le vendeur → Vue acheteur
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => ProductDetailAcheteur(
-                              produit: produit,
-                              images: imageUrls,
-                            ),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  print(
-                    'Erreur lors de la navigation vers les détails du produit: $e',
-                  );
-                  _showSnackBar(
-                    'Erreur lors de l\'ouverture des détails du produit',
-                  );
-                }
-              },
+              showSkeletonLoader: false,
+              onProductTap: (Produit produit) => _handleProductTap(produit),
             ),
 
             if (_isLoadingMore) _buildLoadingIndicator(),
@@ -515,15 +579,75 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // 🚀 NOUVEAU: Preload des images des produits suivants
+  void _preloadNextProductImages(List<Produit> products, int currentLimit) {
+    final nextProducts = products.skip(currentLimit).take(3).toList();
+    for (final product in nextProducts) {
+      getImagePrincipale(product.id);
+    }
+  }
+
+  // 🚀 OPTIMISATION: Gestion du tap sur un produit
+  Future<void> _handleProductTap(Produit produit) async {
+    try {
+      // Récupérer les images du produit
+      final images = await _firestoreService.getImagesProduit(produit.id).first;
+      final imageUrls = images.map((img) => img.url).toList();
+
+      // Vérifier si l'utilisateur connecté est le propriétaire du produit
+      final currentUserId = await _getCurrentUserId();
+      final isOwner =
+          currentUserId != null && currentUserId == produit.vendeurId;
+
+      if (isOwner) {
+        // L'utilisateur est le vendeur → Vue vendeur
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    ProductDetailVendeur(produit: produit, images: imageUrls),
+          ),
+        );
+      } else {
+        // L'utilisateur n'est pas le vendeur → Vue acheteur
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    ProductDetailAcheteur(produit: produit, images: imageUrls),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Erreur lors de la navigation vers les détails du produit: $e');
+      _showSnackBar('Erreur lors de l\'ouverture des détails du produit');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+
     final isDark = _isDarkMode(context);
 
     if (!_isInitialized) {
       return Scaffold(
         backgroundColor: isDark ? Color(0xFF121212) : Colors.grey[50],
-        body: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        body: Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 600),
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: value,
+                child: const CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
+              );
+            },
+          ),
         ),
       );
     }
@@ -533,22 +657,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: RefreshIndicator(
-          // ✅ NOUVEAU: Ajout du RefreshIndicator
           onRefresh: _onRefresh,
           color: AppColors.primary,
           backgroundColor: isDark ? AppColors.black : Colors.white,
           child: NotificationListener<ScrollNotification>(
             onNotification: (ScrollNotification scrollInfo) {
-              // ✅ CORRECTION: Vérifier que le scroll provient du CustomScrollView principal
-              // et non d'un scroll horizontal dans les catégories
               if (scrollInfo.metrics.axisDirection == AxisDirection.down &&
                   scrollInfo.depth == 0) {
-                // depth 0 = scroll principal
                 if (_hasMoreProducts &&
                     !_isLoadingMore &&
                     scrollInfo.metrics.pixels >=
                         scrollInfo.metrics.maxScrollExtent * 0.8) {
-                  _loadMoreProductsAutomatically();
+                  _loadMoreProductsWithDebounce();
                 }
               }
               return false;
@@ -567,20 +687,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         const SizedBox(height: 19),
                         CategorySection(
                           isDark: isDark,
-                          showSkeletonLoader: false, // ← Toujours désactivé
+                          showSkeletonLoader: false,
                         ),
                         const SizedBox(height: 20),
                         _buildProductsSection(isDark),
                         const SizedBox(height: 24),
-                      ] else ...[
-                        const SizedBox(
-                          height: 200,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
                       ],
                     ],
                   ),
@@ -593,7 +704,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // ✅ NOUVEAU: Méthode pour gérer le pull-to-refresh
+  // 🚀 OPTIMISATION: Refresh avec animation fluide
   Future<void> _onRefresh() async {
     try {
       setState(() {
@@ -602,7 +713,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _hasMoreProducts = true;
       });
 
-      // ✅ NOUVEAU: Forcer le rechargement des images dans ProductListSection
+      // Vider le cache pour forcer le rechargement
+      _productImageCache.clear();
+      _cacheTimestamps.clear();
+      _preloadedImages.clear();
+
       _productListKey.currentState?.refreshProductData();
 
       if (_currentUserId != null) {
@@ -622,12 +737,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  void _loadMoreProductsAutomatically() {
-    if (_hasMoreProducts) {
-      setState(() {
-        _displayLimit += 6;
-      });
-    }
+  // 🚀 OPTIMISATION: Chargement avec debouncing
+  void _loadMoreProductsWithDebounce() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (_hasMoreProducts && !_isLoadingMore) {
+        setState(() {
+          _isLoadingMore = true;
+        });
+
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            setState(() {
+              _displayLimit += _loadIncrement;
+              _isLoadingMore = false;
+            });
+          }
+        });
+      }
+    });
   }
 
   Widget _buildSliverAppBar(bool isDark) {
