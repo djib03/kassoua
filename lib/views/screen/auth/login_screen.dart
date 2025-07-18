@@ -482,22 +482,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child:
                       _isLoading
-                          ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
                               ),
-                              const SizedBox(width: 10),
-                              const Text("Connexion en cours..."),
-                            ],
+                            ),
                           )
                           : Text(
                             'Se connecter',

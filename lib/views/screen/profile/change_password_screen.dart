@@ -129,9 +129,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final Brightness brightness = Theme.of(context).brightness;
     final Color backgroundColor =
-        brightness == Brightness.dark
-            ? Theme.of(context).colorScheme.surface
-            : Colors.white;
+        brightness == Brightness.dark ? const Color(0xFF121212) : Colors.white;
     final Color textColor =
         brightness == Brightness.dark ? Colors.white : Colors.black;
     final Color cardColor =
