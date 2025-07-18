@@ -9,6 +9,7 @@ import 'package:kassoua/constants/colors.dart';
 import 'dart:async';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:provider/provider.dart';
+import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
 
 class FavoriteProductsScreen extends StatefulWidget {
   final String? userId;
@@ -254,32 +255,9 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
 
   void _handleLogin() {
     // Naviguer vers la page de connexion
-    // Navigator.pushNamed(context, '/login');
-
-    // Ou afficher un modal de connexion
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Connexion requise'),
-            content: const Text(
-              'Vous devez vous connecter pour accéder à cette fonctionnalité.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Rediriger vers la page de connexion
-                  // Navigator.pushNamed(context, '/login');
-                },
-                child: const Text('Se connecter'),
-              ),
-            ],
-          ),
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthSelectionScreen()),
     );
   }
 
@@ -617,23 +595,6 @@ class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.explore),
-                  label: const Text('Explorer'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,

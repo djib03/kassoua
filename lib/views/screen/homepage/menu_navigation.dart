@@ -55,7 +55,7 @@ class _MenuNavigationState extends State<MenuNavigation> {
               isDark
                   ? const Color.fromARGB(255, 32, 32, 32)
                   : const Color.fromARGB(255, 255, 255, 255),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          // borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),

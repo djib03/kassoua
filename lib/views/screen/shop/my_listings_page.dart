@@ -11,6 +11,7 @@ import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kassoua/views/screen/shop/product_detail_vendeur.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
+import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
 
 class MyListingsPage extends StatefulWidget {
   final AuthController
@@ -69,12 +70,14 @@ class _MyListingsPageState extends State<MyListingsPage> {
             child: IconButton(
               icon: const Icon(Iconsax.add, color: AppColors.white),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddEditProductPage(),
-                  ),
-                );
+                currentUserId == null
+                    ? SnackBar(content: Text('Veillez vous connecter'))
+                    : Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddEditProductPage(),
+                      ),
+                    );
               },
             ),
           ),
@@ -173,32 +176,9 @@ class _MyListingsPageState extends State<MyListingsPage> {
 
   void _handleLogin() {
     // Naviguer vers la page de connexion
-    // Navigator.pushNamed(context, '/login');
-
-    // Ou afficher un modal de connexion
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Connexion requise'),
-            content: const Text(
-              'Vous devez vous connecter pour accéder à cette fonctionnalité.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Rediriger vers la page de connexion
-                  // Navigator.pushNamed(context, '/login');
-                },
-                child: const Text('Se connecter'),
-              ),
-            ],
-          ),
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthSelectionScreen()),
     );
   }
 

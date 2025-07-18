@@ -918,7 +918,9 @@ class ProfileScreen extends StatelessWidget {
                         title: 'Déconnexion',
                         subtitle: 'Se déconnecter de votre compte',
                         onTap: () {
-                          _showLogoutConfirmationDialog(context);
+                          if (isLoggedIn) {
+                            _showLogoutConfirmationDialog(context);
+                          }
                         },
                         color: AppColors.secondary,
                       ),
@@ -927,7 +929,9 @@ class ProfileScreen extends StatelessWidget {
                         title: 'Supprimer le compte',
                         subtitle: 'Supprimer définitivement votre compte',
                         onTap: () {
-                          _showDeleteAccountConfirmationDialog(context);
+                          if (isLoggedIn) {
+                            _showDeleteAccountConfirmationDialog(context);
+                          }
                         },
                         color: AppColors.error,
                         isDestructive: true,
