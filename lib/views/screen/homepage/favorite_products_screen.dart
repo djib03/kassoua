@@ -22,11 +22,11 @@ class FavoriteProductsScreen extends StatefulWidget {
 
 class _FavoriteProductsScreenState extends State<FavoriteProductsScreen>
     with TickerProviderStateMixin {
-  final favoriService _favoriService = favoriService();
+  final FavoriService _favoriService = FavoriService();
 
   // États de données
   List<Produit> _favoriteProducts = [];
-  Map<String, ImageProduit?> _productImages = {}; // Cache des images
+  final Map<String, ImageProduit?> _productImages = {}; // Cache des images
   bool _isLoading = false;
   bool _isInitialized = false;
   String? _currentUserId;

@@ -6,7 +6,6 @@ import 'package:kassoua/views/screen/shop/my_listings_page.dart';
 import 'package:kassoua/views/screen/profile/profile_screen.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:provider/provider.dart';
-import 'package:kassoua/views/screen/auth/auth_screen_selection.dart';
 import 'package:kassoua/views/screen/homepage/favorite_products_screen.dart';
 
 class MenuNavigation extends StatefulWidget {

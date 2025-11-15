@@ -1,6 +1,7 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/models/adresse.dart';
@@ -22,7 +23,6 @@ class UserDetailScreen extends StatefulWidget {
 class _UserDetailScreenState extends State<UserDetailScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
   @override
@@ -31,9 +31,6 @@ class _UserDetailScreenState extends State<UserDetailScreen>
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
@@ -363,7 +360,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final FirestoreService _firestoreService = FirestoreService();
+    final FirestoreService firestoreService = FirestoreService();
 
     // Force la couleur de la status bar à chaque affichage de l'écran
     SystemChrome.setSystemUIOverlayStyle(
@@ -584,7 +581,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                             FutureBuilder<List<Adresse>>(
                               future:
                                   user != null
-                                      ? _firestoreService
+                                      ? firestoreService
                                           .getDefaultAdresses(user.id)
                                           .first
                                       : Future.value([]),

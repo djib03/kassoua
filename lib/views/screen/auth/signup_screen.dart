@@ -33,7 +33,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   bool _isPhone = false;
   String? _phoneNumber;
-  String? _email;
   String? _whatsappNumber; // Pour stocker le numéro WhatsApp
 
   final AuthService _authService = AuthService();
@@ -243,7 +242,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     TextInputType keyboardType = TextInputType.text,
     Function(String)? onChanged,
   }) {
-    final isDark = _isDarkMode(context);
+    _isDarkMode(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -287,7 +286,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Widget pour le champ téléphone avec style similaire
   Widget _buildPhoneField() {
-    final isDark = _isDarkMode(context);
+    _isDarkMode(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,7 +371,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Widget pour le champ email avec style similaire
   Widget _buildEmailField() {
-    final isDark = _isDarkMode(context);
+    _isDarkMode(context);
 
     return Column(
       children: [
@@ -436,9 +435,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     return null;
                   },
                   onChanged: (value) {
-                    setState(() {
-                      _email = value;
-                    });
+                    setState(() {});
                   },
                 ),
               ),

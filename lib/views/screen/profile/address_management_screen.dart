@@ -441,7 +441,7 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
       );
 
       await _firestoreService.resetDefaultAddresses(
-        adresse.idUtilisateur!,
+        adresse.idUtilisateur,
         newDefaultId: adresse.id,
       );
       await _firestoreService.updateAdresse(updatedAdresse);

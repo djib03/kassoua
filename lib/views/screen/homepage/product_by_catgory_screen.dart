@@ -23,7 +23,7 @@ class ProductsByCategoryScreen extends StatefulWidget {
 class _ProductsByCategoryScreenState extends State<ProductsByCategoryScreen> {
   final CategoryService _categoryService = CategoryService();
   final FirestoreService _productService = FirestoreService();
-  final favoriService _favoriService = favoriService();
+  final FavoriService _favoriService = FavoriService();
 
   String _selectedSubCategory = 'Tous';
   List<Categorie> _subCategories = [];

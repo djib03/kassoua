@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:kassoua/models/product.dart';
 import 'package:kassoua/views/screen/shop/image_viewer.dart';
@@ -289,7 +291,7 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          Container(
+          SizedBox(
             width: double.infinity,
             height: 320,
             child:
@@ -380,7 +382,7 @@ class _ProductDetailVendeurState extends State<ProductDetailVendeur>
               ),
 
               Spacer(),
-              _buildStatsChip(Icons.visibility, '${produit.vues ?? 0} vues'),
+              _buildStatsChip(Icons.visibility, '${produit.vues} vues'),
             ],
           ),
 

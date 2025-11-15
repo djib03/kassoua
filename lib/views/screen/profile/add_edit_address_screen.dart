@@ -27,7 +27,6 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
   double? _latitude;
   double? _longitude;
   String? _currentUserId;
-  String? _authType;
 
   bool get isEditing => widget.address != null;
 
@@ -51,8 +50,6 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
     final authTypeFromPrefs = prefs.getString('authType') ?? 'firebase';
 
     setState(() {
-      _authType = authTypeFromPrefs;
-
       if (authTypeFromPrefs == 'firebase') {
         _currentUserId = FirebaseAuth.instance.currentUser?.uid;
       } else {
@@ -177,7 +174,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: AppColors.primary!),
+                            borderSide: BorderSide(color: AppColors.primary),
                           ),
                         ),
                         validator: (value) {
@@ -220,7 +217,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: AppColors.primary!),
+                            borderSide: BorderSide(color: AppColors.primary),
                           ),
                         ),
                       ),

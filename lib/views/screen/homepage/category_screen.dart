@@ -14,7 +14,7 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryListScreenState extends State<CategoryScreen> {
   final CategoryService _categoryService = CategoryService();
-  bool _isInitializing = false;
+  final bool _isInitializing = false;
 
   @override
   void initState() {

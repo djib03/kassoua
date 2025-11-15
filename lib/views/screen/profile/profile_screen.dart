@@ -1,4 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
+// ignore_for_file: deprecated_member_use
+
 import 'package:kassoua/views/screen/profile/address_management_screen.dart';
 import 'package:kassoua/views/screen/profile/user_detail.dart';
 import 'package:flutter/material.dart';
@@ -15,63 +16,6 @@ import 'package:kassoua/views/screen/profile/change_password_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color.fromARGB(31, 93, 93, 93),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 28, color: color),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildSection(
     BuildContext context, {
@@ -706,7 +650,6 @@ class ProfileScreen extends StatelessWidget {
     }
 
     // Récupérez les données de l'utilisateur
-    final Utilisateur? userData = authController.userData;
 
     // CORRECTION : Utilisez isLoggedInSync au lieu de isLoggedIn()
     final bool isLoggedIn = authController.isLoggedInSync;

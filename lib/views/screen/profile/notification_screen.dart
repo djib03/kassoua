@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart'; // Pour les icônes
+// Pour les icônes
 import 'package:kassoua/constants/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,7 +15,7 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  NotificationFilter _currentFilter = NotificationFilter.all; // Filtre actuel
+  // Filtre actuel
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +32,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           PopupMenuButton<NotificationFilter>(
             icon: Icon(Icons.filter_list), // Icône de filtre
             onSelected: (NotificationFilter result) {
-              setState(() {
-                _currentFilter = result;
-              });
+              setState(() {});
             },
             itemBuilder:
                 (BuildContext context) => <PopupMenuEntry<NotificationFilter>>[

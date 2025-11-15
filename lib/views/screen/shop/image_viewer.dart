@@ -8,7 +8,8 @@ class ImageViewer extends StatefulWidget {
   final int initialIndex; // Index de l'image à afficher en premier
   final bool isNetworkImage; // true pour les URLs réseau, false pour les assets
 
-  ImageViewer({
+  const ImageViewer({
+    super.key,
     required this.imageUrl,
     this.initialIndex = 0,
     this.isNetworkImage = true, // Par défaut, on assume des URLs réseau
@@ -82,7 +83,7 @@ class _ImageViewerState extends State<ImageViewer> {
                       });
                     },
                     itemBuilder: (context, index) {
-                      return Container(
+                      return SizedBox(
                         width: MediaQuery.of(context).size.width,
                         height: MediaQuery.of(context).size.height,
                         child: InteractiveViewer(

@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:kassoua/models/product.dart';
 import 'package:kassoua/views/screen/shop/image_viewer.dart';
@@ -10,8 +9,6 @@ import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/models/user.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kassoua/services/firestore_service.dart';
-import 'package:kassoua/services/favori_service.dart';
-import 'package:kassoua/models/image_produit.dart';
 
 class ProductDetailAcheteur extends StatefulWidget {
   final Produit produit;
@@ -31,7 +28,6 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
     with SingleTickerProviderStateMixin {
   PageController productImageSlider = PageController();
   final FirestoreService _firestoreService = FirestoreService();
-  final favoriService _favoriService = favoriService();
   bool isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -325,7 +321,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          Container(
+          SizedBox(
             width: double.infinity,
             height: 320,
             child:
@@ -415,7 +411,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                 ),
               ),
               Spacer(),
-              _buildStatsChip(Icons.visibility, '${produit.vues ?? 0} vues'),
+              _buildStatsChip(Icons.visibility, '${produit.vues} vues'),
             ],
           ),
 
@@ -690,7 +686,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
                     ),
                     if (vendeur?.email != null)
                       Text(
-                        vendeur!.email!,
+                        vendeur!.email,
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                   ],
@@ -924,13 +920,6 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
   }
 
   // Méthode pour forcer le rechargement si nécessaire
-  void _refreshLocation() {
-    setState(() {
-      _locationLoaded = false;
-      _adresse = null;
-    });
-    _loadLocationOnce();
-  }
 
   void _openInMaps(Adresse adresse) async {
     String query = '${adresse.latitude},${adresse.longitude}';
@@ -1115,7 +1104,7 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
 
   void _callVendeur() async {
     if (vendeur?.telephone != null) {
-      final phoneNumber = vendeur!.telephone!;
+      final phoneNumber = vendeur!.telephone;
       final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
 
       try {
@@ -1130,32 +1119,9 @@ class _ProductDetailAcheteurState extends State<ProductDetailAcheteur>
     }
   }
 
-  void _sendSMS() async {
-    if (vendeur?.telephone != null) {
-      final phoneNumber = vendeur!.telephone!;
-      final message =
-          'Bonjour, je suis intéressé par votre produit "${widget.produit.nom}" sur Kassoua.';
-      final Uri smsUri = Uri(
-        scheme: 'sms',
-        path: phoneNumber,
-        queryParameters: {'body': message},
-      );
-
-      try {
-        if (await canLaunchUrl(smsUri)) {
-          await launchUrl(smsUri);
-        } else {
-          _showErrorSnackBar('Impossible d\'ouvrir l\'application SMS');
-        }
-      } catch (e) {
-        _showErrorSnackBar('Erreur lors de l\'envoi du SMS');
-      }
-    }
-  }
-
   void _contactViaWhatsApp() async {
     if (vendeur?.telephone != null) {
-      final phoneNumber = vendeur!.telephone!.replaceAll(RegExp(r'[^\d+]'), '');
+      final phoneNumber = vendeur!.telephone.replaceAll(RegExp(r'[^\d+]'), '');
       final message =
           'Bonjour, je suis intéressé par votre produit "${widget.produit.nom}" sur Kassoua. Prix: ${widget.produit.prix.toStringAsFixed(0)} FCFA';
       final encodedMessage = Uri.encodeComponent(message);

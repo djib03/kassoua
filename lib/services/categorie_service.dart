@@ -44,9 +44,6 @@ class CategoryService {
         .orderBy('ordre')
         .snapshots()
         .map((snapshot) {
-          snapshot.docs.forEach((doc) {
-            print('Document : ${doc.id} - Données : ${doc.data()}');
-          });
           return snapshot.docs
               .map((doc) => Categorie.fromMap(doc.data(), doc.id))
               .toList();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:kassoua/constants/colors.dart';
-import 'package:kassoua/views/widgets/product_card.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:kassoua/models/product.dart';
 import 'package:kassoua/models/favori.dart';

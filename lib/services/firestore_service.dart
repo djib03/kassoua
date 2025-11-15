@@ -78,9 +78,6 @@ class FirestoreService {
         .orderBy('dateAjout', descending: true)
         .snapshots()
         .map((snapshot) {
-          print(
-            'Nombre de produits récupérés: ${snapshot.docs.length}',
-          ); // Debug
           return snapshot.docs.map((doc) {
             return Produit.fromMap(doc.data(), doc.id);
           }).toList();

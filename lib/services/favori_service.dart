@@ -3,9 +3,8 @@ import '../models/favori.dart';
 import '../models/image_produit.dart'; // Ajout de l'import pour ImageProduit
 import 'dart:math';
 
-class favoriService {
+class FavoriService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'products';
 
   // Cache pour les images
   final Map<String, ImageProduit?> _productImageCache = {};
@@ -44,8 +43,6 @@ class favoriService {
       _imageRetryCount.remove(produitId);
       return image;
     } catch (e) {
-      print('Erreur lors du chargement de l\'image: $e');
-
       // ✅ Gestion des retry
       final currentRetries = _imageRetryCount[produitId] ?? 0;
       if (currentRetries < _maxRetries) {

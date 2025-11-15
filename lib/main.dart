@@ -26,7 +26,7 @@ void main() async {
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthController(),
-      child: const KassouaAppWithConnectivity(), // <-- c'est bien ce widget ici
+      child: const KassouaAppWithConnectivity(),
     ),
   );
 }
@@ -70,6 +70,6 @@ class _KassouaAppWithConnectivityState
 
   @override
   Widget build(BuildContext context) {
-    return const KassouaApp(); // <-- et pas KassouaAppWithConnectivity !
+    return const KassouaApp();
   }
 }

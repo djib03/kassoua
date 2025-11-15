@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Widget pour le champ téléphone avec style similaire
   Widget _buildPhoneField() {
-    final isDark = _isDarkMode(context);
+    _isDarkMode(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Widget pour le champ email avec style similaire
   Widget _buildEmailField() {
-    final isDark = _isDarkMode(context);
+    _isDarkMode(context);
 
     return Container(
       decoration: BoxDecoration(

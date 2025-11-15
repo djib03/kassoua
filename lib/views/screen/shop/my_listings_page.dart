@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
@@ -5,7 +7,6 @@ import 'package:kassoua/views/screen/shop/add_edit_product_page.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:kassoua/models/product.dart';
 import 'package:kassoua/models/image_produit.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -529,73 +530,6 @@ class _MyListingsPageState extends State<MyListingsPage> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildProductImage(Produit product, bool isSold) {
-    return Stack(
-      children: [
-        Hero(
-          tag: 'product_image_${product.id}',
-          child: Container(
-            width: DMSizes.imageThumbSize,
-            height: DMSizes.imageThumbSize,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
-              color: AppColors.grey.withOpacity(0.1),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(DMSizes.borderRadiusMd),
-              child: StreamBuilder<List<ImageProduit>>(
-                stream: _firestoreService.getImagesProduit(product.id),
-                builder: (context, imageSnapshot) {
-                  if (imageSnapshot.hasData && imageSnapshot.data!.isNotEmpty) {
-                    // Utiliser la première image trouvée
-                    final imageUrl = imageSnapshot.data!.first.url;
-                    return Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (context, error, stackTrace) => Icon(
-                            Iconsax.image,
-                            size: DMSizes.iconMd,
-                            color: AppColors.darkGrey,
-                          ),
-                    );
-                  } else {
-                    // Pas d'image disponible
-                    return Icon(
-                      Iconsax.image,
-                      size: DMSizes.iconMd,
-                      color: AppColors.darkGrey,
-                    );
-                  }
-                },
-              ),
-            ),
-          ),
-        ),
-        // Badge de statut
-        Positioned(
-          top: DMSizes.xs,
-          right: DMSizes.xs,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: DMSizes.xs, vertical: 2),
-            decoration: BoxDecoration(
-              color: isSold ? AppColors.error : AppColors.success,
-              borderRadius: BorderRadius.circular(DMSizes.borderRadiusSm),
-            ),
-            child: Text(
-              isSold ? 'VENDU' : 'DISPO',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 

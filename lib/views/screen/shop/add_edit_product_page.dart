@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kassoua/constants/colors.dart';
 import 'package:kassoua/constants/size.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kassoua/models/adresse.dart';
 import 'package:kassoua/services/firestore_service.dart';
 import 'package:kassoua/models/product.dart';
@@ -36,7 +35,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
   bool _isDeliverable = false; // Pour savoir si le produit est livrable
 
   final ImagePicker _picker = ImagePicker();
-  List<File> _selectedImages = [];
+  final List<File> _selectedImages = [];
   String? _selectedCategory;
   bool _isLoading = false;
 
@@ -642,13 +641,25 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     SizedBox(height: DMSizes.md),
                     StreamBuilder<List<Adresse>>(
                       stream:
-                          FirebaseAuth.instance.currentUser != null
-                              ? FirestoreService().getAdressesStream(
-                                FirebaseAuth.instance.currentUser!.uid,
-                              )
-                              : Stream.value(
-                                [],
-                              ), // Stream vide si pas d'utilisateur
+                          (() {
+                            final authController = Provider.of<AuthController>(
+                              context,
+                              listen: false,
+                            );
+                            String? userId;
+                            if (authController.user != null) {
+                              userId = authController.user!.uid;
+                            } else if (authController.userData != null) {
+                              userId = authController.userData!.id;
+                            }
+                            if (userId != null) {
+                              return FirestoreService().getAdressesStream(
+                                userId,
+                              );
+                            } else {
+                              return Stream.value(<Adresse>[]);
+                            }
+                          })(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -659,8 +670,7 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                         if (snapshot.hasError) {
                           return Text('Erreur lors du chargement des adresses');
                         }
-
-                        final adresses = snapshot.data ?? [];
+                        final adresses = snapshot.data ?? <Adresse>[];
                         if (adresses.isEmpty) {
                           return Container(
                             padding: EdgeInsets.all(DMSizes.md),
