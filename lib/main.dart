@@ -4,9 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:kassoua/controllers/auth_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:kassoua/constants/colors.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -26,50 +24,7 @@ void main() async {
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthController(),
-      child: const KassouaAppWithConnectivity(),
+      child: const KassouaApp(),
     ),
   );
-}
-
-class KassouaAppWithConnectivity extends StatefulWidget {
-  const KassouaAppWithConnectivity({super.key});
-
-  @override
-  State<KassouaAppWithConnectivity> createState() =>
-      _KassouaAppWithConnectivityState();
-}
-
-class _KassouaAppWithConnectivityState
-    extends State<KassouaAppWithConnectivity> {
-  late final Connectivity _connectivity;
-  ConnectivityResult? _lastResult;
-
-  @override
-  void initState() {
-    super.initState();
-    _connectivity = Connectivity();
-    _connectivity.onConnectivityChanged.listen((result) {
-      if (_lastResult != result) {
-        _lastResult = result;
-        final isOnline = result != ConnectivityResult.none;
-        // ignore: use_build_context_synchronously
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                isOnline ? 'Vous êtes en ligne' : 'Vous êtes hors ligne',
-              ),
-              backgroundColor: isOnline ? AppColors.primary : Colors.red,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const KassouaApp();
-  }
 }

@@ -4,15 +4,18 @@ plugins {
 
 
 
-    id("com.google.gms.google-services") version "4.3.15" apply false // <--- C'est la ligne importante à ajouter/modifier ici !
+    id("com.google.gms.google-services") version "4.3.15" apply false // <
 }
 
 
 allprojects {
     repositories {
-        google() // <-- Très bien !
-        mavenCentral() // <-- Très bien !
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+
     }
+
 
 
 }
